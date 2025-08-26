@@ -1,3 +1,41 @@
+# Описание основных структур данных и переменных модели расписания
+
+# --- Входные данные (Python-структуры) ---
+# days: список дней недели, например ["Mon", "Tue", ...]
+# periods: список номеров уроков, например [1,2,3,4,5,6,7]
+# classes: список классов, например ["5A", "5B"]
+# subjects: список предметов, например ["math", "cs", "eng"]
+# teachers: список учителей, например ["Ivanov", "Petrov"]
+# plan_hours: словарь {(class, subject): часы в неделю}
+# assigned_teacher: словарь {(class, subject): teacher}
+# days_off: словарь {teacher: {дни, когда не работает}}
+# teacher_preferences: {teacher -> {day -> weight}} — мягкие предпочтения по дням
+# class_preferences: {class -> {day -> weight}} — мягкие предпочтения по дням
+
+# --- Переменные MILP (pulp) ---
+# x[(c,s,d,p)] ∈ {0,1} — бинарная переменная: =1 если класс c изучает предмет s в день d на уроке p.
+# y[(c,d,p)] ∈ {0,1} — бинарная переменная: =1 если у класса c есть ЛЮБОЙ урок в слот (d,p).
+# s_run[(c,d,p)] ∈ {0,1} — бинарная переменная: =1 если слот (d,p) является началом блока занятий (anti-gap логика).
+
+# --- Ограничения ---
+# 1. Учебный план: сумма x по всем дням/урокам для (c,s) = требуемые часы.
+# 2. У класса не более 1 урока одновременно: сумма x[(c,s,d,p)] ≤ 1.
+# 3. Связь x и y: y[(c,d,p)] ≥ x[(c,s,d,p)] и y[(c,d,p)] ≤ Σ_s x[(c,s,d,p)].
+# 4. Не более 1 урока одного предмета в день: Σ_p x[(c,s,d,p)] ≤ 1.
+# 5. Ограничения по учителям: не более 1 урока одновременно; недельный максимум ≤ cap.
+# 6. Дни отдыха учителей: в эти дни у них не может быть уроков.
+# 7. Anti-gap: s_run ≥ y(p) - y(p-1) и s_run ≤ y(p). Начало блока фиксируется.
+
+# --- Целевая функция ---
+# obj_runs: минимизация числа блоков (anti-окна).
+# obj_early: минимизация поздних уроков (тянуть к ранним).
+# obj_balance: баланс нагрузки по дням (сумма квадратов отклонений от среднего).
+# obj_tail: штраф за «хвосты» после 6-го урока.
+# obj_pref: мягкие предпочтения учителей и классов.
+
+# Итоговая цель: Minimize alpha*obj_runs + beta*obj_early + gamma*obj_balance + delta*obj_tail + obj_pref
+
+
 from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple
 import itertools
@@ -193,16 +231,30 @@ def build_and_solve_timetable(
 
     # 5) Пользовательские предпочтения
     #    a) по слотам класса
+    # Это     кусок     мягких     предпочтений    в    целевой    функции.Он     добавляет
+    # штрафы / бонусы     за    то, что    у    конкретного    класса    в    конкретный    день    и
+    # на    конкретной    паре    стоит    урок.
     obj_pref_class = pulp.lpSum(
         data.class_slot_weight.get((c, d, p), 0.0) * y[(c, d, p)]
         for c in C for d in D for p in P
     )
     #    b) по слотам учителя (применяем к сумме x у всех его классов/предметов)
+    # Она    штрафует / поощряет    занятия    учителя    в    конкретные    день + пара.
+    # data.teacher_slot_weight = {
+    #     ("Petrov", "Fri", 7): 10.0,  # не хотим позднюю пятницу для Петрова
+    #     ("Ivanov", "Mon", 1): -2.0,  # Иванову удобно ранним утром в понедельник
+    # }
+
     obj_pref_teacher = pulp.lpSum(
         data.teacher_slot_weight.get((t, d, p), 0.0) * pulp.lpSum(x[(c, s, d, p)] for (c, s) in by_teacher.get(t, []))
         for t in data.teachers for d in D for p in P
     )
     #    c) по дню для конкретного предмета у класса
+    # data.class_subject_day_weight = {
+    #     ("5A", "math", "Mon"): 5.0,  # не хотим математику по понедельникам
+    #     ("5B", "eng", "Fri"): -3.0  # хорошо, если у 5B английский в пятницу
+    # }
+
     obj_pref_csd = pulp.lpSum(
         data.class_subject_day_weight.get((c, s, d), 0.0) * pulp.lpSum(x[(c, s, d, p)] for p in P)
         for c in C for s in S for d in D
