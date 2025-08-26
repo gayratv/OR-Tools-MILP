@@ -1,0 +1,32 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="bs4" />
+          <option value="prettytable" />
+          <option value="requests" />
+          <option value="youtube-dl" />
+          <option value="lxml" />
+          <option value="googletrans" />
+          <option value="aiohttp" />
+          <option value="torch" />
+          <option value="Pillow" />
+          <option value="numpy" />
+          <option value="torchvision" />
+          <option value="blend_modes" />
+          <option value="httpx" />
+          <option value="mysqlclient" />
+          <option value="mysql" />
+          <option value="mysql-connector-python" />
+          <option value="tabulate" />
+          <option value="vastai" />
+          <option value="huggingface_hub" />
+          <option value="tqdm" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
