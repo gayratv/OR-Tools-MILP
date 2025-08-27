@@ -3,3 +3,4 @@ pyodbc
 pandas
 pulp
 highspy
+openpyxl
