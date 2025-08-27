@@ -2,3 +2,4 @@ ortools
 pyodbc
 pandas
 pulp
+highspy

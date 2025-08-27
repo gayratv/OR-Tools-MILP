@@ -256,7 +256,24 @@ def build_and_solve_timetable(
     prob.writeLP(lp_path)
     if log:
         print(f"LP-модель сохранена в: {lp_path}")
-    status_code = prob.solve(pulp.PULP_CBC_CMD(msg=log))
+
+    # status_code = prob.solve(pulp.PULP_CBC_CMD(msg=log))
+
+    # HiGHS: 16 потоков и 5% относительный GAP; fallback -> CBC
+    try:
+        solver = pulp.PULP_HIGHS_CMD(
+            msg=log,
+            threads=16,  # задействуем 16 потоков
+            mip_rel_gap=0.05  # 5% допускаемый относительный GAP
+            # при желании можно добавить time_limit=120
+        )
+    except Exception:
+        # если HiGHS недоступен в вашей сборке PuLP — откатываемся на CBC
+        solver = pulp.PULP_CBC_CMD(msg=log)
+
+    status_code = prob.solve(solver)
+    print("Статус решения:", pulp.LpStatus[prob.status], "(code:", status_code, ")")
+
     if log:
         print("Статус решения:", pulp.LpStatus[prob.status], "(code:", status_code, ")")
 
