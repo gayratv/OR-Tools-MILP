@@ -186,8 +186,9 @@ def build_and_solve_timetable(
     # Логика блоков занятий (anti-gaps)
     for c, d in itertools.product(C, D):
         p0 = P[0]
-        model += srun[(c, d, p0)] >= y[(c, d, p0)]
-        model += srun[(c, d, p0)] <= y[(c, d, p0)]
+        # model += srun[(c, d, p0)] >= y[(c, d, p0)]
+        # model += srun[(c, d, p0)] <= y[(c, d, p0)]
+        model += srun[(c, d, p0)] == y[(c, d, p0)]
         for i in range(1, len(P)):
             p = P[i]
             prev = P[i - 1]
