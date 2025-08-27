@@ -271,6 +271,7 @@ if __name__ == "__main__":
         assigned_teacher=assigned_teacher,
         subgroup_assigned_teacher=subgroup_assigned_teacher,
         compatible_pairs=make_default_compat()
+
     )
 
     prob, x, z, y = build_and_solve_timetable(data, log=True)

@@ -97,3 +97,15 @@ class InputData:
     # --- Совместимости split-предметов ---
     # храним как отсортированные пары, напр.: {("eng","eng"), ("cs","eng"), ("labor","labor")}
     compatible_pairs: Set[Tuple[str, str]] = field(default_factory=set)
+
+
+@dataclass
+class OptimizationWeights:
+    """
+    Весовые коэффициенты для составной целевой функции.
+    """
+    alpha_runs: float = 1000.0   # анти-окна: минимизация числа блоков занятий
+    beta_early: float = 1.0      # лёгкое предпочтение ранних уроков
+    gamma_balance: float = 10.0  # баланс по дням (L1-отклонение от среднего)
+    delta_tail: float = 50.0     # штраф за «хвосты» после 6-го урока (soft ban)
+    pref_scale: float = 1.0      # масштаб для пользовательских предпочтений
