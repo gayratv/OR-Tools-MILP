@@ -1,21 +1,20 @@
 # School Timetable MILP — with subgroups + diagnostics (CBC)
 # ----------------------------------------------------------------------------
-# Этот файл строит MILP‑модель школьного расписания, поддерживает подгруппы и
-# включает «диагностический режим» (DBG), позволяющий точечно отключать группы
-# ограничений, чтобы найти источник несовместности (Infeasible).
+# Полная модель с подгруппами, диагностическим режимом DBG и исправлением:
+#  - (C2) каждая ПОДГРУППА может быть только на ОДНОМ занятии в один слот
+#  - (C3) суммарно не более |G| подгрупповых занятий в слот у класса
+# Эти ограничения предотвращают ситуацию, когда у класса в один момент стоит
+# больше двух параллельных занятий (для g1,g2), либо одна подгруппа записана
+# сразу на несколько предметов одновременно.
 # ----------------------------------------------------------------------------
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Set, Tuple
+from typing import Dict, Tuple
 import itertools
 import pulp
-from print_schedule import print_by_classes, print_by_teachers
-from input_data import InputData
 
+from input_data import InputData  # вынесено в отдельный файл
+from print_schedule import print_by_classes, print_by_teachers  # функции печати
 
-# ==============================
-# Утилиты: дефолтные совместимости
-# ==============================
 
 def make_default_compat():
     """Разрешённые пары одновременных split‑предметов: (eng,eng), (labor,labor), (cs,eng)."""
@@ -28,10 +27,6 @@ def make_default_compat():
     return allowed
 
 
-# ==============================
-# Модель MILP c диагностическим режимом
-# ==============================
-
 def build_and_solve_timetable(
     data: InputData,
     lp_path: str = "schedule.lp",
@@ -39,7 +34,7 @@ def build_and_solve_timetable(
     # Веса цели
     alpha_runs: float = 1000.0,   # анти‑окна: минимизация числа блоков занятий
     beta_early: float = 1.0,      # ранние пары
-    gamma_balance: float = 1.0,   # баланс по дням (сделал мягче по умолчанию)
+    gamma_balance: float = 1.0,   # баланс по дням
     delta_tail: float = 10.0,     # штраф за пары после 6‑й
     pref_scale: float = 1.0,
     # Диагностический режим (вкл/выкл группы ограничений)
@@ -115,7 +110,7 @@ def build_and_solve_timetable(
     for (c, s, g), h in data.subgroup_plan_hours.items():
         prob += pulp.lpSum(z[(c, s, g, d, p)] for d in D for p in P) == h, f"PlanSub_{c}_{s}_g{g}"
 
-    # Связь y и запрет смешивания
+    # Связь y, запрет смешивания
     for c, d, p in itertools.product(C, D, P):
         # максимум 1 non‑split урок у класса в слоте
         prob += pulp.lpSum(x[(c, s, d, p)] for s in S if s not in splitS) <= 1, f"Class1slot_nosplit_{c}_{d}_{p}"
@@ -142,10 +137,19 @@ def build_and_solve_timetable(
     for c, s, d in itertools.product(C, S, D):
         if s not in splitS and (c, s) in data.plan_hours:
             prob += pulp.lpSum(x[(c, s, d, p)] for p in P) <= 1, f"SubDaily_{c}_{s}_{d}"
-    # Для подгрупп — по каждой подгруппе ≤ 1 в день (как правило)
+    # Для подгрупп — по каждой подгруппе ≤ 1 в день
     for c, s, g, d in itertools.product(C, S, G, D):
         if s in splitS and (c, s, g) in data.subgroup_plan_hours:
             prob += pulp.lpSum(z[(c, s, g, d, p)] for p in P) <= 1, f"SubDailySub_{c}_{s}_g{g}_{d}"
+
+    # (C2) Каждая подгруппа может быть только на ОДНОМ занятии в слот
+    #      ∀ c,g,d,p: Σ_{s∈split} z[c,s,g,d,p] ≤ 1
+    for c, g, d, p in itertools.product(C, G, D, P):
+        prob += pulp.lpSum(z[(c, s, g, d, p)] for s in S if s in splitS) <= 1, f"SubgroupSlot_{c}_g{g}_{d}_{p}"
+
+    # (C3) (избыточно) суммарно не более |G| подгрупповых занятий в слот
+    for c, d, p in itertools.product(C, D, P):
+        prob += pulp.lpSum(z[(c, s, g, d, p)] for s in S if s in splitS for g in G) <= len(G), f"SubgroupSlotTotal_{c}_{d}_{p}"
 
     # Совместимости split‑предметов
     split_list = sorted(list(splitS))
@@ -153,13 +157,13 @@ def build_and_solve_timetable(
         for i, s1 in enumerate(split_list):
             for s2 in split_list[i:]:
                 pair = tuple(sorted((s1, s2)))
-                # pres связываем
+                # pres связываем (независимо от DBG)
                 prob += pres[(c, s1, d, p)] <= pulp.lpSum(z[(c, s1, g, d, p)] for g in G)
                 prob += pres[(c, s2, d, p)] <= pulp.lpSum(z[(c, s2, g, d, p)] for g in G)
                 for g in G:
                     prob += pres[(c, s1, d, p)] >= z[(c, s1, g, d, p)]
                     prob += pres[(c, s2, d, p)] >= z[(c, s2, g, d, p)]
-                # запрет несовместимых пар можно отключить
+                # запрет несовместимых пар можно отключить через DBG
                 if DBG.get("compat", True) and pair not in data.compatible_pairs:
                     prob += pres[(c, s1, d, p)] + pres[(c, s2, d, p)] <= 1, f"CompatBan_{c}_{d}_{p}_{s1}_{s2}"
 
@@ -270,10 +274,8 @@ if __name__ == "__main__":
     subjects = ["math", "eng", "cs", "labor"]  # math — общий; eng/cs/labor — split
     teachers = ["Ivanov", "Petrov", "Sidorov", "Smirnov", "Volkov", "Fedorov", "Nikolaev"]
 
-    # Подгруппы и split‑предметы
     split_subjects = {"eng", "cs", "labor"}
 
-    # Планы часов
     plan_hours = {
         ("5A", "math"): 2,
         ("5B", "math"): 2,
@@ -287,7 +289,6 @@ if __name__ == "__main__":
         ("5B", "labor", 1): 1, ("5B", "labor", 2): 1,
     }
 
-    # Учителя: для наглядности — разные по подгруппам
     assigned_teacher = {
         ("5A", "math"): "Ivanov",
         ("5B", "math"): "Volkov",
@@ -301,7 +302,6 @@ if __name__ == "__main__":
         ("5B", "labor", 1): "Smirnov", ("5B", "labor", 2): "Volkov",
     }
 
-    # Off‑days
     days_off = {
         "Petrov": {"Mon"},
         "Ivanov": set(),
@@ -333,13 +333,12 @@ if __name__ == "__main__":
     )
 
     # Диагностический режим: можно точечно выключать ограничения
-
     DBG = {
-        "teach_overlap": True,  # учитель не ведёт 2 занятия одновременно
-        "teach_cap": True,  # недельный лимит уроков на учителя
-        "dayoff": False,  # выходные/недоступные дни учителя
-        "nomix": False,  # нельзя смешивать non-split и split уроки в одном слоте
-        "compat": False,  # запрет несовместимых пар split-предметов
+        "teach_overlap": True,
+        "teach_cap": True,
+        "dayoff": False,
+        "nomix": False,
+        "compat": False,
     }
 
     prob, x, z, y = build_and_solve_timetable(
@@ -354,10 +353,6 @@ if __name__ == "__main__":
         DBG=DBG,
     )
 
-    # -----------------
-    # Печать расписания
-    # -----------------
-
-    # def print_by_classes(data: InputData, x: Dict[Tuple, pulp.LpVariable], z: Dict[Tuple, pulp.LpVariable]) -> None:
+    # Печать расписаний
     print_by_classes(data, x, z)
-    # print_by_teachers()
+    print_by_teachers(data, x, z)
