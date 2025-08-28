@@ -23,8 +23,7 @@ def make_default_compat():
     def add(a, b):
         allowed.add(tuple(sorted((a, b))))
 
-    add("eng", "eng")
-    add("labor", "labor")
+    # здесь надо записать только разные предметы
     add("cs", "eng")
     return allowed
 
