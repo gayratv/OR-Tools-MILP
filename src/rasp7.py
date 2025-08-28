@@ -270,59 +270,73 @@ def build_and_solve_timetable(
             # Если же y(p)=1 и y(prev_p)=1, то srun >= 0. Минимизация в целевой функции сделает srun=0.
             model += srun[(c, d, p)] <= y[(c, d, p)], f"SRun_Upper_Bound_{c}_{d}_{p}"
 
+    # --- Логика для балансировки нагрузки по дням ---
+    for c, d in itertools.product(C, D):
+        # Суммарное число уроков у класса в день
+        model += yday[(c, d)] == pulp.lpSum(y[(c, d, p)] for p in P), f"YDay_Def_{c}_{d}"
+
+    for c in C:
+        # Среднее число уроков в день для класса.
+        # PuLP и решатели корректно работают с такими линейными выражениями.
+        total_lessons_for_class = pulp.lpSum(y[(c, d, p)] for d in D for p in P)
+        avg_lessons = total_lessons_for_class / len(D)
+        for d in D:
+            # Отклонение от среднего (L1-норма). Выражение y_day - avg = dev_pos - dev_neg
+            model += yday[(c, d)] - avg_lessons == dev_pos[(c, d)] - dev_neg[(c, d)], f"Dev_Def_{c}_{d}"
+
     # ------------------------------
     # Целевая функция (составная)
     # ------------------------------
-    # 1) Анти-окна: минимизировать число блоков у классов
+    # 1) Анти-окна: минимизировать число пустых окон у классов между уроками
     obj_runs = pulp.lpSum(srun[(c, d, p)] for c, d, p in itertools.product(C, D, P))
 
-    # 2) Ранние слоты
-    obj_early = pulp.lpSum(p * y[(c, d, p)] for c, d, p in itertools.product(C, D, P))
-
-    # 3) Баланс по дням (L1-норма отклонений)
+    # 3) Баланс по дням (L1-норма отклонений) - более менее равномерное распределение уроков по дням
     obj_balance = pulp.lpSum(dev_pos[(c, d)] + dev_neg[(c, d)] for c, d in itertools.product(C, D))
 
-    # 4) «Хвосты» после 6-го урока (штраф за поздние слоты)
-    late_periods = [p for p in P if p > last_ok_period]
-    obj_tail = pulp.lpSum(y[(c, d, p)] for c in C for d in D for p in late_periods)
+    # 4) «Хвосты» после 6-го урока (штраф за поздние слоты) если есть возможность то не назначать уроки после 6 урока
+    obj_tail = pulp.lpSum(y[(c, d, p)] for c, d, p in itertools.product(C, D, P) if p > last_ok_period)
 
     # 5) Пользовательские предпочтения
-    #    a) по слотам класса
-    obj_pref_class = pulp.lpSum(
-        data.class_slot_weight.get((c, d, p), 0.0) * y[(c, d, p)]
-        for c in C for d in D for p in P
-    )
-    #    b) по слотам учителя (применяем к сумме x и z у всех его классов/предметов)
-    obj_pref_teacher_lessons = []
-    for t, assignments in by_teacher.items():
-        for d, p in itertools.product(D, P):
-            weight = data.teacher_slot_weight.get((t, d, p), 0.0)
-            if weight != 0.0:
-                lessons_in_slot = []
-                for assign in assignments:
-                    if assign[0] == 'x':
-                        _, c, s = assign
-                        lessons_in_slot.append(x[(c, s, d, p)])
-                    else:  # 'z'
-                        _, c, s, g = assign
-                        lessons_in_slot.append(z[(c, s, g, d, p)])
-                if lessons_in_slot:
-                    obj_pref_teacher_lessons.append(weight * pulp.lpSum(lessons_in_slot))
-    obj_pref_teacher = pulp.lpSum(obj_pref_teacher_lessons)
-
-    #    c) по дню для конкретного предмета у класса
-    obj_pref_csd = pulp.lpSum(
-        data.class_subject_day_weight.get((c, s, d), 0.0) * pulp.lpSum(x[(c, s, d, p)] for p in P)
-        for c in C for s in S for d in D
+    #    a) по слотам класса (class_slot_weight)
+    obj_pref_class_slot = pulp.lpSum(
+        y[(c, d, p)] * w
+        for (c, d, p), w in data.class_slot_weight.items()
+        if c in C and d in D and p in P
     )
 
-    model += (
-            alpha_runs * obj_runs
-            + beta_early * obj_early
-            + gamma_balance * obj_balance
-            + delta_tail * obj_tail
-            + pref_scale * (obj_pref_class + obj_pref_teacher + obj_pref_csd)
-    ), "CompositeObjective"
+    #    b) по слотам учителя (teacher_slot_weight)
+    teacher_slot_lessons = []
+    for (t, d, p), w in data.teacher_slot_weight.items():
+        if t in by_teacher and d in D and p in P:
+            for assign in by_teacher[t]:
+                if assign[0] == 'x':
+                    _, c, s = assign
+                    teacher_slot_lessons.append(x[(c, s, d, p)] * w)
+                else:  # 'z'
+                    _, c, s, g = assign
+                    teacher_slot_lessons.append(z[(c, s, g, d, p)] * w)
+    obj_pref_teacher_slot = pulp.lpSum(teacher_slot_lessons)
+
+    #    c) по дню для конкретного предмета у класса (class_subject_day_weight)
+    class_subj_day_lessons = []
+    for (c, s, d), w in data.class_subject_day_weight.items():
+        if c in C and s in S and d in D:
+            if s not in splitS:
+                # Суммируем все часы этого предмета в этот день и умножаем на вес
+                total_hours_on_day = pulp.lpSum(x[(c, s, d, p)] for p in P)
+                class_subj_day_lessons.append(total_hours_on_day * w)
+            else:
+                # Для делящихся предметов суммируем слоты, в которые они преподаются,
+                # чтобы избежать двойного штрафа за параллельные подгруппы.
+                total_slots_on_day = pulp.lpSum(is_subj_taught[(c, s, d, p)] for p in P)
+                class_subj_day_lessons.append(total_slots_on_day * w)
+    obj_pref_class_subj_day = pulp.lpSum(class_subj_day_lessons)
+
+    model += (alpha_runs * obj_runs +
+              gamma_balance * obj_balance +
+              delta_tail * obj_tail +
+              pref_scale * (obj_pref_class_slot + obj_pref_teacher_slot + obj_pref_class_subj_day)
+              ), "CompositeObjective"
 
     # ------------------------------
     # Решение CBC
