@@ -67,7 +67,7 @@ def build_and_solve_timetable(
 ):
     C, S, D, P = data.classes, data.subjects, data.days, data.periods
     G = data.subgroup_ids
-    splitS = set(data.split_subjects)
+    splitS = set(data.split_subjects) # {"eng", "cs", "labor"}' - это уже множество (set).
 
     prob = pulp.LpProblem("School_Timetabling", sense=pulp.LpMinimize)
 
@@ -96,12 +96,12 @@ def build_and_solve_timetable(
         prob += pulp.lpSum(x[(c,s,d,p)] for d in D for p in P) == hIghs
 
     # План часов: split по подгруппам
-    for (c, s, g), hIghs in data.subgroup_plan_hours.items():
-        prob += pulp.lpSum(z[(c,s,g,d,p)] for d in D for p in P) == hIghs
+    for (c, s, g), subGrpNum in data.subgroup_plan_hours.items():
+        prob += pulp.lpSum(z[(c,s,g,d,p)] for d in D for p in P) == subGrpNum
 
     # Не больше 1 non-split в слот у класса
     for c,d,p in itertools.product(C,D,P):
-        prob += pulp.lpSum(x[(c,s,d,p)] for s in S if s not in splitS) <= 1
+        prob += pulp.lpSum(x[(c,s,d,p)] for s in S if s not in splitS) <= 1 # splitS - set разбиваемых уроков
 
         # y связываем с x и z
         for s in S:

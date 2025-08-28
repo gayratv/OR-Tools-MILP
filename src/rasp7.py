@@ -67,6 +67,9 @@ def build_and_solve_timetable(
     """
 
     C, S, D, P = data.classes, data.subjects, data.days, data.periods
+    G = data.subgroup_ids  # определено в типе - номера подгрупп
+    splitS = set(data.split_subjects)  # {"eng", "cs", "labor"}' - это уже множество (set).
+
     weights = OptimizationWeights()
     alpha_runs = weights.alpha_runs
     beta_early = weights.beta_early
@@ -75,19 +78,26 @@ def build_and_solve_timetable(
     pref_scale = weights.pref_scale
     last_ok_period = weights.last_ok_period
 
-
     model = pulp.LpProblem("School_Timetabling", sense=pulp.LpMinimize)
 
     # Переменные назначения
+    # x[(c, s, d, p)] ∈ {0,1} — у класса c предмет s в день d, урок p.
     x = pulp.LpVariable.dicts(
         "x", ((c, s, d, p) for c, s, d, p in itertools.product(C, S, D, P)),
         lowBound=0, upBound=1, cat=pulp.LpBinary
     )
-    # y[c,d,p] = 1 если в слоте есть ЛЮБОЙ урок у класса c
+    # y[c,d,p] = 1 если в слоте день, час есть ЛЮБОЙ урок у класса c
     y = pulp.LpVariable.dicts(
         "y", ((c, d, p) for c, d, p in itertools.product(C, D, P)),
         lowBound=0, upBound=1, cat=pulp.LpBinary
     )
+
+    # 1 если для подгруппы проводится урок
+    # z[(c, s, g, d, p)] ∈ {0,1}
+    z = pulp.LpVariable.dicts(
+        "z", ((c, s, g, d, p) for c, s, g, d, p in itertools.product(C, S, G, D, P) if s in splitS),
+        0, 1, cat=pulp.LpBinary)
+
     # srun[c,d,p] — начало блока занятий у класса
     srun = pulp.LpVariable.dicts(
         "srun", ((c, d, p) for c, d, p in itertools.product(C, D, P)),
@@ -107,82 +117,100 @@ def build_and_solve_timetable(
         "devn", ((c, d) for c, d in itertools.product(C, D)), lowBound=0, cat=pulp.LpContinuous
     )
 
+    # is_subj_taught[(c, s, d, p)] = 1, если предмет s преподается ЛЮБОЙ подгруппе класса c в данном слоте
+    is_subj_taught = pulp.LpVariable.dicts(
+        "is_subj_taught", ((c, s, d, p) for c, s, d, p in itertools.product(C, splitS, D, P)),
+        cat=pulp.LpBinary
+    )
+
     # ------------------------------
     # Ограничения
     # ------------------------------
 
     # Учебный план
+    # с- class s - предмет h - часы
     for (c, s), h in data.plan_hours.items():
         model += pulp.lpSum(x[(c, s, d, p)] for d in D for p in P) == h, f"Plan_{c}_{s}"
 
-    # У класса не более 1 урока в слот; связь y с x
+    # План часов: split по подгруппам
+    # z- если есть урок в подгруппе
+    for (c, s, g), h in data.subgroup_plan_hours.items():
+        model += pulp.lpSum(z[(c, s, g, d, p)] for d in D for p in P) == h
+
+    # Не больше 1 non-split в слот у класса
     for c, d, p in itertools.product(C, D, P):
-        model += pulp.lpSum(x[(c, s, d, p)] for s in S) <= 1, f"Class1slot_{c}_{d}_{p}"
+        model += pulp.lpSum(x[(c, s, d, p)] for s in S if s not in splitS) <= 1  # splitS - set разбиваемых уроков
+
+        # y связываем с x и z
         for s in S:
-            model += y[(c, d, p)] >= x[(c, s, d, p)]
-        model += y[(c, d, p)] <= pulp.lpSum(x[(c, s, d, p)] for s in S)
+            if s not in splitS:
+                model += y[(c, d, p)] >= x[(c, s, d, p)]
+            else:
+                for g in G:
+                    model += y[(c, d, p)] >= z[(c, s, g, d, p)]
 
-    # Не больше 1 урока одного предмета в день на класс
+        # это уравнение нужно, чтобы установить y в 0
+        # если нет занятий то предыдущее уравнение говорит что y>=0 , те y может быть 0 и 1
+        model += y[(c, d, p)] <= (
+                pulp.lpSum(x[(c, s, d, p)] for s in S if s not in splitS) +
+                pulp.lpSum(z[(c, s, g, d, p)] for s in S if s in splitS for g in G)
+        )
+
+    # Каждая подгруппа только на одном занятии в слот, два предмета не могут быть назначены на одно время
+    for c, g, d, p in itertools.product(C, G, D, P):
+        model += pulp.lpSum(z[(c, s, g, d, p)] for s in S if s in splitS) <= 1
+
+    # Нельзя одновременно ставить урок для всего класса и для его подгруппы в один и тот же слот
+    for c, g, d, p in itertools.product(C, G, D, P):
+        model += (pulp.lpSum(x[(c, s, d, p)] for s in S if s not in splitS) +
+                  pulp.lpSum(z[(c, s, g, d, p)] for s in S if s in splitS)
+                  ) <= 1, f"No_Class_Subgroup_Clash_{c}_{g}_{d}_{p}"
+
+    # У класса не более 1 урока в слот; связь y с x
+    # Цикл проходит по каждой возможной комбинации класс (c), Дня (d) и Периода (p).
+
+    # Не больше 2 урока предмета в день (могут быть 2 алгебры)
+
+    # Переменные означают следующее:
+     # •C: Список всех Классов(например, '9А', '10Б').
+     # •S: Список всех предметов(Subjects), например, 'Математика', 'История'.
+     # •D: Список всех учебных Дней(например, 'Понедельник', 'Вторник').
+     # •P: Список всех уроков - Периодов в течение одного дня(например, 1, 2, 3, 4).
+     # •G: Список всех подгрупп(например, 'Группа 1', 'Группа 2').
+     # •x и z: Это бинарные переменные решения для модели
+     # •x — для уроков всего класса,
+     # •z — для уроков в подгруппах.
+     # Они равны 1, если урок запланирован на определенное время, и 0 в противном случае.
+
     for c, s, d in itertools.product(C, S, D):
-        if (c, s) in data.plan_hours and data.plan_hours[(c, s)] > 0:
-            model += pulp.lpSum(x[(c, s, d, p)] for p in P) <= 1, f"SubDaily_{c}_{s}_{d}"
+        if s not in splitS and (c, s) in data.plan_hours:
+            model += pulp.lpSum(x[(c, s, d, p)] for p in P) <= 2
 
-    # Группировка по учителям
-    by_teacher: Dict[str, List[Tuple[str, str]]] = {t: [] for t in data.teachers}
-    for (c, s), t in data.assigned_teacher.items():
-        by_teacher[t].append((c, s))
+    for c, s, g, d in itertools.product(C, S, G, D):
+        if s in splitS and (c, s, g) in data.subgroup_plan_hours:
+            model += pulp.lpSum(z[(c, s, g, d, p)] for p in P) <= 2
 
-    # Учитель не ведёт два класса одновременно
-    for t in data.teachers:
-        cs_pairs = by_teacher.get(t, [])
-        for d, p in itertools.product(D, P):
-            if cs_pairs:
-                model += pulp.lpSum(x[(c, s, d, p)] for (c, s) in cs_pairs) <= 1, f"Teach1slot_{t}_{d}_{p}"
+    # --- Совместимость "делящихся" предметов ---
 
-    # Недельная нагрузка учителя ≤ cap
-    for t in data.teachers:
-        cs_pairs = by_teacher.get(t, [])
-        if cs_pairs:
-            model += pulp.lpSum(
-                x[(c, s, d, p)] for (c, s) in cs_pairs for d in D for p in P) <= data.teacher_weekly_cap, f"TeachCap_{t}"
+    # Связь z и is_subj_taught: флаг, что предмет s преподается классу c в слоте (d,p)
+    for c, s, d, p in itertools.product(C, splitS, D, P):
+        # Если хотя бы одна подгруппа g изучает предмет s, is_subj_taught должен стать 1
+        for g in G:
+            model += is_subj_taught[(c, s, d, p)] >= z[(c, s, g, d, p)], f"Link_is_subj_taught_up_{c}_{s}_{d}_{p}_{g}"
+        # Если ни одна подгруппа не изучает предмет s, is_subj_taught должен стать 0
+        model += is_subj_taught[(c, s, d, p)] <= pulp.lpSum(z[(c, s, g, d, p)] for g in G), f"Link_is_subj_taught_down_{c}_{s}_{d}_{p}"
 
-    # Дни без уроков у учителя
-    for t, off_days in data.days_off.items():
-        cs_pairs = by_teacher.get(t, [])
-        for d in off_days:
-            for p in P:
-                model += pulp.lpSum(x[(c, s, d, p)] for (c, s) in cs_pairs) == 0, f"TeachOff_{t}_{d}_{p}"
-
-    # Логика блоков занятий (anti-gaps)
-    for c, d in itertools.product(C, D):
-        p0 = P[0]
-        # model += srun[(c, d, p0)] >= y[(c, d, p0)]
-        # model += srun[(c, d, p0)] <= y[(c, d, p0)]
-        model += srun[(c, d, p0)] == y[(c, d, p0)]
-        for i in range(1, len(P)):
-            p = P[i]
-            prev = P[i - 1]
-            model += srun[(c, d, p)] >= y[(c, d, p)] - y[(c, d, prev)]
-            model += srun[(c, d, p)] <= y[(c, d, p)]
-
-    # Подсчёт yday и связь с y
-    for c, d in itertools.product(C, D):
-        model += yday[(c, d)] == pulp.lpSum(y[(c, d, p)] for p in P), f"YdayDef_{c}_{d}"
-
-    # Баланс по дням: |yday - avg_c| = dev_pos - dev_neg, dev_pos,dev_neg >= 0
-    # avg_c = total_hours_c / |D| — константа (может быть дробной)
-    total_hours_c: Dict[str, int] = {c: 0 for c in C}
-    for (c, s), h in data.plan_hours.items():
-        total_hours_c[c] += h
-    avg_c: Dict[str, float] = {c: (total_hours_c[c] / float(len(D))) for c in C}
-
-    for c, d in itertools.product(C, D):
-        # yday - avg = dev_pos - dev_neg
-        # Это две линейные неравенства:
-        # yday - avg <= dev_pos
-        # -(yday - avg) <= dev_neg  => avg - yday <= dev_neg
-        model += yday[(c, d)] - avg_c[c] <= dev_pos[(c, d)], f"BalPos_{c}_{d}"
-        model += avg_c[c] - yday[(c, d)] <= dev_neg[(c, d)], f"BalNeg_{c}_{d}"
+    # Ограничение совместимости: в одном слоте у класса могут быть только совместимые "делящиеся" предметы
+    split_list = sorted(list(splitS))
+    for c, d, p in itertools.product(C, D, P):
+        for s1, s2 in itertools.combinations(split_list, 2):
+            pair = (s1, s2)
+            # Проверяем в обоих направлениях, если compatible_pairs не отсортированы
+            if pair not in data.compatible_pairs and (s2, s1) not in data.compatible_pairs:
+                # Если предметы s1 и s2 несовместимы, они не могут преподаваться одновременно
+                # разным подгруппам одного класса.
+                model += is_subj_taught[(c, s1, d, p)] + is_subj_taught[(c, s2, d, p)] <= 1, \
+                    f"Incompatible_Pair_{c}_{d}_{p}_{s1}_{s2}"
 
     # ------------------------------
     # Целевая функция (составная)
@@ -268,7 +296,6 @@ def build_and_solve_timetable(
     col_names = hIghs.getLp().col_names_
     values = {name: val for name, val in zip(col_names, sol)}
 
-
     missed = 0
     for var in model.variables():
         if var.name in values:
@@ -280,12 +307,11 @@ def build_and_solve_timetable(
 
     return model, x, y
 
+
 # ------------------------------
 # Пример запуска
 # ------------------------------
 if __name__ == "__main__":
-
-
     data = create_timetable_data()
 
     build_and_solve_timetable(

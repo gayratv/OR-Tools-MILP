@@ -24,8 +24,8 @@ def make_default_compat():
         allowed.add(tuple(sorted((a, b))))
 
     add("eng", "eng")
-    add("trud", "trud")
-    add("informatika", "eng")
+    add("labor", "labor")
+    add("cs", "eng")
     return allowed
 
 
@@ -36,15 +36,11 @@ def create_timetable_data() -> InputData:
     days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
     periods = [1, 2, 3, 4, 5, 6, 7]
     classes = ["5A", "5B"]
+    # subgroup_ids: Subgroups = field(default_factory=lambda: [1, 2]) - определено в самом типе
     subjects = ["math", "cs", "eng", "labor"]
-    split_subjects = {"eng", "cs", "cs"}
+    split_subjects = {"eng", "cs", "labor"}
 
     teachers = ["Ivanov", "Petrov", "Sidorov", "Nikolaev"]
-
-    subgroup_plan_hours = {
-        ("5A", "eng", 2): 1, ("5A", "eng", 2): 1,
-        ("5B", "eng", 2): 1, ("5B", "eng", 2): 1
-    }
 
     subgroup_assigned_teacher = {
         ("5A", "eng", 1): "Sidorov", ("5A", "eng", 2): "Nikolaev",
@@ -54,6 +50,11 @@ def create_timetable_data() -> InputData:
     plan_hours = {
         ("5A", "math"): 2, ("5A", "cs"): 2, ("5A", "eng"): 2, ("5A", "labor"): 2,
         ("5B", "math"): 2, ("5B", "cs"): 2, ("5B", "eng"): 2, ("5B", "labor"): 2,
+    }
+
+    subgroup_plan_hours = {
+        ("5A", "eng", 2): 1, ("5A", "eng", 2): 1,
+        ("5B", "eng", 2): 1, ("5B", "eng", 2): 1
     }
 
     assigned_teacher = {("5A", "math"): "Ivanov", ("5B", "math"): "Ivanov"}
