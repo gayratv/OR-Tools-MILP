@@ -25,63 +25,62 @@ def make_default_compat():
 
     # здесь надо записать только разные предметы
     add("cs", "eng")
+    add("labor", "labor")
+    add("cs", "cs")
     return allowed
 
 
 def create_timetable_data() -> InputData:
-    # Веса для составной целевой функции - см. OptimizationWeights
-
-
     days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
-    periods = [1, 2, 3, 4, 5, 6, 7]
+    periods = list(range(1, 8))
     classes = ["5A", "5B"]
-    # subgroup_ids: Subgroups = field(default_factory=lambda: [1, 2]) - определено в самом типе
     subjects = ["math", "cs", "eng", "labor"]
     split_subjects = {"eng", "cs", "labor"}
+    teachers = ["Ivanov", "Petrov", "Sidorov", "Nikolaev", "Smirnov"]
 
-    teachers = ["Ivanov", "Petrov", "Sidorov", "Nikolaev"]
-
+    # --- Учебный план ---
+    # Только НЕ-делимые предметы
     plan_hours = {
-        ("5A", "math"): 2, ("5A", "cs"): 2, ("5A", "eng"): 2, ("5A", "labor"): 2,
-        ("5B", "math"): 2, ("5B", "cs"): 2, ("5B", "eng"): 2, ("5B", "labor"): 2,
+        ("5A", "math"): 2,
+        ("5B", "math"): 2,
     }
 
+    # Только ДЕЛИМЫЕ предметы (по подгруппам)
     subgroup_plan_hours = {
-        ("5A", "eng", 2): 1, ("5A", "eng", 2): 1,
-        ("5B", "eng", 2): 1, ("5B", "eng", 2): 1
+        # 5A
+        ("5A", "eng", 1): 1, ("5A", "eng", 2): 1,
+        ("5A", "cs", 1): 1, ("5A", "cs", 2): 1,
+        ("5A", "labor", 1): 1, ("5A", "labor", 2): 1,
+        # 5B
+        ("5B", "eng", 1): 1, ("5B", "eng", 2): 1,
+        ("5B", "cs", 1): 1, ("5B", "cs", 2): 1,
+        ("5B", "labor", 1): 1, ("5B", "labor", 2): 1,
     }
 
-    assigned_teacher = {("5A", "math"): "Ivanov", ("5B", "math"): "Ivanov"}
+    # --- Закрепление учителей ---
+    # НЕ-делимые
+    assigned_teacher = {
+        ("5A", "math"): "Ivanov",
+        ("5B", "math"): "Ivanov"
+    }
 
+    # ДЕЛИМЫЕ (по подгруппам)
     subgroup_assigned_teacher = {
+        # 5A
         ("5A", "eng", 1): "Sidorov", ("5A", "eng", 2): "Nikolaev",
-        ("5B", "eng", 1): "Sidorov", ("5B", "eng", 2): "Nikolaev"
+        ("5A", "cs", 1): "Petrov", ("5A", "cs", 2): "Petrov",
+        ("5A", "labor", 1): "Smirnov", ("5A", "labor", 2): "Smirnov",
+        # 5B
+        ("5B", "eng", 1): "Sidorov", ("5B", "eng", 2): "Nikolaev",
+        ("5B", "cs", 1): "Petrov", ("5B", "cs", 2): "Petrov",
+        ("5B", "labor", 1): "Smirnov", ("5B", "labor", 2): "Smirnov",
     }
 
-    # дни когда учитель не работает
-    days_off = {
-        "Petrov": {"Mon"},
-    }
-
-    # Жесткие запреты на слоты для классов
-    forbidden_slots = {
-        ('5A', 'Mon', 1),  # Классу 5А нельзя проводить уроки в понедельник на 1-м уроке
-    }
-
-    # Пример предпочтений:
-    #  - Штрафуем поздние слоты у 5A по пятницам
-    class_slot_weight = {
-        ("5A", "Fri", 7): 10.0,
-        ("5A", "Fri", 6): 5.0,
-    }
-    #  - Учитель Петров не любит 1-й урок во вторник
-    teacher_slot_weight = {
-        ("Petrov", "Tue", 1): 8.0,
-    }
-    #  - Классу 5B лучше не ставить math по понедельникам
-    class_subject_day_weight = {
-        ("5B", "math", "Mon"): 6.0,
-    }
+    days_off = {"Petrov": {"Mon"}}
+    forbidden_slots = {('5A', 'Mon', 1)}
+    class_slot_weight = {("5A", "Fri", 7): 10.0, ("5A", "Fri", 6): 5.0}
+    teacher_slot_weight = {("Petrov", "Tue", 1): 8.0}
+    class_subject_day_weight = {("5B", "math", "Mon"): 6.0}
 
     data = InputData(
         days=days, periods=periods, classes=classes, subjects=subjects, teachers=teachers,
