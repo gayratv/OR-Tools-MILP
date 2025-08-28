@@ -192,29 +192,19 @@ def build_and_solve_timetable(
             by_teacher[t].append(('z', c, s, g))
 
     # Теперь проходим по каждому учителю и слоту
-    # by_teacher = {
-    #     "Иванов": [
-    #         ('x', '9A', 'Математика')
-    #     ],
-    #     "Петров": [
-    #         ('z', '9A', 'Английский', 1),
-    #         ('z', '9А', 'Английский', 2)
-    #     ]
-    #     # ... и так для каждого учителя
-    # }
     for t, assignments in by_teacher.items():
         # Ограничение на недельную нагрузку (если задано)
-        # if hasattr(data, 'teacher_weekly_cap') and data.teacher_weekly_cap > 0:
-        #     weekly_lessons = []
-        #     for assign in assignments:
-        #         if assign[0] == 'x':
-        #             _, c, s = assign
-        #             weekly_lessons.extend(x[(c, s, d, p)] for d in D for p in P)
-        #         else:
-        #             _, c, s, g = assign
-        #             weekly_lessons.extend(z[(c, s, g, d, p)] for d in D for p in P)
-        #     if weekly_lessons:
-        #         model += pulp.lpSum(weekly_lessons) <= data.teacher_weekly_cap, f"Teacher_Weekly_Cap_{t}"
+        if hasattr(data, 'teacher_weekly_cap') and data.teacher_weekly_cap > 0:
+            weekly_lessons = []
+            for assign in assignments:
+                if assign[0] == 'x':
+                    _, c, s = assign
+                    weekly_lessons.extend(x[(c, s, d, p)] for d in D for p in P)
+                else:
+                    _, c, s, g = assign
+                    weekly_lessons.extend(z[(c, s, g, d, p)] for d in D for p in P)
+            if weekly_lessons:
+                model += pulp.lpSum(weekly_lessons) <= data.teacher_weekly_cap, f"Teacher_Weekly_Cap_{t}"
 
         for d, p in itertools.product(D, P):
             lessons_in_slot = []
@@ -226,15 +216,11 @@ def build_and_solve_timetable(
                     _, c, s, g = assign
                     lessons_in_slot.append(z[(c, s, g, d, p)])
 
-             # Ограничение 1: Не более 1 урока в слот
-             # Теперь lessons_in_slot выглядит так:
-             # [ < объект LpVariable 'x_(' 9 A ',_' Алгебра ',_' Пн ',_3)' >, < объект LpVariable LpVariable
-             # 'x_(' 10 Б ',_' Геометрия ',_' Пн ',_3)' >]
+            # Ограничение 1: Не более 1 урока в слот
             if lessons_in_slot:
                 model += pulp.lpSum(lessons_in_slot) <= 1, f"Teacher_Slot_Clash_{t}_{d}_{p}"
 
             # Ограничение 2: Учет дней отдыха
-            # get(t, set())  set() - значение по умолчанию
             if d in data.days_off.get(t, set()) and lessons_in_slot:
                 model += pulp.lpSum(lessons_in_slot) == 0, f"Teacher_Day_Off_{t}_{d}_{p}"
 
@@ -259,6 +245,25 @@ def build_and_solve_timetable(
                 # разным подгруппам одного класса.
                 model += is_subj_taught[(c, s1, d, p)] + is_subj_taught[(c, s2, d, p)] <= 1, \
                     f"Incompatible_Pair_{c}_{d}_{p}_{s1}_{s2}"
+
+    # --- Логика для "анти-окон" (подсчет начала блоков занятий) ---
+    for c, d in itertools.product(C, D):
+        # Для первого урока дня, начало блока - это просто наличие урока.
+        # Если y(p0)=1, то srun(p0)=1. Если y(p0)=0, то srun(p0)=0.
+        p0 = P[0]
+        model += srun[(c, d, p0)] == y[(c, d, p0)], f"SRun_First_Period_{c}_{d}"
+
+        # Для остальных уроков, начало блока - это когда урок есть, а на предыдущем не было.
+        for i in range(1, len(P)):
+            p = P[i]
+            prev_p = P[i - 1]
+            # srun >= y(p) - y(p-1)
+            # Это неравенство заставляет srun стать 1, если y(p)=1 и y(prev_p)=0.
+            model += srun[(c, d, p)] >= y[(c, d, p)] - y[(c, d, prev_p)], f"SRun_Lower_Bound_{c}_{d}_{p}"
+            # srun <= y(p)
+            # Это неравенство не дает srun стать 1, если в текущем слоте урока нет (y(p)=0).
+            # Если же y(p)=1 и y(prev_p)=1, то srun >= 0. Минимизация в целевой функции сделает srun=0.
+            model += srun[(c, d, p)] <= y[(c, d, p)], f"SRun_Upper_Bound_{c}_{d}_{p}"
 
     # ------------------------------
     # Целевая функция (составная)
