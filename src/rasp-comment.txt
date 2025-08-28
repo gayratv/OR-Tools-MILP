@@ -1,4 +1,0 @@
-C, data.classes
-S,  предметы ["math", "cs", "eng", "labor"]
-D,  дни ["Mon", "Tue", "Wed", "Thu", "Fri"]
-P   data.periods [1, 2, 3, 4, 5, 6, 7]
