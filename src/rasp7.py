@@ -171,17 +171,6 @@ def build_and_solve_timetable(
 
     # Не больше 2 урока предмета в день (могут быть 2 алгебры)
 
-    # Переменные означают следующее:
-     # •C: Список всех Классов(например, '9А', '10Б').
-     # •S: Список всех предметов(Subjects), например, 'Математика', 'История'.
-     # •D: Список всех учебных Дней(например, 'Понедельник', 'Вторник').
-     # •P: Список всех уроков - Периодов в течение одного дня(например, 1, 2, 3, 4).
-     # •G: Список всех подгрупп(например, 'Группа 1', 'Группа 2').
-     # •x и z: Это бинарные переменные решения для модели
-     # •x — для уроков всего класса,
-     # •z — для уроков в подгруппах.
-     # Они равны 1, если урок запланирован на определенное время, и 0 в противном случае.
-
     for c, s, d in itertools.product(C, S, D):
         if s not in splitS and (c, s) in data.plan_hours:
             model += pulp.lpSum(x[(c, s, d, p)] for p in P) <= 2
@@ -189,6 +178,65 @@ def build_and_solve_timetable(
     for c, s, g, d in itertools.product(C, S, G, D):
         if s in splitS and (c, s, g) in data.subgroup_plan_hours:
             model += pulp.lpSum(z[(c, s, g, d, p)] for p in P) <= 2
+
+    # --- Ограничения для учителей ---
+    # Сначала создадим удобную структуру {учитель -> список его уроков}
+    by_teacher = {t: [] for t in data.teachers}
+    # Назначения для целых классов
+    for (c, s), t in data.assigned_teacher.items():
+        if s not in splitS:
+            by_teacher[t].append(('x', c, s))
+    # Назначения для подгрупп
+    if hasattr(data, 'subgroup_assigned_teacher'):
+        for (c, s, g), t in data.subgroup_assigned_teacher.items():
+            by_teacher[t].append(('z', c, s, g))
+
+    # Теперь проходим по каждому учителю и слоту
+    # by_teacher = {
+    #     "Иванов": [
+    #         ('x', '9A', 'Математика')
+    #     ],
+    #     "Петров": [
+    #         ('z', '9A', 'Английский', 1),
+    #         ('z', '9А', 'Английский', 2)
+    #     ]
+    #     # ... и так для каждого учителя
+    # }
+    for t, assignments in by_teacher.items():
+        # Ограничение на недельную нагрузку (если задано)
+        # if hasattr(data, 'teacher_weekly_cap') and data.teacher_weekly_cap > 0:
+        #     weekly_lessons = []
+        #     for assign in assignments:
+        #         if assign[0] == 'x':
+        #             _, c, s = assign
+        #             weekly_lessons.extend(x[(c, s, d, p)] for d in D for p in P)
+        #         else:
+        #             _, c, s, g = assign
+        #             weekly_lessons.extend(z[(c, s, g, d, p)] for d in D for p in P)
+        #     if weekly_lessons:
+        #         model += pulp.lpSum(weekly_lessons) <= data.teacher_weekly_cap, f"Teacher_Weekly_Cap_{t}"
+
+        for d, p in itertools.product(D, P):
+            lessons_in_slot = []
+            for assign in assignments:
+                if assign[0] == 'x':
+                    _, c, s = assign
+                    lessons_in_slot.append(x[(c, s, d, p)])
+                else:  # 'z'
+                    _, c, s, g = assign
+                    lessons_in_slot.append(z[(c, s, g, d, p)])
+
+             # Ограничение 1: Не более 1 урока в слот
+             # Теперь lessons_in_slot выглядит так:
+             # [ < объект LpVariable 'x_(' 9 A ',_' Алгебра ',_' Пн ',_3)' >, < объект LpVariable LpVariable
+             # 'x_(' 10 Б ',_' Геометрия ',_' Пн ',_3)' >]
+            if lessons_in_slot:
+                model += pulp.lpSum(lessons_in_slot) <= 1, f"Teacher_Slot_Clash_{t}_{d}_{p}"
+
+            # Ограничение 2: Учет дней отдыха
+            # get(t, set())  set() - значение по умолчанию
+            if d in data.days_off.get(t, set()) and lessons_in_slot:
+                model += pulp.lpSum(lessons_in_slot) == 0, f"Teacher_Day_Off_{t}_{d}_{p}"
 
     # --- Совместимость "делящихся" предметов ---
 
@@ -230,30 +278,29 @@ def build_and_solve_timetable(
 
     # 5) Пользовательские предпочтения
     #    a) по слотам класса
-    # Это     кусок     мягких     предпочтений    в    целевой    функции.Он     добавляет
-    # штрафы / бонусы     за    то, что    у    конкретного    класса    в    конкретный    день    и
-    # на    конкретной    паре    стоит    урок.
     obj_pref_class = pulp.lpSum(
         data.class_slot_weight.get((c, d, p), 0.0) * y[(c, d, p)]
         for c in C for d in D for p in P
     )
-    #    b) по слотам учителя (применяем к сумме x у всех его классов/предметов)
-    # Она    штрафует / поощряет    занятия    учителя    в    конкретные    день + пара.
-    # data.teacher_slot_weight = {
-    #     ("Petrov", "Fri", 7): 10.0,  # не хотим позднюю пятницу для Петрова
-    #     ("Ivanov", "Mon", 1): -2.0,  # Иванову удобно ранним утром в понедельник
-    # }
+    #    b) по слотам учителя (применяем к сумме x и z у всех его классов/предметов)
+    obj_pref_teacher_lessons = []
+    for t, assignments in by_teacher.items():
+        for d, p in itertools.product(D, P):
+            weight = data.teacher_slot_weight.get((t, d, p), 0.0)
+            if weight != 0.0:
+                lessons_in_slot = []
+                for assign in assignments:
+                    if assign[0] == 'x':
+                        _, c, s = assign
+                        lessons_in_slot.append(x[(c, s, d, p)])
+                    else:  # 'z'
+                        _, c, s, g = assign
+                        lessons_in_slot.append(z[(c, s, g, d, p)])
+                if lessons_in_slot:
+                    obj_pref_teacher_lessons.append(weight * pulp.lpSum(lessons_in_slot))
+    obj_pref_teacher = pulp.lpSum(obj_pref_teacher_lessons)
 
-    obj_pref_teacher = pulp.lpSum(
-        data.teacher_slot_weight.get((t, d, p), 0.0) * pulp.lpSum(x[(c, s, d, p)] for (c, s) in by_teacher.get(t, []))
-        for t in data.teachers for d in D for p in P
-    )
     #    c) по дню для конкретного предмета у класса
-    # data.class_subject_day_weight = {
-    #     ("5A", "math", "Mon"): 5.0,  # не хотим математику по понедельникам
-    #     ("5B", "eng", "Fri"): -3.0  # хорошо, если у 5B английский в пятницу
-    # }
-
     obj_pref_csd = pulp.lpSum(
         data.class_subject_day_weight.get((c, s, d), 0.0) * pulp.lpSum(x[(c, s, d, p)] for p in P)
         for c in C for s in S for d in D

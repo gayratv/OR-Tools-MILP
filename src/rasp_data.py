@@ -41,11 +41,6 @@ def create_timetable_data() -> InputData:
 
     teachers = ["Ivanov", "Petrov", "Sidorov", "Nikolaev"]
 
-    subgroup_assigned_teacher = {
-        ("5A", "eng", 1): "Sidorov", ("5A", "eng", 2): "Nikolaev",
-        ("5B", "eng", 1): "Sidorov", ("5B", "eng", 2): "Nikolaev"
-    }
-
     plan_hours = {
         ("5A", "math"): 2, ("5A", "cs"): 2, ("5A", "eng"): 2, ("5A", "labor"): 2,
         ("5B", "math"): 2, ("5B", "cs"): 2, ("5B", "eng"): 2, ("5B", "labor"): 2,
@@ -58,12 +53,14 @@ def create_timetable_data() -> InputData:
 
     assigned_teacher = {("5A", "math"): "Ivanov", ("5B", "math"): "Ivanov"}
 
+    subgroup_assigned_teacher = {
+        ("5A", "eng", 1): "Sidorov", ("5A", "eng", 2): "Nikolaev",
+        ("5B", "eng", 1): "Sidorov", ("5B", "eng", 2): "Nikolaev"
+    }
+
     # дни когда учитель не работает
     days_off = {
         "Petrov": {"Mon"},
-        "Ivanov": set(),
-        "Sidorov": set(),
-        "Nikolaev": set(),
     }
 
     # Пример предпочтений:
