@@ -5,7 +5,7 @@ Pretty-printers for timetables using InputData + solution vars.
 from typing import Dict, Tuple
 import pulp
 import openpyxl
-from openpyxl.styles import Font
+from openpyxl.styles import Font, Alignment
 
 from input_data import InputData
 
@@ -81,16 +81,18 @@ def print_by_teachers(data: InputData,
                         cell = f"{p}: {c} — {s}"
                         total += 1
                         break
+                # split
                 if cell is None:
-                    # split
+                    pieces = []
                     for (c, s, g), tt in data.subgroup_assigned_teacher.items():
                         if tt != t:
                             continue
                         varz = z.get((c, s, g, d, p))
                         if varz is not None and _val(varz) > 0.5:
-                            cell = f"{p}: {c} — {s}[g{g}]"
+                            pieces.append(f"{c} — {s}[g{g}]")
                             total += 1
-                            break
+                    if pieces:
+                        cell = f"{p}: " + " + ".join(pieces)
                 row.append(cell or f"{p}: —")
             print(f"{d} | " + ", ".join(row))
         print(f"Итого уроков за неделю: {total}")
@@ -99,92 +101,102 @@ def print_by_teachers(data: InputData,
 def summary_load(data: InputData,
                  x: Dict[Tuple, pulp.LpVariable],
                  z: Dict[Tuple, pulp.LpVariable]) -> None:
-    """Сводка по нагрузке для классов и учителей:
+    """Сводка по нагрузке для классов и учителей (оптимизированная):
        - общее количество
        - распределение по дням
-       - предупреждения о перегрузках
-       - сравнение со средним по дням
+       - подсчет 'окон' у учителей
+       - предупреждения о перегрузках и перекосах
     """
     print("\n================ СВОДКА НАГРУЗКИ ================")
+
+    # --- Предварительный расчет --- 
+    teacher_load_per_day = {t: {d: 0 for d in data.days} for t in data.teachers}
+    class_load_per_day = {c: {d: 0 for d in data.days} for c in data.classes}
+    teacher_busy_periods = {t: {d: [] for d in data.days} for t in data.teachers}
+
+    # не-делимые предметы
+    for (c, s, d, p), var in x.items():
+        if _val(var) > 0.5:
+            class_load_per_day[c][d] += 1
+            teacher = data.assigned_teacher.get((c, s))
+            if teacher:
+                teacher_load_per_day[teacher][d] += 1
+                teacher_busy_periods[teacher][d].append(p)
+
+    # делимые предметы
+    for (c, s, g, d, p), var in z.items():
+        if _val(var) > 0.5:
+            class_load_per_day[c][d] += 1
+            teacher = data.subgroup_assigned_teacher.get((c, s, g))
+            if teacher:
+                teacher_load_per_day[teacher][d] += 1
+                teacher_busy_periods[teacher][d].append(p)
 
     # --- по классам ---
     print("\n--- Классы ---")
     for c in data.classes:
-        total = 0
-        per_day = {d: 0 for d in data.days}
-        # non-split
-        for (cc, s), _ in data.assigned_teacher.items():
-            if cc == c:
-                for d in data.days:
-                    for p in data.periods:
-                        val = _val(x[(cc, s, d, p)])
-                        total += val
-                        per_day[d] += val
-        # split
-        for (cc, s, g), _ in data.subgroup_assigned_teacher.items():
-            if cc == c:
-                for d in data.days:
-                    for p in data.periods:
-                        val = _val(z[(cc, s, g, d, p)])
-                        total += val
-                        per_day[d] += val
-
+        per_day = class_load_per_day[c]
+        total = sum(per_day.values())
         avg = total / len(data.days) if data.days else 0
-        print(f"{c}: {int(total)} занятий/подгрупповых слотов за неделю (≈{avg:.1f}/день)")
-        warn_days = [d for d,v in per_day.items() if v > 7]
+
+        print(f"{c}: {total} занятий/подгрупповых слотов за неделю (≈{avg:.1f}/день)")
+        warn_days = [d for d, v in per_day.items() if v > 7]
         if warn_days:
             print(f"   ⚠️ Перегрузка {c} в днях {', '.join(warn_days)} (больше 7 уроков)")
-        # проверка на перекосы от среднего (>30% отклонение)
-        skew = [d for d,v in per_day.items() if abs(v - avg) > 0.3*avg and avg > 0]
+        skew = [d for d, v in per_day.items() if abs(v - avg) > 0.3 * avg and avg > 0]
         if skew:
             print(f"   ⚠️ Перекос нагрузки в днях: {', '.join(skew)} (сильно отличается от среднего {avg:.1f})")
-        print("   по дням:", ", ".join(f"{d}:{int(per_day[d])}" for d in data.days))
+        print("   по дням:", ", ".join(f"{d}:{v}" for d, v in per_day.items()))
 
     # --- по учителям ---
     print("\n--- Учителя ---")
     for t in data.teachers:
-        total = 0
-        per_day = {d: 0 for d in data.days}
-        # non-split
-        for (c, s), tt in data.assigned_teacher.items():
-            if tt == t:
-                for d in data.days:
-                    for p in data.periods:
-                        val = _val(x[(c, s, d, p)])
-                        total += val
-                        per_day[d] += val
-        # split
-        for (c, s, g), tt in data.subgroup_assigned_teacher.items():
-            if tt == t:
-                for d in data.days:
-                    for p in data.periods:
-                        val = _val(z[(c, s, g, d, p)])
-                        total += val
-                        per_day[d] += val
-
+        per_day = teacher_load_per_day[t]
+        total = sum(per_day.values())
         avg = total / len(data.days) if data.days else 0
-        print(f"{t}: {int(total)} занятий за неделю (лимит {data.teacher_weekly_cap}, ≈{avg:.1f}/день)")
+
+        print(f"{t}: {total} занятий за неделю (лимит {data.teacher_weekly_cap}, ≈{avg:.1f}/день)")
         if total > data.teacher_weekly_cap:
-            print(f"   ⚠️ {t} перегружен! Лимит {data.teacher_weekly_cap}, фактически {int(total)}")
-        warn_days = [d for d,v in per_day.items() if v > 8]
+            print(f"   ⚠️ {t} перегружен! Лимит {data.teacher_weekly_cap}, фактически {total}")
+        
+        # Окна
+        total_windows = 0
+        windows_details = []
+        for d in data.days:
+            busy_periods = sorted(teacher_busy_periods[t][d])
+            if len(busy_periods) > 1:
+                day_windows = 0
+                for i in range(len(busy_periods) - 1):
+                    day_windows += busy_periods[i+1] - busy_periods[i] - 1
+                if day_windows > 0:
+                    total_windows += day_windows
+                    windows_details.append(f"{d}:{day_windows}")
+        
+        if total_windows > 0:
+            print(f"   Окна за неделю: {total_windows} ({', '.join(windows_details)})")
+            if total_windows > 5: # Условный лимит
+                print(f"   ⚠️  У {t} много окон (больше 5)")
+
+        warn_days = [d for d, v in per_day.items() if v > 8]
         if warn_days:
             print(f"   ⚠️ Перегрузка {t} в днях {', '.join(warn_days)} (больше 8 уроков)")
-        skew = [d for d,v in per_day.items() if abs(v - avg) > 0.3*avg and avg > 0]
+        skew = [d for d, v in per_day.items() if abs(v - avg) > 0.3 * avg and avg > 0]
         if skew:
             print(f"   ⚠️ Перекос нагрузки в днях: {', '.join(skew)} (сильно отличается от среднего {avg:.1f})")
-        print("   по дням:", ", ".join(f"{d}:{int(per_day[d])}" for d in data.days))
+        print("   по дням:", ", ".join(f"{d}:{v}" for d, v in per_day.items()))
+
 
 def export_full_schedule_to_excel(filename: str,
                                   data: InputData,
                                   x: Dict[Tuple, pulp.LpVariable],
                                   z: Dict[Tuple, pulp.LpVariable]) -> None:
-    """Экспорт полного расписания в Excel: отдельные листы для классов и учителей"""
+    """Экспорт полного расписания и сводки в Excel-файл"""
     wb = openpyxl.Workbook()
+    bold_font = Font(bold=True)
 
     # --- Лист: расписание по классам ---
     ws_classes = wb.active
     ws_classes.title = "Классы_расписание"
-    # для каждого класса вставляем блок
     for c in data.classes:
         ws_classes.append([f"Класс {c}"])
         header = ["День"] + [f"Урок {p}" for p in data.periods]
@@ -195,8 +207,7 @@ def export_full_schedule_to_excel(filename: str,
                 cell = None
                 # non-split
                 for s in data.subjects:
-                    if s in data.split_subjects:
-                        continue
+                    if s in data.split_subjects: continue
                     if _val(x.get((c, s, d, p))) > 0.5:
                         t = data.assigned_teacher[(c, s)]
                         cell = f"{s} ({t})"
@@ -205,8 +216,7 @@ def export_full_schedule_to_excel(filename: str,
                 if cell is None:
                     pieces = []
                     for s in data.subjects:
-                        if s not in data.split_subjects:
-                            continue
+                        if s not in data.split_subjects: continue
                         for g in data.subgroup_ids:
                             if _val(z.get((c, s, g, d, p))) > 0.5:
                                 t = data.subgroup_assigned_teacher[(c, s, g)]
@@ -215,7 +225,7 @@ def export_full_schedule_to_excel(filename: str,
                         cell = "+".join(pieces)
                 row.append(cell or "—")
             ws_classes.append(row)
-        ws_classes.append([])  # пустая строка-разделитель
+        ws_classes.append([])
 
     # --- Лист: расписание по учителям ---
     ws_teachers = wb.create_sheet("Учителя_расписание")
@@ -229,30 +239,111 @@ def export_full_schedule_to_excel(filename: str,
                 cell = None
                 # non-split
                 for (c, s), tt in data.assigned_teacher.items():
-                    if tt != t:
-                        continue
+                    if tt != t: continue
                     if _val(x.get((c, s, d, p))) > 0.5:
                         cell = f"{c}-{s}"
                         break
                 # split
                 if cell is None:
+                    pieces = []
                     for (c, s, g), tt in data.subgroup_assigned_teacher.items():
-                        if tt != t:
-                            continue
+                        if tt != t: continue
                         if _val(z.get((c, s, g, d, p))) > 0.5:
-                            cell = f"{c}-{s}[g{g}]"
-                            break
+                            pieces.append(f"{c}-{s}[g{g}]")
+                    if pieces:
+                        cell = " + ".join(pieces)
                 row.append(cell or "—")
             ws_teachers.append(row)
         ws_teachers.append([])
 
-    # --- стиль заголовков ---
-    for ws in [ws_classes, ws_teachers]:
-        for row in ws.iter_rows(min_row=2, max_row=2):  # строка заголовков
+    # --- Лист: Сводка нагрузки ---
+    ws_summary = wb.create_sheet("Сводка_нагрузки")
+    teacher_load_per_day = {t: {d: 0 for d in data.days} for t in data.teachers}
+    class_load_per_day = {c: {d: 0 for d in data.days} for c in data.classes}
+    teacher_busy_periods = {t: {d: [] for d in data.days} for t in data.teachers}
+
+    for (c, s, d, p), var in x.items():
+        if _val(var) > 0.5:
+            class_load_per_day[c][d] += 1
+            teacher = data.assigned_teacher.get((c, s))
+            if teacher:
+                teacher_load_per_day[teacher][d] += 1
+                teacher_busy_periods[teacher][d].append(p)
+
+    for (c, s, g, d, p), var in z.items():
+        if _val(var) > 0.5:
+            class_load_per_day[c][d] += 1
+            teacher = data.subgroup_assigned_teacher.get((c, s, g))
+            if teacher:
+                teacher_load_per_day[teacher][d] += 1
+                teacher_busy_periods[teacher][d].append(p)
+
+    ws_summary.append(["Сводка по классам"]) 
+    ws_summary.cell(ws_summary.max_row, 1).font = bold_font
+    header = ["Класс", "Всего уроков", "Среднее в день"] + data.days + ["Предупреждения"]
+    ws_summary.append(header)
+
+    for c in data.classes:
+        per_day = class_load_per_day[c]
+        total = sum(per_day.values())
+        avg = total / len(data.days) if data.days else 0
+        warnings = []
+        warn_days = [d for d, v in per_day.items() if v > 7]
+        if warn_days: warnings.append(f"Перегрузка: {', '.join(warn_days)}")
+        skew = [d for d, v in per_day.items() if abs(v - avg) > 0.3 * avg and avg > 0]
+        if skew: warnings.append(f"Перекос: {', '.join(skew)}")
+        row = [c, total, f"{avg:.1f}"] + [per_day[d] for d in data.days] + [", ".join(warnings)]
+        ws_summary.append(row)
+
+    ws_summary.append([])
+    ws_summary.append(["Сводка по учителям"]) 
+    ws_summary.cell(ws_summary.max_row, 1).font = bold_font
+    header = ["Учитель", "Всего уроков", "Лимит", "Среднее в день", "Окна"] + data.days + ["Предупреждения"]
+    ws_summary.append(header)
+
+    for t in data.teachers:
+        per_day = teacher_load_per_day[t]
+        total = sum(per_day.values())
+        avg = total / len(data.days) if data.days else 0
+        
+        total_windows = 0
+        windows_details = []
+        for d in data.days:
+            busy_periods = sorted(teacher_busy_periods[t][d])
+            if len(busy_periods) > 1:
+                day_windows = sum(busy_periods[i+1] - busy_periods[i] - 1 for i in range(len(busy_periods) - 1))
+                if day_windows > 0: 
+                    total_windows += day_windows
+                    windows_details.append(f"{d}:{day_windows}")
+
+        warnings = []
+        if total > data.teacher_weekly_cap: warnings.append(f"Перегрузка ({total}/{data.teacher_weekly_cap})")
+        if total_windows > 5: warnings.append(f"Много окон ({total_windows})")
+        warn_days = [d for d, v in per_day.items() if v > 8]
+        if warn_days: warnings.append(f"Перегрузка по дням: {', '.join(warn_days)}")
+        skew = [d for d, v in per_day.items() if abs(v - avg) > 0.3 * avg and avg > 0]
+        if skew: warnings.append(f"Перекос: {', '.join(skew)}")
+
+        row = [t, total, data.teacher_weekly_cap, f"{avg:.1f}", f"{total_windows} ({', '.join(windows_details)})"] + [per_day[d] for d in data.days] + [", ".join(warnings)]
+        ws_summary.append(row)
+
+    # --- Авто-ширина колонок и стиль ---
+    for ws in wb.worksheets:
+        for col in ws.columns:
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(cell.value)
+                except: pass
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column].width = adjusted_width
+        for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
             for cell in row:
-                cell.font = Font(bold=True)
+                if cell.font.bold:
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
 
     wb.save(filename)
-    print(f"Полное расписание сохранено в {filename}")
-
+    print(f"Полное расписание и сводка сохранены в {filename}")
 

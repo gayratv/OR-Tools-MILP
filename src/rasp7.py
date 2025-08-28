@@ -45,6 +45,7 @@ import pulp
 
 from input_data import InputData, OptimizationWeights
 from rasp_data import create_timetable_data
+from print_schedule import print_by_classes, print_by_teachers, summary_load, export_full_schedule_to_excel
 
 
 # ------------------------------
@@ -259,9 +260,7 @@ def build_and_solve_timetable(
         model += srun[(c, d, p0)] == y[(c, d, p0)], f"SRun_First_Period_{c}_{d}"
 
         # Для остальных уроков, начало блока - это когда урок есть, а на предыдущем не было.
-        for i in range(1, len(P)):
-            p = P[i]
-            prev_p = P[i - 1]
+        for prev_p, p in zip(P, P[1:]):
             # srun >= y(p) - y(p-1)
             # Это неравенство заставляет srun стать 1, если y(p)=1 и y(prev_p)=0.
             model += srun[(c, d, p)] >= y[(c, d, p)] - y[(c, d, prev_p)], f"SRun_Lower_Bound_{c}_{d}_{p}"
@@ -289,6 +288,9 @@ def build_and_solve_timetable(
     # ------------------------------
     # 1) Анти-окна: минимизировать число пустых окон у классов между уроками
     obj_runs = pulp.lpSum(srun[(c, d, p)] for c, d, p in itertools.product(C, D, P))
+
+    # 2) Ранние слоты: легкое предпочтение ранних уроков
+    obj_early = pulp.lpSum(p * y[(c, d, p)] for c, d, p in itertools.product(C, D, P))
 
     # 3) Баланс по дням (L1-норма отклонений) - более менее равномерное распределение уроков по дням
     obj_balance = pulp.lpSum(dev_pos[(c, d)] + dev_neg[(c, d)] for c, d in itertools.product(C, D))
@@ -332,7 +334,9 @@ def build_and_solve_timetable(
                 class_subj_day_lessons.append(total_slots_on_day * w)
     obj_pref_class_subj_day = pulp.lpSum(class_subj_day_lessons)
 
+
     model += (alpha_runs * obj_runs +
+              beta_early * obj_early +
               gamma_balance * obj_balance +
               delta_tail * obj_tail +
               pref_scale * (obj_pref_class_slot + obj_pref_teacher_slot + obj_pref_class_subj_day)
@@ -351,32 +355,39 @@ def build_and_solve_timetable(
     if log:
         print("Статус решения:", pulp.LpStatus[model.status])
 
-    hIghs = highspy.Highs()
-    hIghs.setOptionValue("threads", 16)
-    hIghs.setOptionValue("mip_rel_gap", 0.05)
-    hIghs.readModel(lp_path)
-    hIghs.run()
+    if model.status == pulp.LpStatusOptimal:
+        hIghs = highspy.Highs()
+        hIghs.setOptionValue("threads", 16)
+        hIghs.setOptionValue("mip_rel_gap", 0.05)
+        hIghs.readModel(lp_path)
+        hIghs.run()
 
-    status = hIghs.getModelStatus()
-    obj = hIghs.getObjectiveValue()
-    if log:
-        print("Статус HiGHS:", status, "Obj:", obj)
+        status = hIghs.getModelStatus()
+        obj = hIghs.getObjectiveValue()
+        if log:
+            print("Статус HiGHS:", status, "Obj:", obj)
 
-    # Загружаем решение обратно
-    sol = hIghs.getSolution().col_value
-    col_names = hIghs.getLp().col_names_
-    values = {name: val for name, val in zip(col_names, sol)}
+        # Загружаем решение обратно
+        sol = hIghs.getSolution().col_value
+        col_names = hIghs.getLp().col_names_
+        values = {name: val for name, val in zip(col_names, sol)}
 
-    missed = 0
-    for var in model.variables():
-        if var.name in values:
-            var.varValue = values[var.name]
-        else:
-            var.varValue = 0.0
-            missed += 1
-    print("Vars with no value from HiGHS:", missed)
+        missed = 0
+        for var in model.variables():
+            if var.name in values:
+                var.varValue = values[var.name]
+            else:
+                var.varValue = 0.0
+                missed += 1
+        print("Vars with no value from HiGHS:", missed)
 
-    return model, x, y
+        # --- Вывод результатов ---
+        print_by_classes(data, x, z)
+        print_by_teachers(data, x, z)
+        # summary_load(data, x, z)
+        # export_full_schedule_to_excel("timetable_solution.xlsx", data, x, z)
+
+    return model, x, y, z
 
 
 # ------------------------------
