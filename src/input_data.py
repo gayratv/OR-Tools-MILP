@@ -33,6 +33,9 @@ TeacherSlotWeight = Dict[Tuple[str, str, int], float]
 #  - по сочетанию (class, subject, day)
 ClassSubjectDayWeight = Dict[Tuple[str, str, str], float]
 
+# Жесткие запреты на слоты для классов: {(class, day, period), ...}
+ForbiddenSlots = Set[Tuple[str, str, int]]
+
 
 @dataclass
 class InputData:
@@ -57,6 +60,7 @@ class InputData:
     Ограничения/предпочтения:
       - days_off: выходные/недоступные дни учителей
       - teacher_weekly_cap: лимит недельной нагрузки учителя
+      - forbidden_slots: жесткий запрет на проведение ЛЮБЫХ уроков для класса в данном слоте
       - class_slot_weight, teacher_slot_weight, class_subject_day_weight: мягкие цели
 
     Совместимость подгрупп:
@@ -74,7 +78,6 @@ class InputData:
     teachers: Teachers
 
     # --- Подгруппы ---
-
     split_subjects: Set[str] = field(default_factory=set)
     subgroup_ids: Subgroups = field(default_factory=lambda: [1, 2])
 
@@ -86,9 +89,12 @@ class InputData:
     assigned_teacher: AssignedTeacher = field(default_factory=dict)
     subgroup_assigned_teacher: SubgroupAssignedTeacher = field(default_factory=dict)
 
-    # --- Недоступные дни / лимиты ---
+    # --- Недоступные дни / лимиты / запреты ---
     days_off: DaysOff = field(default_factory=dict)
     teacher_weekly_cap: int = 35
+
+    # запрщенные слоты для конкретного класса
+    forbidden_slots: ForbiddenSlots = field(default_factory=set)
 
     # --- Мягкие цели (необязательно) ---
     class_slot_weight: ClassSlotWeight = field(default_factory=dict)

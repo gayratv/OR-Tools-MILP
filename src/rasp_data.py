@@ -63,6 +63,11 @@ def create_timetable_data() -> InputData:
         "Petrov": {"Mon"},
     }
 
+    # Жесткие запреты на слоты для классов
+    forbidden_slots = {
+        ('5A', 'Mon', 1),  # Классу 5А нельзя проводить уроки в понедельник на 1-м уроке
+    }
+
     # Пример предпочтений:
     #  - Штрафуем поздние слоты у 5A по пятницам
     class_slot_weight = {
@@ -87,6 +92,7 @@ def create_timetable_data() -> InputData:
         subgroup_assigned_teacher=subgroup_assigned_teacher,
         compatible_pairs=make_default_compat(),
         days_off=days_off,
+        forbidden_slots=forbidden_slots,
         class_slot_weight=class_slot_weight,
         teacher_slot_weight=teacher_slot_weight,
         class_subject_day_weight=class_subject_day_weight

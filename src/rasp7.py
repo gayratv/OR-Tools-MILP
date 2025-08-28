@@ -137,6 +137,11 @@ def build_and_solve_timetable(
     for (c, s, g), h in data.subgroup_plan_hours.items():
         model += pulp.lpSum(z[(c, s, g, d, p)] for d in D for p in P) == h
 
+    # Жесткие запреты на слоты для классов
+    for c, d, p in data.forbidden_slots:
+        if c in C and d in D and p in P:
+            model += y[(c, d, p)] == 0, f"Forbidden_Slot_{c}_{d}_{p}"
+
     # Не больше 1 non-split в слот у класса
     for c, d, p in itertools.product(C, D, P):
         model += pulp.lpSum(x[(c, s, d, p)] for s in S if s not in splitS) <= 1  # splitS - set разбиваемых уроков
