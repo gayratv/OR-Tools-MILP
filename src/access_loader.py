@@ -53,7 +53,9 @@ def load_data_from_access(db_path: str) -> InputData:
                     # df[col] = df[col].str.strip()
                     df[col] = df[col].str.replace(r'\s+', ' ', regex=True).str.strip()
 
-                # Устанавл
+            # Явное преобразование столбца со значениями в числовой, а затем в целый тип.
+            # Это решает проблему с float (например, 2.0 вместо 2)
+            df[value_col] = pd.to_numeric(df[value_col], errors='coerce').fillna(0).astype(int)
 
             # Устанавливаем колонки-ключи как индекс и преобразуем оставшуюся колонку в словарь
             dict1 = df.set_index(key_cols)[value_col].to_dict()
