@@ -5,7 +5,7 @@
 # periods: список номеров уроков, например [1,2,3,4,5,6,7]
 # classes: список классов, например ["5A", "5B"]
 # subjects: список предметов, например ["math", "cs", "eng"]
-# teachers: список учителей, например ["Ivanov", "Petrov"]
+# teachers: список учителей, например ["Ivanov E K ", "Petrov"]
 # plan_hours: словарь {(class, subject): часы в неделю}
 # assigned_teacher: словарь {(class, subject): teacher}
 # days_off: словарь {teacher: {дни, когда не работает}}
@@ -25,8 +25,8 @@ def make_default_compat():
 
     # здесь надо записать только разные предметы
     add("cs", "eng")
-    add("labor", "labor")
-    add("cs", "cs")
+    # add("labor", "labor")
+    # add("cs", "cs")
     return allowed
 
 
@@ -34,23 +34,26 @@ def create_timetable_data() -> InputData:
     days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
     periods = list(range(1, 8))
     classes = ["5A", "5B"]
-    subjects = ["math", "cs", "eng", "labor"]
+    subjects = ["math", "cs", "eng", "labor", "history"]
     split_subjects = {"eng", "cs", "labor"}
-    teachers = ["Ivanov", "Petrov", "Sidorov", "Nikolaev", "Smirnov"]
+    teachers = ["Ivanov E K ", "Petrov", "Sidorov", "Nikolaev", "Smirnov", "Voloshin"]
 
     # --- Учебный план ---
     # Только НЕ-делимые предметы
     plan_hours = {
         ("5A", "math"): 2,
         ("5B", "math"): 2,
+        ("5A", "history"): 2,
+        ("5B", "history"): 2,
+
     }
 
     # Только ДЕЛИМЫЕ предметы (по подгруппам)
     subgroup_plan_hours = {
         # 5A
-        ("5A", "eng", 1): 1, ("5A", "eng", 2): 1,
-        ("5A", "cs", 1): 1, ("5A", "cs", 2): 1,
-        ("5A", "labor", 1): 1, ("5A", "labor", 2): 1,
+        ("5A", "eng", 1): 2, ("5A", "eng", 2): 2,
+        ("5A", "cs", 1): 2, ("5A", "cs", 2): 2,
+        # ("5A", "labor", 1): 1, ("5A", "labor", 2): 1,
         # 5B
         ("5B", "eng", 1): 1, ("5B", "eng", 2): 1,
         ("5B", "cs", 1): 1, ("5B", "cs", 2): 1,
@@ -60,14 +63,17 @@ def create_timetable_data() -> InputData:
     # --- Закрепление учителей ---
     # НЕ-делимые
     assigned_teacher = {
-        ("5A", "math"): "Ivanov",
-        ("5B", "math"): "Ivanov"
+        ("5A", "math"): "Ivanov E K ",
+        ("5B", "math"): "Ivanov E K ",
+        ("5A", "history"): "Voloshin",
+        ("5B", "history"): "Voloshin"
     }
 
     # ДЕЛИМЫЕ (по подгруппам)
     subgroup_assigned_teacher = {
         # 5A
-        ("5A", "eng", 1): "Sidorov", ("5A", "eng", 2): "Nikolaev",
+        ("5A", "eng", 1): "Sidorov",
+        ("5A", "eng", 2): "Nikolaev",
         ("5A", "cs", 1): "Petrov", ("5A", "cs", 2): "Petrov",
         ("5A", "labor", 1): "Smirnov", ("5A", "labor", 2): "Smirnov",
         # 5B
