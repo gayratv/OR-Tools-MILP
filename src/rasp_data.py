@@ -13,7 +13,7 @@
 # class_preferences: {class -> {day -> weight}} — мягкие предпочтения по дням
 
 
-from input_data import InputData
+from input_data_OptimizationWeights_types import InputData
 
 
 def make_default_compat():

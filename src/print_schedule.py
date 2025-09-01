@@ -7,7 +7,7 @@ import pulp
 import openpyxl
 from openpyxl.styles import Font, Alignment
 
-from input_data import InputData
+from input_data_OptimizationWeights_types import InputData
 
 
 def _val(var) -> float:

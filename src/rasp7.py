@@ -43,7 +43,7 @@ import itertools
 import highspy
 import pulp
 
-from input_data import InputData, OptimizationWeights
+from input_data_OptimizationWeights_types import InputData, OptimizationWeights
 from rasp_data import create_timetable_data
 from print_schedule import print_by_classes, print_by_teachers, summary_load, export_full_schedule_to_excel
 
