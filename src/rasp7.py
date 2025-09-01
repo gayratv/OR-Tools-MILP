@@ -44,7 +44,9 @@ import highspy
 import pulp
 
 from input_data_OptimizationWeights_types import InputData, OptimizationWeights
-from rasp_data import create_timetable_data
+from access_loader import load_data_from_access
+from rasp_data import create_timetable_data as create_manual_data
+from rasp_data_generated import create_timetable_data as create_generated_data
 from print_schedule import print_by_classes, print_by_teachers, summary_load, export_full_schedule_to_excel
 
 
@@ -396,7 +398,27 @@ def build_and_solve_timetable(
 # Пример запуска
 # ------------------------------
 if __name__ == "__main__":
-    data = create_timetable_data()
+    # --- ВЫБЕРИТЕ ИСТОЧНИК ДАННЫХ ---
+    # 'db'        - загрузка "вживую" из базы данных MS Access
+    # 'manual'    - использование данных из файла rasp_data.py (ручные, для тестов)
+    # 'generated' - использование данных из файла rasp_data_generated.py (снимок базы)
+    data_source = 'generated'  # <--- ИЗМЕНИТЕ ЗДЕСЬ
+
+    data = None
+    if data_source == 'db':
+        print("--- Источник данных: MS Access DB ---")
+        db_path = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3.accdb"
+        data = load_data_from_access(db_path)
+    elif data_source == 'generated':
+        print("--- Источник данных: сгенерированный файл (rasp_data_generated.py) ---")
+        data = create_generated_data()
+    elif data_source == 'manual':
+        print("--- Источник данных: ручной файл (rasp_data.py) ---")
+        data = create_manual_data()
+
+    if data is None:
+        print(f"Ошибка: не удалось загрузить данные из источника '{data_source}'. Проверьте настройки.")
+        exit()
 
     build_and_solve_timetable(
         data,

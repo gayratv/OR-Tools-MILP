@@ -145,7 +145,7 @@ def load_data_from_access(db_path: str) -> InputData:
     # --- Сборка и возврат объекта InputData ---
     return InputData(
         days=days,
-        periods=list(range(1, 8)),
+        periods=list(range(1, 9)),
         classes=classes, subjects=subjects, teachers=teachers,
         split_subjects=split_subjects,
         plan_hours=plan_hours, subgroup_plan_hours=subgroup_plan_hours,
