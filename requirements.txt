@@ -4,3 +4,5 @@ pandas
 pulp
 highspy
 openpyxl
+sqlalchemy
+sqlalchemy-access

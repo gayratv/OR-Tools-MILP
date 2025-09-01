@@ -32,7 +32,7 @@ def make_default_compat():
 
 def create_timetable_data() -> InputData:
     days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
-    periods = list(range(1, 8))
+    periods = list(range(1, 8)) # от 1 до 7
     classes = ["5A", "5B"]
     subjects = ["math", "cs", "eng", "labor", "history"]
     split_subjects = {"eng", "cs", "labor"}
@@ -82,8 +82,10 @@ def create_timetable_data() -> InputData:
         ("5B", "labor", 1): "Smirnov", ("5B", "labor", 2): "Smirnov",
     }
 
-    days_off = {"Petrov": {"Mon"}}
-    forbidden_slots = {('5A', 'Mon', 1)}
+    days_off = {"Petrov": {"Mon", "Tue"}}
+    forbidden_slots = {('5A', 'Mon', 1), ('5A', 'Tue', 2)}
+
+    # Штраф или бонус за назначение урока классу 'c' в конкретный день 'd' и период 'p'.
     class_slot_weight = {("5A", "Fri", 7): 10.0, ("5A", "Fri", 6): 5.0}
     teacher_slot_weight = {("Petrov", "Tue", 1): 8.0}
     class_subject_day_weight = {("5B", "math", "Mon"): 6.0}

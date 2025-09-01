@@ -1,33 +1,32 @@
-import pyodbc
 import pandas as pd
+from sqlalchemy import create_engine
+from urllib.parse import quote_plus
 
 # надо установить Microsoft Access Database Engine 2016 Redistributable
 # https://www.microsoft.com/en-us/download/details.aspx?id=54920&utm_source=chatgpt.com
 
 # путь к вашей базе Access (.mdb или .accdb)
-db_file = r"F:\_prg\python\OR-Tools-MILP\src\db\rasp.accdb"
+db_file = r"F:\_prg\python\OR-Tools-MILP\src\db\rasp2.accdb"
 
 # строка подключения (для новых версий Access — драйвер "Microsoft Access Driver (*.mdb, *.accdb)")
-conn_str = (
+conn_str_raw = (
     r"DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};"
     fr"DBQ={db_file};"
 )
 
-# подключение
-conn = pyodbc.connect(conn_str)
+# Для подавления UserWarning и соответствия лучшим практикам pandas
+# рекомендуется использовать SQLAlchemy для создания соединения.
+quoted_conn_str = quote_plus(conn_str_raw)
+engine = create_engine(f"access+pyodbc:///?odbc_connect={quoted_conn_str}")
 
 # пример: читаем таблицу MyTable в DataFrame
-df = pd.read_sql("SELECT * FROM в_аудитории", conn)
+df = pd.read_sql("SELECT NAIME FROM vCLASS", engine)
+classes = df["NAIME"].tolist()
 
-# query = "SELECT * FROM Orders WHERE Year(OrderDate) = 2025"
 
-# year = 2025
-# query = "SELECT * FROM Orders WHERE Year(OrderDate) = ?"
-# df = pd.read_sql(query, conn, params=[year])
+print(f"\n--- Полученный список классов из столбца NAIME ---")
+print(classes)
 
-# по умолчанию показывает первые 5 строк DataFrame. Показывает 10
-# print(df.head(10))
+print(type(classes))
 
-print(df)
-
-conn.close()
+# subjects = ["math", "cs", "eng", "labor", "history"]

@@ -300,6 +300,7 @@ def build_and_solve_timetable(
 
     # 5) Пользовательские предпочтения
     #    a) по слотам класса (class_slot_weight)
+    #       Штраф или бонус за назначение урока классу 'c' в конкретный день 'd' и период 'p'.
     obj_pref_class_slot = pulp.lpSum(
         y[(c, d, p)] * w
         for (c, d, p), w in data.class_slot_weight.items()
@@ -307,6 +308,7 @@ def build_and_solve_timetable(
     )
 
     #    b) по слотам учителя (teacher_slot_weight)
+    #       Штраф или бонус за назначение урока учителю 't' в конкретный день 'd' и период 'p'.
     teacher_slot_lessons = []
     for (t, d, p), w in data.teacher_slot_weight.items():
         if t in by_teacher and d in D and p in P:
