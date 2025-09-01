@@ -38,7 +38,9 @@ def load_data_from_access(db_path: str) -> InputData:
             print(f"ВНИМАНИЕ: Не удалось загрузить {view_name}. Возвращен пустой список. Ошибка: {e}")
             return []
 
-    def get_dict(view_name: str, key_cols: list, value_col: str, print_dict: bool = False) -> dict:
+    # def get_dict(view_name: str, key_cols: list, value_col: str, print_dict: bool = False) -> dict:
+    def get_dict(view_name: str, key_cols: list, value_col: str, value_is_numeric: bool = False, print_dict: bool = False) -> dict:
+
         """Читает представление и возвращает как словарь { (ключи): значение }."""
         try:
             df = pd.read_sql(f"SELECT * FROM {view_name}", engine)
@@ -55,7 +57,10 @@ def load_data_from_access(db_path: str) -> InputData:
 
             # Явное преобразование столбца со значениями в числовой, а затем в целый тип.
             # Это решает проблему с float (например, 2.0 вместо 2)
-            df[value_col] = pd.to_numeric(df[value_col], errors='coerce').fillna(0).astype(int)
+            if value_is_numeric:
+                # Явное преобразование столбца со значениями в числовой, а затем в целый тип.
+                # Это решает проблему с float (например, 2.0 вместо 2).
+                df[value_col] = pd.to_numeric(df[value_col], errors='coerce').fillna(0).astype(int)
 
             # Устанавливаем колонки-ключи как индекс и преобразуем оставшуюся колонку в словарь
             dict1 = df.set_index(key_cols)[value_col].to_dict()
@@ -85,19 +90,18 @@ def load_data_from_access(db_path: str) -> InputData:
 
     # 2. Словари (учебные планы, назначения)
     # plan_hours = {("5A", "math"): 2, ("5B", "math"): 2, ...}
-    plan_hours = get_dict("vНагрузка_по_классам", ["CLASS", "Subject"], "Hours")
+    plan_hours = get_dict("vНагрузка_по_классам", ["CLASS", "Subject"], "Hours",value_is_numeric=True)
     # print(plan_hours)
     # print(type(plan_hours))
 
     # subgroup_plan_hours = {("5A", "eng", 1): 2, ("5A", "eng", 2): 2, ...}
-    subgroup_plan_hours = get_dict("v_subgroup_plan_hours", ["CLASS", "SubjectName", "Subgroup"], "Hours")
+    subgroup_plan_hours = get_dict("v_subgroup_plan_hours", ["CLASS", "SubjectName", "Subgroup"], "Hours",value_is_numeric=True)
     # print(subgroup_plan_hours)
     # print(type(subgroup_plan_hours))
 
 
     # assigned_teacher = {("5A", "math"): "Ivanov E K ", ...}
-    assigned_teacher = get_dict("v_assigned_teacher", ["CLASS", "SubjectName"], "Teacher",)
-    # return
+    assigned_teacher = get_dict("v_assigned_teacher", ["CLASS", "SubjectName"], "Teacher")
 
     # subgroup_assigned_teacher = {("5A", "eng", 1): "Sidorov", ...}
     subgroup_assigned_teacher = get_dict("v_subgroup_assigned_teacher", ["ClassName", "SubjectName", "SUBGROUP"], "TeacherName",)
@@ -121,16 +125,16 @@ def load_data_from_access(db_path: str) -> InputData:
     # Веса для предпочтений
     # class_slot_weight = {("5A", "Fri", 7): 10.0, ("5A", "Fri", 6): 5.0}
     # Штраф или бонус за назначение урока классу 'c' в конкретный день 'd' и период 'p'.
-    class_slot_weight = get_dict("v_class_slot_weight", ["ClassName", "day_of_week", "slot"], "weight")
+    class_slot_weight = get_dict("v_class_slot_weight", ["ClassName", "day_of_week", "slot"], "weight",value_is_numeric=True)
     # pprint(class_slot_weight)
 
     #       Штраф или бонус за назначение урока учителю 't' в конкретный день 'd' и период 'p'.
     # teacher_slot_weight = {("Petrov", "Tue", 1): 8.0}
-    teacher_slot_weight = get_dict("v_teacher_slot_weight", ["TeacherName", "day_of_week", "slot"], "weight")
+    teacher_slot_weight = get_dict("v_teacher_slot_weight", ["TeacherName", "day_of_week", "slot"], "weight",value_is_numeric=True)
     # pprint(teacher_slot_weight)
 
     # class_subject_day_weight = {("5B", "math", "Mon"): 6.0}
-    class_subject_day_weight = get_dict("v_class_subject_day_weight", ["ClassName", "SubjectName", "day_of_week"], "weight",)
+    class_subject_day_weight = get_dict("v_class_subject_day_weight", ["ClassName", "SubjectName", "day_of_week"], "weight",value_is_numeric=True)
 
 
     # Совместимость пар

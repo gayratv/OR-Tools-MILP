@@ -389,7 +389,7 @@ def build_and_solve_timetable(
         print_by_classes(data, x, z)
         # print_by_teachers(data, x, z)
         # summary_load(data, x, z)
-        # export_full_schedule_to_excel("timetable_solution.xlsx", data, x, z)
+        export_full_schedule_to_excel("timetable_solution.xlsx", data, x, z)
 
     return model, x, y, z
 

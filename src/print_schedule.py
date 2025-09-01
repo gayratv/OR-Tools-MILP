@@ -11,7 +11,11 @@ from input_data_OptimizationWeights_types import InputData
 
 
 def _val(var) -> float:
-    return float(pulp.value(var)) if var is not None else 0.0
+    if var is None:
+        return 0.0
+    # pulp.value(var) может вернуть None, если значение переменной не определено
+    val = pulp.value(var)
+    return float(val) if val is not None else 0.0
 
 
 def print_by_classes(data: InputData,
@@ -346,4 +350,3 @@ def export_full_schedule_to_excel(filename: str,
 
     wb.save(filename)
     print(f"Полное расписание и сводка сохранены в {filename}")
-
