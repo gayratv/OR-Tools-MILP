@@ -28,7 +28,12 @@ def load_data_from_access(db_path: str) -> InputData:
         """Читает один столбец из представления и возвращает как Python list."""
         try:
             df = pd.read_sql(f"SELECT {column_name} FROM {view_name}", engine)
-            return df[column_name].tolist()
+            # return df[column_name].tolist()
+            # Очищаем строки от лишних пробелов и символов переноса
+            # return df[column_name].str.strip().tolist()
+            return df[column_name].str.replace(r'\s+', ' ', regex=True).str.strip().tolist()
+
+
         except Exception as e:
             print(f"ВНИМАНИЕ: Не удалось загрузить {view_name}. Возвращен пустой список. Ошибка: {e}")
             return []
@@ -39,6 +44,17 @@ def load_data_from_access(db_path: str) -> InputData:
             df = pd.read_sql(f"SELECT * FROM {view_name}", engine)
             if df.empty:
                 return {}
+
+            # Очищаем все строковые столбцы от лишних пробелов и символов переноса.
+            # Это касается и ключей, и значений будущего словаря.
+            for col in df.columns:
+                # Проверяем, что тип столбца - 'object', что обычно означает строки в pandas
+                if df[col].dtype == 'object':
+                    # df[col] = df[col].str.strip()
+                    df[col] = df[col].str.replace(r'\s+', ' ', regex=True).str.strip()
+
+                # Устанавл
+
             # Устанавливаем колонки-ключи как индекс и преобразуем оставшуюся колонку в словарь
             dict1 = df.set_index(key_cols)[value_col].to_dict()
             if print_dict:
@@ -78,11 +94,11 @@ def load_data_from_access(db_path: str) -> InputData:
 
 
     # assigned_teacher = {("5A", "math"): "Ivanov E K ", ...}
-    assigned_teacher = get_dict("v_assigned_teacher", ["CLASS", "SubjectName"], "Teacher")
-
+    assigned_teacher = get_dict("v_assigned_teacher", ["CLASS", "SubjectName"], "Teacher",)
+    # return
 
     # subgroup_assigned_teacher = {("5A", "eng", 1): "Sidorov", ...}
-    subgroup_assigned_teacher = get_dict("v_subgroup_assigned_teacher", ["ClassName", "SubjectName", "SUBGROUP"], "TeacherName")
+    subgroup_assigned_teacher = get_dict("v_subgroup_assigned_teacher", ["ClassName", "SubjectName", "SUBGROUP"], "TeacherName",)
 
 
     # 3. Более сложные структуры
@@ -147,7 +163,7 @@ if __name__ == '__main__':
     from pprint import pprint
 
     # Путь к базе данных для тестового запуска
-    db_path_for_test = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp2.accdb"
+    db_path_for_test = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3.accdb"
 
     print(f"--- Запускаем тестовую загрузку данных из {db_path_for_test} ---")
     data_from_db = load_data_from_access(db_path_for_test)
