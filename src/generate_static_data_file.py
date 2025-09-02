@@ -92,7 +92,7 @@ def create_timetable_data() -> InputData:
 if __name__ == '__main__':
     # Определяем пути
     project_root = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(project_root, 'db', 'rasp3.accdb')
+    db_path = os.path.join(project_root, 'db', 'rasp3-new-calculation.accdb')
     output_file_path = os.path.join(project_root, 'rasp_data_generated.py')
 
     # 1. Загружаем данные из Access
