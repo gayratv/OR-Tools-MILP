@@ -40,9 +40,9 @@ def print_by_classes(data: InputData,
                 for s in subjects:
                     if s in split_subjects:
                         continue
-                    var = x.get((c, s, d, p))
-                    if var is not None and _val(var) > 0.5:
-                        t = data.assigned_teacher[(c, s)]
+                    if _val(x.get((c, s, d, p))) > 0.5:
+                        # Безопасно получаем учителя
+                        t = data.assigned_teacher.get((c, s), "БЕЗ_УЧИТЕЛЯ")
                         cell = f"{p}: {s} ({t})"
                         total_lessons += 1
                         break
@@ -53,9 +53,9 @@ def print_by_classes(data: InputData,
                         if s not in split_subjects:
                             continue
                         for g in data.subgroup_ids:
-                            varz = z.get((c, s, g, d, p))
-                            if varz is not None and _val(varz) > 0.5:
-                                t = data.subgroup_assigned_teacher[(c, s, g)]
+                            if _val(z.get((c, s, g, d, p))) > 0.5:
+                                # Безопасно получаем учителя
+                                t = data.subgroup_assigned_teacher.get((c, s, g), "БЕЗ_УЧИТЕЛЯ")
                                 pieces.append(f"{s}[g{g}::{t}]")
                                 total_lessons += 1
                     if pieces:
@@ -216,7 +216,7 @@ def export_full_schedule_to_excel(filename: str,
                 for s in data.subjects:
                     if s in data.split_subjects: continue
                     if _val(x.get((c, s, d, p))) > 0.5:
-                        t = data.assigned_teacher[(c, s)]
+                        t = data.assigned_teacher.get((c, s), "БЕЗ_УЧИТЕЛЯ")
                         cell = f"{s} ({t})"
                         break
                 # split
@@ -226,7 +226,7 @@ def export_full_schedule_to_excel(filename: str,
                         if s not in data.split_subjects: continue
                         for g in data.subgroup_ids:
                             if _val(z.get((c, s, g, d, p))) > 0.5:
-                                t = data.subgroup_assigned_teacher[(c, s, g)]
+                                t = data.subgroup_assigned_teacher.get((c, s, g), "БЕЗ_УЧИТЕЛЯ")
                                 pieces.append(f"{s}[g{g}::{t}]")
                     if pieces:
                         cell = "+".join(pieces)

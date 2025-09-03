@@ -131,15 +131,23 @@ def build_and_solve_timetable(
     # Ограничения
     # ------------------------------
 
-    # Учебный план
-    # с- class s - предмет h - часы
-    for (c, s), h in data.plan_hours.items():
-        model += pulp.lpSum(x[(c, s, d, p)] for d in D for p in P) == h, f"Plan_{c}_{s}"
+    # --- Учебный план ---
+    # Проходим по всем возможным урокам и накладываем ограничения
 
-    # План часов: split по подгруппам
-    # z- если есть урок в подгруппе
-    for (c, s, g), h in data.subgroup_plan_hours.items():
-        model += pulp.lpSum(z[(c, s, g, d, p)] for d in D for p in P) == h
+    # Для обычных (неделимых) предметов
+    for c, s in itertools.product(C, S):
+        if s not in splitS:
+            required_hours = data.plan_hours.get((c, s), 0)
+            model += pulp.lpSum(x[(c, s, d, p)] for d in D for p in P) == required_hours, f"Plan_{c}_{s}"
+
+    # Для делимых предметов
+    for c, s, g in itertools.product(C, S, G):
+        if s in splitS:
+            # Получаем требуемые часы из плана. Если урока нет в плане, требуемые часы = 0.
+            # Это ключевое исправление: мы явно запрещаем назначать уроки, которых нет в плане.
+            required_hours = data.subgroup_plan_hours.get((c, s, g), 0)
+            model += pulp.lpSum(z[(c, s, g, d, p)] for d in D for p in P) == required_hours, f"Subgroup_Plan_{c}_{s}_{g}"
+
 
     # Жесткие запреты на слоты для классов
     for c, d, p in data.forbidden_slots:
