@@ -47,7 +47,7 @@ from input_data_OptimizationWeights_types import InputData, OptimizationWeights
 from access_loader import load_data_from_access
 from rasp_data import create_timetable_data as create_manual_data
 from rasp_data_generated import create_timetable_data as create_generated_data
-from print_schedule import print_by_classes, print_by_teachers, summary_load, export_full_schedule_to_excel
+from print_schedule import print_by_classes, print_by_teachers, summary_load, export_full_schedule_to_excel, export_raw_data_to_excel
 
 
 # ------------------------------
@@ -57,6 +57,7 @@ from print_schedule import print_by_classes, print_by_teachers, summary_load, ex
 def build_and_solve_timetable(
         data: InputData,
         lp_path: str = "schedule.lp",
+        db_path: str = None, # Добавляем db_path как необязательный аргумент
         log: bool = True,
 
 ):
@@ -370,8 +371,13 @@ def build_and_solve_timetable(
         print_by_classes(data, x, z)
         # print_by_teachers(data, x, z)
         # summary_load(data, x, z)
-        export_full_schedule_to_excel("timetable_solution.xlsx", data, x, z)
+        
+        output_filename = "timetable_solution.xlsx"
+        export_full_schedule_to_excel(output_filename, data, x, z)
 
+        # Добавляем листы с сырыми данными в тот же файл, если источник - БД
+        if db_path: # Теперь проверка стала проще и надежнее
+            export_raw_data_to_excel(output_filename, db_path)
     return model, x, y, z
 
 
@@ -386,12 +392,14 @@ if __name__ == "__main__":
     data_source = 'generated'  # <--- ИЗМЕНИТЕ ЗДЕСЬ
 
     data = None
+    db_path = None # Инициализируем переменную
     if data_source == 'db':
         print("--- Источник данных: MS Access DB ---")
         db_path = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3.accdb"
         data = load_data_from_access(db_path)
     elif data_source == 'generated':
         print("--- Источник данных: сгенерированный файл (rasp_data_generated.py) ---")
+        db_path = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3-new-calculation.accdb"
         data = create_generated_data()
     elif data_source == 'manual':
         print("--- Источник данных: ручной файл (rasp_data.py) ---")
@@ -404,5 +412,6 @@ if __name__ == "__main__":
     build_and_solve_timetable(
         data,
         lp_path="schedule.lp",
+        db_path=db_path, # Явно передаем db_path в функцию
         log=True,
     )

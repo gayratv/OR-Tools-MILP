@@ -4,9 +4,12 @@ Pretty-printers for timetables using InputData + solution vars.
 """
 from typing import Dict, Tuple
 import pulp
+import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, Alignment
 
+# Импортируем функцию для создания подключения к БД из access_loader
+from access_loader import _create_db_engine
 from input_data_OptimizationWeights_types import InputData
 
 
@@ -350,3 +353,39 @@ def export_full_schedule_to_excel(filename: str,
 
     wb.save(filename)
     print(f"Полное расписание и сводка сохранены в {filename}")
+
+
+def export_raw_data_to_excel(filename: str, db_path: str) -> None:
+    """
+    Добавляет в существующий Excel-файл листы с "сырыми" данными из таблиц MS Access.
+
+    Args:
+        filename: Путь к существующему Excel-файлу, куда будут добавлены листы.
+        db_path: Путь к файлу базы данных MS Access.
+    """
+    if not db_path:
+        print("INFO: Путь к базе данных не указан, экспорт сырых данных пропущен.")
+        return
+
+    # Список таблиц/представлений для экспорта.
+    # Ключ - имя таблицы/представления в Access, значение - имя листа в Excel.
+    tables_to_export = {
+        "з_excel_предметы": "предметы",
+        "з_excel_учителя": "учителя",
+        # "v_subgroup_plan_hours": "Нагрузка_подгрупп",
+        # "v_subgroup_assigned_teacher": "Назначения_подгрупп",
+        # "v_days_off": "Выходные_учителей",
+        # "v_forbidden_slots": "Запреты_слотов",
+        # "v_сompatible_pairs": "Совместимые_пары",
+    }
+
+    try:
+        engine = _create_db_engine(db_path)
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+            for table_name, sheet_name in tables_to_export.items():
+                print(f"  - Экспорт '{table_name}' в лист '{sheet_name}'...")
+                df = pd.read_sql(f"SELECT * FROM {table_name}", engine)
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+        print(f"Сырые данные из Access добавлены в {filename}")
+    except Exception as e:
+        print(f"ОШИБКА: Не удалось экспортировать сырые данные из Access. Причина: {e}")
