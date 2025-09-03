@@ -349,43 +349,24 @@ def build_and_solve_timetable(
     # ------------------------------
     # Решение CBC
     # ------------------------------
-    model.writeLP(lp_path)
+    # Просто сохраняем LP-файл. Так как используются только английские символы,
+    # проблем с кодировкой быть не должно.
+    model.writeLP(lp_path) 
     if log:
         print(f"LP-модель сохранена в: {lp_path}")
 
-    solver = pulp.PULP_CBC_CMD(msg=log)
+    # Используем решатель HiGHS через его API 'highspy',
+    # так как pulp.pulpTestAll() показал, что 'HiGHS' доступен,
+    # в отличие от 'HiGHS_CMD' или 'OR_TOOLS'.
+    solver = pulp.HiGHS(msg=log, gapRel=0.05)
     model.solve(solver)
 
     if log:
         print("Статус решения:", pulp.LpStatus[model.status])
 
     if model.status == pulp.LpStatusOptimal:
-        hIghs = highspy.Highs()
-        hIghs.setOptionValue("threads", 16)
-        hIghs.setOptionValue("mip_rel_gap", 0.05)
-        hIghs.readModel(lp_path)
-        hIghs.run()
-
-        status = hIghs.getModelStatus()
-        obj = hIghs.getObjectiveValue()
-        if log:
-            print("Статус HiGHS:", status, "Obj:", obj)
-
-        # Загружаем решение обратно
-        sol = hIghs.getSolution().col_value
-        col_names = hIghs.getLp().col_names_
-        values = {name: val for name, val in zip(col_names, sol)}
-
-        missed = 0
-        for var in model.variables():
-            if var.name in values:
-                var.varValue = values[var.name]
-            else:
-                var.varValue = 0.0
-                missed += 1
-        print("Vars with no value from HiGHS:", missed)
-
         # --- Вывод результатов ---
+        # Так как PuLP сам получил решение от HiGHS, переменные уже заполнены.
         print_by_classes(data, x, z)
         # print_by_teachers(data, x, z)
         # summary_load(data, x, z)
