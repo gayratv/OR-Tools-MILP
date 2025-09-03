@@ -23,14 +23,23 @@ def _val(var) -> float:
 
 def print_by_classes(data: InputData,
                      x: Dict[Tuple, pulp.LpVariable],
-                     z: Dict[Tuple, pulp.LpVariable]) -> None:
+                     z: Dict[Tuple, pulp.LpVariable],
+                     display_maps: Dict[str, Dict[str, str]] = None) -> None:
     """Печать расписания по классам"""
     days, periods, classes, subjects = data.days, data.periods, data.classes, data.subjects
     split_subjects = set(data.split_subjects)
+    if display_maps is None:
+        display_maps = {}
+
+    # Извлекаем словари для удобства, с пустым словарем по умолчанию
+    # class_map = display_maps.get("class_names", {}) # Пока не загружается
+    subject_map = display_maps.get("subject_names", {})
+    teacher_map = display_maps.get("teacher_names", {})
 
     print("\n================ РАСПИСАНИЕ ПО КЛАССАМ ================")
     for c in classes:
-        print(f"\n=== Класс {c} ===")
+        # class_name_rus = class_map.get(c, c)
+        print(f"\n=== Класс {c} ===") # Используем техническое имя, т.к. карты для классов нет
         total_lessons = 0
         for d in days:
             row = []
@@ -41,9 +50,10 @@ def print_by_classes(data: InputData,
                     if s in split_subjects:
                         continue
                     if _val(x.get((c, s, d, p))) > 0.5:
-                        # Безопасно получаем учителя
-                        t = data.assigned_teacher.get((c, s), "БЕЗ_УЧИТЕЛЯ")
-                        cell = f"{p}: {s} ({t})"
+                        t_eng = data.assigned_teacher.get((c, s), "БЕЗ_УЧИТЕЛЯ")
+                        s_rus = subject_map.get(s, s)
+                        t_rus = teacher_map.get(t_eng, t_eng)
+                        cell = f"{p}: {s_rus} ({t_rus})"
                         total_lessons += 1
                         break
                 # split
@@ -54,9 +64,10 @@ def print_by_classes(data: InputData,
                             continue
                         for g in data.subgroup_ids:
                             if _val(z.get((c, s, g, d, p))) > 0.5:
-                                # Безопасно получаем учителя
-                                t = data.subgroup_assigned_teacher.get((c, s, g), "БЕЗ_УЧИТЕЛЯ")
-                                pieces.append(f"{s}[g{g}::{t}]")
+                                t_eng = data.subgroup_assigned_teacher.get((c, s, g), "БЕЗ_УЧИТЕЛЯ")
+                                s_rus = subject_map.get(s, s)
+                                t_rus = teacher_map.get(t_eng, t_eng)
+                                pieces.append(f"{s_rus}[g{g}::{t_rus}]")
                                 total_lessons += 1
                     if pieces:
                         cell = f"{p}: " + "+".join(pieces)
@@ -67,13 +78,21 @@ def print_by_classes(data: InputData,
 
 def print_by_teachers(data: InputData,
                       x: Dict[Tuple, pulp.LpVariable],
-                      z: Dict[Tuple, pulp.LpVariable]) -> None:
+                      z: Dict[Tuple, pulp.LpVariable],
+                      display_maps: Dict[str, Dict[str, str]] = None) -> None:
     """Печать расписания по учителям"""
     days, periods, teachers = data.days, data.periods, data.teachers
+    if display_maps is None:
+        display_maps = {}
+    # class_map = display_maps.get("class_names", {})
+    subject_map = display_maps.get("subject_names", {})
+    teacher_map = display_maps.get("teacher_names", {})
 
     print("\n================ РАСПИСАНИЕ ПО УЧИТЕЛЯМ ================")
     for t in teachers:
-        print(f"\n=== Учитель {t} ===")
+        # Используем русское имя учителя
+        teacher_name_rus = teacher_map.get(t, t)
+        print(f"\n=== Учитель {teacher_name_rus} ===")
         total = 0
         for d in days:
             row = []
@@ -85,7 +104,9 @@ def print_by_teachers(data: InputData,
                         continue
                     var = x.get((c, s, d, p))
                     if var is not None and _val(var) > 0.5:
-                        cell = f"{p}: {c} — {s}"
+                        # c_rus = class_map.get(c, c)
+                        s_rus = subject_map.get(s, s)
+                        cell = f"{p}: {c} — {s_rus}"
                         total += 1
                         break
                 # split
@@ -96,7 +117,9 @@ def print_by_teachers(data: InputData,
                             continue
                         varz = z.get((c, s, g, d, p))
                         if varz is not None and _val(varz) > 0.5:
-                            pieces.append(f"{c} — {s}[g{g}]")
+                            # c_rus = class_map.get(c, c)
+                            s_rus = subject_map.get(s, s)
+                            pieces.append(f"{c} — {s_rus}[g{g}]")
                             total += 1
                     if pieces:
                         cell = f"{p}: " + " + ".join(pieces)
@@ -107,7 +130,8 @@ def print_by_teachers(data: InputData,
 
 def summary_load(data: InputData,
                  x: Dict[Tuple, pulp.LpVariable],
-                 z: Dict[Tuple, pulp.LpVariable]) -> None:
+                 z: Dict[Tuple, pulp.LpVariable],
+                 display_maps: Dict[str, Dict[str, str]] = None) -> None:
     """Сводка по нагрузке для классов и учителей (оптимизированная):
        - общее количество
        - распределение по дням
@@ -115,6 +139,11 @@ def summary_load(data: InputData,
        - предупреждения о перегрузках и перекосах
     """
     print("\n================ СВОДКА НАГРУЗКИ ================")
+    if display_maps is None:
+        display_maps = {}
+    # class_map = display_maps.get("class_names", {})
+    # subject_map = display_maps.get("subject_names", {})
+    teacher_map = display_maps.get("teacher_names", {})
 
     # --- Предварительный расчет --- 
     teacher_load_per_day = {t: {d: 0 for d in data.days} for t in data.teachers}
@@ -146,7 +175,8 @@ def summary_load(data: InputData,
         total = sum(per_day.values())
         avg = total / len(data.days) if data.days else 0
 
-        print(f"{c}: {total} занятий/подгрупповых слотов за неделю (≈{avg:.1f}/день)")
+        # class_name_rus = class_map.get(c, c)
+        print(f"{c}: {total} занятий/подгрупповых слотов за неделю (≈{avg:.1f}/день)") # Используем техническое имя
         warn_days = [d for d, v in per_day.items() if v > 7]
         if warn_days:
             print(f"   ⚠️ Перегрузка {c} в днях {', '.join(warn_days)} (больше 7 уроков)")
@@ -162,9 +192,10 @@ def summary_load(data: InputData,
         total = sum(per_day.values())
         avg = total / len(data.days) if data.days else 0
 
-        print(f"{t}: {total} занятий за неделю (лимит {data.teacher_weekly_cap}, ≈{avg:.1f}/день)")
+        teacher_name_rus = teacher_map.get(t, t)
+        print(f"{teacher_name_rus}: {total} занятий за неделю (лимит {data.teacher_weekly_cap}, ≈{avg:.1f}/день)")
         if total > data.teacher_weekly_cap:
-            print(f"   ⚠️ {t} перегружен! Лимит {data.teacher_weekly_cap}, фактически {total}")
+            print(f"   ⚠️ {teacher_name_rus} перегружен! Лимит {data.teacher_weekly_cap}, фактически {total}")
         
         # Окна
         total_windows = 0
@@ -182,11 +213,11 @@ def summary_load(data: InputData,
         if total_windows > 0:
             print(f"   Окна за неделю: {total_windows} ({', '.join(windows_details)})")
             if total_windows > 5: # Условный лимит
-                print(f"   ⚠️  У {t} много окон (больше 5)")
+                print(f"   ⚠️  У {teacher_name_rus} много окон (больше 5)")
 
         warn_days = [d for d, v in per_day.items() if v > 8]
         if warn_days:
-            print(f"   ⚠️ Перегрузка {t} в днях {', '.join(warn_days)} (больше 8 уроков)")
+            print(f"   ⚠️ Перегрузка {teacher_name_rus} в днях {', '.join(warn_days)} (больше 8 уроков)")
         skew = [d for d, v in per_day.items() if abs(v - avg) > 0.3 * avg and avg > 0]
         if skew:
             print(f"   ⚠️ Перекос нагрузки в днях: {', '.join(skew)} (сильно отличается от среднего {avg:.1f})")
@@ -196,16 +227,26 @@ def summary_load(data: InputData,
 def export_full_schedule_to_excel(filename: str,
                                   data: InputData,
                                   x: Dict[Tuple, pulp.LpVariable],
-                                  z: Dict[Tuple, pulp.LpVariable]) -> None:
+                                  z: Dict[Tuple, pulp.LpVariable],
+                                  display_maps: Dict[str, Dict[str, str]] = None) -> None:
     """Экспорт полного расписания и сводки в Excel-файл"""
     wb = openpyxl.Workbook()
     bold_font = Font(bold=True)
+    if display_maps is None:
+        display_maps = {}
+
+    # Извлекаем словари для удобства
+    # В access_loader.py нет загрузки для class_names, поэтому пока закомментировано
+    # class_map = display_maps.get("class_names", {}) 
+    subject_map = display_maps.get("subject_names", {})
+    teacher_map = display_maps.get("teacher_names", {})
 
     # --- Лист: расписание по классам ---
     ws_classes = wb.active
     ws_classes.title = "Классы_расписание"
     for c in data.classes:
-        ws_classes.append([f"Класс {c}"])
+        # class_rus = class_map.get(c, c)
+        ws_classes.append([f"Класс {c}"]) # Используем техническое имя, т.к. карты для классов нет
         header = ["День"] + [f"Урок {p}" for p in data.periods]
         ws_classes.append(header)
         for d in data.days:
@@ -216,8 +257,10 @@ def export_full_schedule_to_excel(filename: str,
                 for s in data.subjects:
                     if s in data.split_subjects: continue
                     if _val(x.get((c, s, d, p))) > 0.5:
-                        t = data.assigned_teacher.get((c, s), "БЕЗ_УЧИТЕЛЯ")
-                        cell = f"{s} ({t})"
+                        t_eng = data.assigned_teacher.get((c, s), "БЕЗ_УЧИТЕЛЯ")
+                        s_rus = subject_map.get(s, s)
+                        t_rus = teacher_map.get(t_eng, t_eng)
+                        cell = f"{s_rus} ({t_rus})"
                         break
                 # split
                 if cell is None:
@@ -226,8 +269,10 @@ def export_full_schedule_to_excel(filename: str,
                         if s not in data.split_subjects: continue
                         for g in data.subgroup_ids:
                             if _val(z.get((c, s, g, d, p))) > 0.5:
-                                t = data.subgroup_assigned_teacher.get((c, s, g), "БЕЗ_УЧИТЕЛЯ")
-                                pieces.append(f"{s}[g{g}::{t}]")
+                                t_eng = data.subgroup_assigned_teacher.get((c, s, g), "БЕЗ_УЧИТЕЛЯ")
+                                s_rus = subject_map.get(s, s)
+                                t_rus = teacher_map.get(t_eng, t_eng)
+                                pieces.append(f"{s_rus}[g{g}::{t_rus}]")
                     if pieces:
                         cell = "+".join(pieces)
                 row.append(cell or "—")
@@ -237,7 +282,8 @@ def export_full_schedule_to_excel(filename: str,
     # --- Лист: расписание по учителям ---
     ws_teachers = wb.create_sheet("Учителя_расписание")
     for t in data.teachers:
-        ws_teachers.append([f"Учитель {t}"])
+        teacher_name_rus = teacher_map.get(t, t)
+        ws_teachers.append([f"Учитель {teacher_name_rus}"])
         header = ["День"] + [f"Урок {p}" for p in data.periods]
         ws_teachers.append(header)
         for d in data.days:
@@ -248,7 +294,8 @@ def export_full_schedule_to_excel(filename: str,
                 for (c, s), tt in data.assigned_teacher.items():
                     if tt != t: continue
                     if _val(x.get((c, s, d, p))) > 0.5:
-                        cell = f"{c}-{s}"
+                        s_rus = subject_map.get(s, s)
+                        cell = f"{c}-{s_rus}"
                         break
                 # split
                 if cell is None:
@@ -256,7 +303,8 @@ def export_full_schedule_to_excel(filename: str,
                     for (c, s, g), tt in data.subgroup_assigned_teacher.items():
                         if tt != t: continue
                         if _val(z.get((c, s, g, d, p))) > 0.5:
-                            pieces.append(f"{c}-{s}[g{g}]")
+                            s_rus = subject_map.get(s, s)
+                            pieces.append(f"{c}-{s_rus}[g{g}]")
                     if pieces:
                         cell = " + ".join(pieces)
                 row.append(cell or "—")
@@ -291,6 +339,7 @@ def export_full_schedule_to_excel(filename: str,
     ws_summary.append(header)
 
     for c in data.classes:
+        # class_rus = class_map.get(c, c)
         per_day = class_load_per_day[c]
         total = sum(per_day.values())
         avg = total / len(data.days) if data.days else 0
@@ -299,7 +348,7 @@ def export_full_schedule_to_excel(filename: str,
         if warn_days: warnings.append(f"Перегрузка: {', '.join(warn_days)}")
         skew = [d for d, v in per_day.items() if abs(v - avg) > 0.3 * avg and avg > 0]
         if skew: warnings.append(f"Перекос: {', '.join(skew)}")
-        row = [c, total, f"{avg:.1f}"] + [per_day[d] for d in data.days] + [", ".join(warnings)]
+        row = [c, total, f"{avg:.1f}"] + [per_day[d] for d in data.days] + [", ".join(warnings)] # Используем техническое имя
         ws_summary.append(row)
 
     ws_summary.append([])
@@ -309,6 +358,7 @@ def export_full_schedule_to_excel(filename: str,
     ws_summary.append(header)
 
     for t in data.teachers:
+        teacher_name_rus = teacher_map.get(t, t)
         per_day = teacher_load_per_day[t]
         total = sum(per_day.values())
         avg = total / len(data.days) if data.days else 0
@@ -331,7 +381,7 @@ def export_full_schedule_to_excel(filename: str,
         skew = [d for d, v in per_day.items() if abs(v - avg) > 0.3 * avg and avg > 0]
         if skew: warnings.append(f"Перекос: {', '.join(skew)}")
 
-        row = [t, total, data.teacher_weekly_cap, f"{avg:.1f}", f"{total_windows} ({', '.join(windows_details)})"] + [per_day[d] for d in data.days] + [", ".join(warnings)]
+        row = [teacher_name_rus, total, data.teacher_weekly_cap, f"{avg:.1f}", f"{total_windows} ({', '.join(windows_details)})"] + [per_day[d] for d in data.days] + [", ".join(warnings)]
         ws_summary.append(row)
 
     # --- Авто-ширина колонок и стиль ---

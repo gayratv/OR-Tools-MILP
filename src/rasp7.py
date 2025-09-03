@@ -44,10 +44,11 @@ import highspy
 import pulp
 
 from input_data_OptimizationWeights_types import InputData, OptimizationWeights
-from access_loader import load_data_from_access
+from access_loader import load_data_from_access, load_display_maps
 from rasp_data import create_timetable_data as create_manual_data
 from rasp_data_generated import create_timetable_data as create_generated_data
-from print_schedule import print_by_classes, print_by_teachers, summary_load, export_full_schedule_to_excel, export_raw_data_to_excel
+from print_schedule import print_by_classes, print_by_teachers, summary_load, export_full_schedule_to_excel, \
+    export_raw_data_to_excel
 
 
 # ------------------------------
@@ -57,8 +58,9 @@ from print_schedule import print_by_classes, print_by_teachers, summary_load, ex
 def build_and_solve_timetable(
         data: InputData,
         lp_path: str = "schedule.lp",
-        db_path: str = None, # Добавляем db_path как необязательный аргумент
+        db_path: str = None,  # Добавляем db_path как необязательный аргумент
         log: bool = True,
+        display_maps: Dict[str, Dict[str, str]] = None
 
 ):
     """
@@ -146,8 +148,8 @@ def build_and_solve_timetable(
             # Получаем требуемые часы из плана. Если урока нет в плане, требуемые часы = 0.
             # Это ключевое исправление: мы явно запрещаем назначать уроки, которых нет в плане.
             required_hours = data.subgroup_plan_hours.get((c, s, g), 0)
-            model += pulp.lpSum(z[(c, s, g, d, p)] for d in D for p in P) == required_hours, f"Subgroup_Plan_{c}_{s}_{g}"
-
+            model += pulp.lpSum(
+                z[(c, s, g, d, p)] for d in D for p in P) == required_hours, f"Subgroup_Plan_{c}_{s}_{g}"
 
     # Жесткие запреты на слоты для классов
     for c, d, p in data.forbidden_slots:
@@ -249,7 +251,8 @@ def build_and_solve_timetable(
         for g in G:
             model += is_subj_taught[(c, s, d, p)] >= z[(c, s, g, d, p)], f"Link_is_subj_taught_up_{c}_{s}_{d}_{p}_{g}"
         # Если ни одна подгруппа не изучает предмет s, is_subj_taught должен стать 0
-        model += is_subj_taught[(c, s, d, p)] <= pulp.lpSum(z[(c, s, g, d, p)] for g in G), f"Link_is_subj_taught_down_{c}_{s}_{d}_{p}"
+        model += is_subj_taught[(c, s, d, p)] <= pulp.lpSum(
+            z[(c, s, g, d, p)] for g in G), f"Link_is_subj_taught_down_{c}_{s}_{d}_{p}"
 
     # Ограничение совместимости: в одном слоте у класса могут быть только совместимые "делящиеся" предметы
     split_list = sorted(list(splitS))
@@ -347,7 +350,6 @@ def build_and_solve_timetable(
                 class_subj_day_lessons.append(total_slots_on_day * w)
     obj_pref_class_subj_day = pulp.lpSum(class_subj_day_lessons)
 
-
     model += (alpha_runs * obj_runs +
               beta_early * obj_early +
               gamma_balance * obj_balance +
@@ -360,7 +362,7 @@ def build_and_solve_timetable(
     # ------------------------------
     # Просто сохраняем LP-файл. Так как используются только английские символы,
     # проблем с кодировкой быть не должно.
-    model.writeLP(lp_path) 
+    model.writeLP(lp_path)
     if log:
         print(f"LP-модель сохранена в: {lp_path}")
 
@@ -376,15 +378,15 @@ def build_and_solve_timetable(
     if model.status == pulp.LpStatusOptimal:
         # --- Вывод результатов ---
         # Так как PuLP сам получил решение от HiGHS, переменные уже заполнены.
-        print_by_classes(data, x, z)
+        print_by_classes(data, x, z, display_maps)
         # print_by_teachers(data, x, z)
         # summary_load(data, x, z)
-        
+
         output_filename = "timetable_solution.xlsx"
-        export_full_schedule_to_excel(output_filename, data, x, z)
+        export_full_schedule_to_excel(output_filename, data, x, z, display_maps)
 
         # Добавляем листы с сырыми данными в тот же файл, если источник - БД
-        if db_path: # Теперь проверка стала проще и надежнее
+        if db_path:  # Теперь проверка стала проще и надежнее
             export_raw_data_to_excel(output_filename, db_path)
     return model, x, y, z
 
@@ -400,26 +402,27 @@ if __name__ == "__main__":
     data_source = 'generated'  # <--- ИЗМЕНИТЕ ЗДЕСЬ
 
     data = None
-    db_path = None # Инициализируем переменную
+    db_path = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3-new-calculation.accdb"
+
     if data_source == 'db':
         print("--- Источник данных: MS Access DB ---")
-        db_path = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3.accdb"
         data = load_data_from_access(db_path)
     elif data_source == 'generated':
         print("--- Источник данных: сгенерированный файл (rasp_data_generated.py) ---")
-        db_path = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3-new-calculation.accdb"
         data = create_generated_data()
     elif data_source == 'manual':
         print("--- Источник данных: ручной файл (rasp_data.py) ---")
         data = create_manual_data()
-
     if data is None:
         print(f"Ошибка: не удалось загрузить данные из источника '{data_source}'. Проверьте настройки.")
         exit()
 
+    display_maps = load_display_maps(db_path)
+
     build_and_solve_timetable(
         data,
         lp_path="schedule.lp",
-        db_path=db_path, # Явно передаем db_path в функцию
+        db_path=db_path,  # Явно передаем db_path в функцию
         log=True,
+        display_maps=display_maps
     )

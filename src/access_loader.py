@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from urllib.parse import quote_plus
 from input_data_OptimizationWeights_types import InputData
 from pprint import pprint
+from sqlalchemy import text
 import re
 
 
@@ -195,6 +196,32 @@ def load_data_from_access(db_path: str) -> InputData:
         class_subject_day_weight=class_subject_day_weight,
         compatible_pairs=compatible_pairs
     )
+
+
+def load_display_maps(db_path: str) -> dict:
+    """
+    Загружает из базы данных словари для сопоставления
+    технических (английских) названий с полными (русскими) для отчетов.
+    """
+    if not db_path:
+        return {}
+
+    print("--- Загрузка словарей для отображения результатов ---")
+    engine = _create_db_engine(db_path)
+
+    try:
+
+        subject_map = pd.read_sql('SELECT "предмет_eng", "предмет" FROM "з_excel_предметы"', engine)
+
+        teacher_map = pd.read_sql('SELECT "teacher", "FAMIO" FROM "з_excel_учителя"', engine)
+
+        return {
+            "subject_names": subject_map.set_index('предмет_eng')['предмет'].to_dict(),
+            "teacher_names": teacher_map.set_index('teacher')['FAMIO'].to_dict()
+        }
+    except Exception as e:
+        print(f"ОШИБКА при загрузке словарей для отображения: {e}")
+        return {}
 
 
 if __name__ == '__main__':
