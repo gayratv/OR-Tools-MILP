@@ -13,14 +13,45 @@ def create_timetable_data() -> InputData:
     """
     days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
     periods = [1, 2, 3, 4, 5, 6, 7, 8]
-    classes = ['2V', '2A', '2B', '3G', '3V', '3B', '3A', '4A', '4B', '4V', '4G', '5G', '5A', '5B', '5V', '6A', '6B', '6V', '7A', '7V', '7_MK', '8B', '8A', '8V', '9V', '9A', '9B']
-    subjects = ['Rus', 'Lit', 'Math', 'Phys', 'Bio', 'Chem', 'Geog', 'Env', 'Alg', 'Trud', 'Art', 'Hist', 'Eng', 'PE', 'VisArt', 'Mus', 'Draw', 'Soc', 'Safe', 'NatSci', 'CS', 'Geom', 'Stat', 'SchComp', 'Relig', 'El', 'Proj', 'MathAdv', 'Fin', 'Pol', 'ElRu', 'El']
+    classes = ['2V', '2A', '2B', '3G', '3V', '3B', '3A', '4A', '4B', '4V', '4G', '5G', '5A', '5B', '5V', '6A', '6B', '6V', '7A', '7V', '7_MK', '8B', '8A', '8V', '9V', '9A', '9B', '10B', '10A']
+    subjects = ['Rus', 'Lit', 'Math', 'Phys', 'Bio', 'Chem', 'Geog', 'Env', 'Alg', 'Trud', 'Art', 'Hist', 'Eng', 'PE', 'VisArt', 'Mus', 'Draw', 'Soc', 'Safe', 'NatSci', 'CS', 'Geom', 'Stat', 'SchComp', 'Relig', 'ElParms', 'Proj', 'MathAdv', 'Fin', 'Pol', 'ElRu', 'El']
     teachers = ['Gas_ASh', 'Vac_2', 'Ula_OV', 'Zhi_VI', 'Bel_IV', 'Kol_IL', 'Sol_MA', 'Los_AS', 'Vac_1', 'Ode_OG', 'Gos_EO', 'Sha_VE', 'Par_VYu', 'Osi_EM', 'Gri_TV', 'Obu_KV', 'Bad_MV', 'Var_SG', 'Kuk_EN', 'Vor_IG', 'Per_SI', 'Zue_SG', 'Got_EV', 'Sak_EV', 'Che_LN', 'Ode_DV', 'Pys_LP', 'Rad_OV', 'Put_MG', 'Sta_EV', 'Vac_IT', 'May_AYu', 'Kam_OV', 'Bul_AS', 'Kam_SI', 'Zue_M', 'Vac_fizra', 'Bur_NS', 'Fil_DM', 'Vac_Physics', 'Zal_DI']
-    split_subjects = {'Trud', 'CS', 'Eng'}
+    split_subjects = {'Trud', 'Eng', 'CS'}
     subgroup_ids = [1, 2]
 
     # --- Учебные планы ---
-    plan_hours = {   ('5A', 'Bio'): 1,
+    plan_hours = {   ('10A', 'Alg'): 4,
+    ('10A', 'Bio'): 1,
+    ('10A', 'Chem'): 1,
+    ('10A', 'El'): 1,
+    ('10A', 'Geog'): 1,
+    ('10A', 'Geom'): 3,
+    ('10A', 'Hist'): 2,
+    ('10A', 'Lit'): 3,
+    ('10A', 'PE'): 4,
+    ('10A', 'Phys'): 5,
+    ('10A', 'Proj'): 1,
+    ('10A', 'Rus'): 2,
+    ('10A', 'Safe'): 1,
+    ('10A', 'Soc'): 2,
+    ('10A', 'Stat'): 1,
+    ('10B', 'Alg'): 2,
+    ('10B', 'Bio'): 1,
+    ('10B', 'Chem'): 1,
+    ('10B', 'El'): 2,
+    ('10B', 'Geog'): 1,
+    ('10B', 'Geom'): 2,
+    ('10B', 'Hist'): 4,
+    ('10B', 'Lit'): 3,
+    ('10B', 'MathAdv'): 1,
+    ('10B', 'PE'): 4,
+    ('10B', 'Phys'): 2,
+    ('10B', 'Proj'): 1,
+    ('10B', 'Rus'): 2,
+    ('10B', 'Safe'): 1,
+    ('10B', 'Soc'): 2,
+    ('10B', 'Stat'): 1,
+    ('5A', 'Bio'): 1,
     ('5A', 'Geog'): 1,
     ('5A', 'Hist'): 3,
     ('5A', 'Lit'): 3,
@@ -206,7 +237,15 @@ def create_timetable_data() -> InputData:
     ('9V', 'Safe'): 1,
     ('9V', 'Soc'): 1,
     ('9V', 'Stat'): 1}
-    subgroup_plan_hours = {   ('2A', 'Eng', 1): 2,
+    subgroup_plan_hours = {   ('10A', 'CS', 1): 1,
+    ('10A', 'CS', 2): 1,
+    ('10A', 'Eng', 1): 3,
+    ('10A', 'Eng', 2): 3,
+    ('10B', 'CS', 1): 1,
+    ('10B', 'CS', 2): 1,
+    ('10B', 'Eng', 1): 5,
+    ('10B', 'Eng', 2): 5,
+    ('2A', 'Eng', 1): 2,
     ('2A', 'Eng', 2): 2,
     ('2B', 'Eng', 1): 2,
     ('2B', 'Eng', 2): 2,
@@ -312,7 +351,38 @@ def create_timetable_data() -> InputData:
     ('9V', 'Trud', 2): 1}
 
     # --- Закрепления учителей ---
-    assigned_teacher = {   ('5A', 'Bio'): 'Vor_IG',
+    assigned_teacher = {   ('10A', 'Alg'): 'Kol_IL',
+    ('10A', 'Bio'): 'Vor_IG',
+    ('10A', 'Chem'): 'Var_SG',
+    ('10A', 'El'): 'Kol_IL',
+    ('10A', 'Geog'): 'Sak_EV',
+    ('10A', 'Geom'): 'Kol_IL',
+    ('10A', 'Hist'): 'Vac_IT',
+    ('10A', 'Lit'): 'Che_LN',
+    ('10A', 'PE'): 'Zue_M',
+    ('10A', 'Phys'): 'Ula_OV',
+    ('10A', 'Proj'): 'Vor_IG',
+    ('10A', 'Rus'): 'Che_LN',
+    ('10A', 'Safe'): 'Fil_DM',
+    ('10A', 'Soc'): 'Vac_IT',
+    ('10A', 'Stat'): 'Kol_IL',
+    ('10B', 'Alg'): 'Put_MG',
+    ('10B', 'Bio'): 'Vor_IG',
+    ('10B', 'Chem'): 'Var_SG',
+    ('10B', 'El'): 'Vac_IT',
+    ('10B', 'Geog'): 'Sak_EV',
+    ('10B', 'Geom'): 'Put_MG',
+    ('10B', 'Hist'): 'Bad_MV',
+    ('10B', 'Lit'): 'Che_LN',
+    ('10B', 'MathAdv'): 'Put_MG',
+    ('10B', 'PE'): 'Zue_M',
+    ('10B', 'Phys'): 'Vac_Physics',
+    ('10B', 'Proj'): 'Vac_IT',
+    ('10B', 'Rus'): 'Che_LN',
+    ('10B', 'Safe'): 'Fil_DM',
+    ('10B', 'Soc'): 'Vac_IT',
+    ('10B', 'Stat'): 'Put_MG',
+    ('5A', 'Bio'): 'Vor_IG',
     ('5A', 'Geog'): 'Sak_EV',
     ('5A', 'Hist'): 'Osi_EM',
     ('5A', 'Lit'): 'Bel_IV',
@@ -498,7 +568,15 @@ def create_timetable_data() -> InputData:
     ('9V', 'Safe'): 'Fil_DM',
     ('9V', 'Soc'): 'Bad_MV',
     ('9V', 'Stat'): 'Sol_MA'}
-    subgroup_assigned_teacher = {   ('2A', 'Eng', 1): 'Sha_VE',
+    subgroup_assigned_teacher = {   ('10A', 'CS', 1): 'Bul_AS',
+    ('10A', 'CS', 2): 'Bul_AS',
+    ('10A', 'Eng', 1): 'Zhi_VI',
+    ('10A', 'Eng', 2): 'Par_VYu',
+    ('10B', 'CS', 1): 'Bul_AS',
+    ('10B', 'CS', 2): 'Bul_AS',
+    ('10B', 'Eng', 1): 'Zhi_VI',
+    ('10B', 'Eng', 2): 'Gos_EO',
+    ('2A', 'Eng', 1): 'Sha_VE',
     ('2A', 'Eng', 2): 'Zue_SG',
     ('2B', 'Eng', 1): 'Sha_VE',
     ('2B', 'Eng', 2): 'Zue_SG',
@@ -604,8 +682,10 @@ def create_timetable_data() -> InputData:
     ('9V', 'Trud', 2): 'Kam_SI'}
 
     # --- Ограничения ---
-    days_off = {'Osi_EM': {'Tue', 'Mon'}}
-    forbidden_slots = {   ('2A', 'Mon', 1),
+    days_off = {'Osi_EM': {'Mon', 'Tue'}}
+    forbidden_slots = {   ('10A', 'Mon', 1),
+    ('10B', 'Mon', 1),
+    ('2A', 'Mon', 1),
     ('2B', 'Mon', 1),
     ('2V', 'Mon', 1),
     ('3A', 'Mon', 1),
