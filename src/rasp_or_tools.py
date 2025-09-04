@@ -84,7 +84,8 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True):
             lessons = teacher_lessons_in_slot[t, d, p]
             if not lessons: continue
             model.AddAtMostOne(lessons)
-            # c) Запрет работы в выходные дни
+            # c) Запрет работы в выходные дни учителя
+            # days_off = {'Osi_EM': {'Mon', 'Tue'}}
             if d in data.days_off.get(t, set()):
                 for lesson_var in lessons: model.Add(lesson_var == 0)
 
