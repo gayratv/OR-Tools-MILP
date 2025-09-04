@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy import create_engine
 from urllib.parse import quote_plus
-from input_data_OptimizationWeights_types import InputData
+from input_data import InputData
 from pprint import pprint
 from sqlalchemy import text
 import re
