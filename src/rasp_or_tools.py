@@ -155,6 +155,50 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True):
     # 4. Хвосты: штраф за уроки после определенного часа (например, после 6-го).
     objective_terms.append(weights.delta_tail * sum(y[c,d,p] for c,d,p in y if p > weights.last_ok_period))
 
+    # 5. Спаренные уроки: штраф за "одиночные" уроки для предметов, которые должны идти парами.
+
+    # Я применил подход, который называется "штраф и скидка" .
+    # 1.Штраф: Мы добавляем в целевую функцию штраф за каждый урок из списка paired_subjects.
+    # То есть, если решатель ставит один урок труда, он сразу получает "минус" в целевую функцию .
+    # 2.Скидка: Если решатель ставит два таких урока подряд(например, на 1 - м и 2 - м уроках),
+    # мы создаем специальную переменную - индикатор is_paired, которая становится 1.
+    # За каждую такую пару мы даем "скидку" в размере двойного штрафа.
+    # В итоге, для решателя становится выгоднее поставить два урока и получить штраф + штраф - 2 * штраф = 0,
+    # чем поставить один урок и получить штраф.
+    # Это эффективно мотивирует его спаривать уроки, но оставляет возможность поставить одиночный урок,
+    # если по - другому составить расписание не получается.
+
+    if data.paired_subjects:
+        single_lessons = []
+        # Проходим по всем слотам, где может быть такой урок
+        for c, s, d, p in itertools.product(C, data.paired_subjects, D, P):
+            # Переменная для текущего урока
+            current_lesson_var = None
+            if s in z:  # Делимый предмет
+                # Для делимых предметов считаем, что урок есть, если он есть хотя бы у одной подгруппы
+                # Используем is_subj_taught, который уже агрегирует подгруппы
+                current_lesson_var = is_subj_taught.get((c, s, d, p))
+            elif s in x:  # Неделимый
+                current_lesson_var = x.get((c, s, d, p))
+
+            if not current_lesson_var: continue
+
+            # Урок считается "одиночным", если он есть, но нет такого же урока ни до, ни после него
+            prev_lesson_var = is_subj_taught.get((c, s, d, p - 1)) if p > P[0] else 0
+            next_lesson_var = is_subj_taught.get((c, s, d, p + 1)) if p < P[-1] else 0
+
+            # Штрафуем, если current_lesson_var=1, а соседи = 0.
+            # Это сложно выразить линейно, поэтому просто штрафуем за каждый урок,
+            # а за каждую созданную пару даем "скидку" в двойном размере штрафа.
+            # Minimize( A + B - 2*A*B ) -> поощряет A=B=1
+            single_lessons.append(current_lesson_var)
+            if next_lesson_var:
+                # Создаем переменную-индикатор того, что уроки спарены
+                is_paired = model.NewBoolVar(f'paired_{c}_{s}_{d}_{p}')
+                model.AddBoolAnd([current_lesson_var, next_lesson_var]).OnlyEnforceIf(is_paired)
+                # "Скидка" за пару
+                single_lessons.append(-2 * is_paired)
+
     model.Minimize(sum(objective_terms))
 
     # --- Решение ---

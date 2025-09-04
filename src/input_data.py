@@ -105,6 +105,10 @@ class InputData:
     # храним как отсортированные пары, напр.: {("eng","eng"), ("cs","eng"), ("labor","labor")}
     compatible_pairs: Set[Tuple[str, str]] = field(default_factory=set)
 
+    # --- Предпочтения по спариванию ---
+    # Предметы, которые желательно ставить по 2 урока подряд
+    paired_subjects: Set[str] = field(default_factory=set)
+
 
 @dataclass
 class OptimizationWeights:
@@ -115,6 +119,9 @@ class OptimizationWeights:
     beta_early: float = 1.0      # лёгкое предпочтение ранних уроков
     gamma_balance: float = 1.0  # баланс по дням (L1-отклонение от среднего)
     delta_tail: float = 10.0     # штраф за «хвосты» после 6-го урока (soft ban)
+
+    epsilon_pairing: float = 5.0 # штраф за каждый "одиночный" урок, который должен быть спарен
+
     pref_scale: float = 1.0      # масштаб для пользовательских предпочтений
 
     last_ok_period: int = 6      # после этого слота начинаются «хвосты» (мягко штрафуем)

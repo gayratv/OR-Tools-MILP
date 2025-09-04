@@ -35,6 +35,7 @@ def create_manual_data() -> InputData:
     periods = list(range(1, 8))
     classes = ["5A", "5B"]
     subjects = ["math", "cs", "eng", "labor"]
+    paired_subjects = {"labor"}
     split_subjects = {"eng", "cs", "labor"}
     teachers = ["Ivanov", "Petrov", "Sidorov", "Nikolaev", "Smirnov"]
 
@@ -94,7 +95,8 @@ def create_manual_data() -> InputData:
         forbidden_slots=forbidden_slots,
         class_slot_weight=class_slot_weight,
         teacher_slot_weight=teacher_slot_weight,
-        class_subject_day_weight=class_subject_day_weight
+        class_subject_day_weight=class_subject_day_weight,
+        paired_subjects=paired_subjects
     )
 
     return data

@@ -23,6 +23,7 @@ def generate_function_string(data: InputData) -> str:
     compatible_pairs_str = pprint.pformat(data.compatible_pairs, indent=4, width=120)
     forbidden_slots_str = pprint.pformat(data.forbidden_slots, indent=4, width=120)
     split_subjects_str = pprint.pformat(data.split_subjects, indent=4, width=120)
+    paired_subjects_str = pprint.pformat(data.paired_subjects, indent=4, width=120)
 
     # Собираем итоговый код функции в виде многострочной f-строки
     function_code = f"""
@@ -65,6 +66,9 @@ def create_timetable_data() -> InputData:
 
     # --- Совместимости ---
     compatible_pairs = {compatible_pairs_str}
+    
+    # --- Спаривание ---
+    paired_subjects = {paired_subjects_str}
 
     return InputData(
         days=days,
@@ -83,7 +87,8 @@ def create_timetable_data() -> InputData:
         class_slot_weight=class_slot_weight,
         teacher_slot_weight=teacher_slot_weight,
         class_subject_day_weight=class_subject_day_weight,
-        compatible_pairs=compatible_pairs
+        compatible_pairs=compatible_pairs,
+        paired_subjects=paired_subjects
     )
 """
     return function_code

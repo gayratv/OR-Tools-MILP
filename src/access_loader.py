@@ -101,6 +101,9 @@ def load_data_from_access(db_path: str) -> InputData:
     # split_subjects = {"eng", "cs", "labor"}
     split_subjects = set(get_list("vSubject_split", "предмет_eng"))
 
+    # paired_subjects = {"labor"}
+    paired_subjects = set(get_list("vPaired_subjects", "предмет_eng"))
+
     # 2. Словари (учебные планы, назначения)
     # plan_hours = {("5A", "math"): 2, ("5B", "math"): 2, ...}
     plan_hours = get_dict("vНагрузка_по_классам", ["класс_eng", "предмет_eng"], "Hours",value_is_numeric=True)
@@ -194,7 +197,8 @@ def load_data_from_access(db_path: str) -> InputData:
         class_slot_weight=class_slot_weight,
         teacher_slot_weight=teacher_slot_weight,
         class_subject_day_weight=class_subject_day_weight,
-        compatible_pairs=compatible_pairs
+        compatible_pairs=compatible_pairs,
+        paired_subjects = paired_subjects
     )
 
 
