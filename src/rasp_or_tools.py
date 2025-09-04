@@ -1,4 +1,4 @@
-# rasp_or_tools.py (v8 - принудительное обновление)
+# rasp_or_tools.py (v14 - еще больше комментариев)
 
 import itertools
 from ortools.sat.python import cp_model
@@ -15,74 +15,138 @@ from print_schedule import get_solution_maps, export_full_schedule_to_excel
 
 
 def build_and_solve_with_or_tools(data: InputData, log: bool = True):
+    """Основная функция для построения и решения модели расписания с помощью OR-Tools."""
     model = cp_model.CpModel()
     C, S, D, P = data.classes, data.subjects, data.days, data.periods
     G, splitS = data.subgroup_ids, data.split_subjects
     weights = OptimizationWeights()
 
+    # --- Переменные ---
+    # x[(c, s, d, p)] = 1, если у класса c не-делимый предмет s в день d, урок p
     x = { (c, s, d, p): model.NewBoolVar(f'x_{c}_{s}_{d}_{p}')
           for c, s, d, p in itertools.product(C, S, D, P) if s not in splitS }
+
+    # z[(c, s, g, d, p)] = 1, если у класса c делимый предмет s для подгруппы g в день d, урок p
     z = { (c, s, g, d, p): model.NewBoolVar(f'z_{c}_{s}_{g}_{d}_{p}')
           for c, s, g, d, p in itertools.product(C, S, G, D, P) if s in splitS }
+
+    # y[c, d, p] = 1, если у класса c есть любое занятие в день d, период p (вспомогательная переменная)
     y = { (c, d, p): model.NewBoolVar(f'y_{c}_{d}_{p}')
           for c, d, p in itertools.product(C, D, P) }
+          
+    # is_subj_taught[(c, s, d, p)] = 1, если делимый предмет s преподается ЛЮБОЙ подгруппе класса c в данном слоте
+    # (нужна для проверки совместимости)
+    is_subj_taught = { (c, s, d, p): model.NewBoolVar(f'ist_{c}_{s}_{d}_{p}')
+                       for c, s, d, p in itertools.product(C, splitS, D, P) }
 
-    # --- Жесткие ограничения (код идентичен предыдущей версии) ---
+
+    # --- Жесткие ограничения (Hard Constraints) ---
+    # Эти правила должны выполняться неукоснительно.
+
+    # 1. Связь y (слот занят) с x и z (конкретными уроками)
+    # Для каждого слота (класс, день, период), переменная y должна быть 1, если в этом слоте есть хотя бы один урок (x или z).
     for c, d, p in itertools.product(C, D, P):
         lessons_in_slot = [x.get((c, s, d, p)) for s in S if s not in splitS] + \
                           [z.get((c, s, g, d, p)) for s in splitS for g in G]
         lessons_in_slot = [v for v in lessons_in_slot if v is not None]
+        # y=1 эквивалентно тому, что хотя бы один из уроков в этом слоте активен.
         model.AddBoolOr(lessons_in_slot).OnlyEnforceIf(y[c, d, p])
         model.AddBoolAnd([v.Not() for v in lessons_in_slot]).OnlyEnforceIf(y[c, d, p].Not())
+
+    # 2. Выполнение учебного плана
+    # Сумма всех уроков по предмету за неделю должна быть равна часам в плане.
     for (c, s), h in data.plan_hours.items(): model.Add(sum(x[c, s, d, p] for d in D for p in P) == h)
     for (c, s, g), h in data.subgroup_plan_hours.items(): model.Add(sum(z[c, s, g, d, p] for d in D for p in P) == h)
+
+    # 3. Ограничения для учителей
+    # Создаем удобную структуру для быстрого доступа к урокам каждого учителя
     teacher_lessons_in_slot = { (t,d,p): [] for t,d,p in itertools.product(data.teachers, D, P) }
     for (c, s), t in data.assigned_teacher.items():
         if s not in splitS: 
             for d, p in itertools.product(D, P): teacher_lessons_in_slot[t, d, p].append(x[c, s, d, p])
     for (c, s, g), t in data.subgroup_assigned_teacher.items():
         for d, p in itertools.product(D, P): teacher_lessons_in_slot[t, d, p].append(z[c, s, g, d, p])
+
     for t in data.teachers:
+        # a) Недельная нагрузка не более лимита
         all_lessons_for_teacher = []
         for d,p in itertools.product(D,P):
             all_lessons_for_teacher.extend(teacher_lessons_in_slot[t,d,p])
         if all_lessons_for_teacher:
              model.Add(sum(all_lessons_for_teacher) <= data.teacher_weekly_cap)
+        # b) Не более одного урока в одном слоте (нет "накладок")
         for d, p in itertools.product(D, P):
             lessons = teacher_lessons_in_slot[t, d, p]
             if not lessons: continue
             model.AddAtMostOne(lessons)
+            # c) Запрет работы в выходные дни
             if d in data.days_off.get(t, set()):
                 for lesson_var in lessons: model.Add(lesson_var == 0)
+
+    # 4. Ограничения на одновременные уроки в классе
     for c, d, p in itertools.product(C, D, P):
+        # a) Не более одного не-делимого урока в слоте
         non_split_vars = [x[c, s, d, p] for s in S if s not in splitS]
         model.AddAtMostOne(non_split_vars)
+        
+        # b) У каждой подгруппы не более одного урока в слоте
         for g in G:
             model.AddAtMostOne(z[c, s, g, d, p] for s in splitS)
+        
+        # c) Нельзя проводить не-делимый и делимый урок одновременно
         all_split_vars_in_slot = [z[c, s, g, d, p] for s in splitS for g in G]
         for nsv in non_split_vars:
             for sv in all_split_vars_in_slot:
                 model.AddBoolOr([nsv.Not(), sv.Not()])
 
-    # --- Целевая функция (код идентичен предыдущей версии) ---
+    # 5. Совместимость "делящихся" предметов
+    # Связь z и is_subj_taught: флаг, что предмет s преподается классу c в слоте (d,p)
+    for c, s, d, p in itertools.product(C, splitS, D, P):
+        subgroup_lessons = [z[c, s, g, d, p] for g in G]
+        model.AddBoolOr(subgroup_lessons).OnlyEnforceIf(is_subj_taught[c, s, d, p])
+        model.AddBoolAnd([v.Not() for v in subgroup_lessons]).OnlyEnforceIf(is_subj_taught[c, s, d, p].Not())
+
+    # Ограничение на несовместимые пары: в одном слоте у класса могут быть только совместимые "делящиеся" предметы
+    split_list = sorted(list(splitS))
+    for c, d, p in itertools.product(C, D, P):
+        for s1, s2 in itertools.combinations(split_list, 2):
+            pair = tuple(sorted((s1, s2)))
+            if pair not in data.compatible_pairs:
+                # Если предметы несовместимы, они не могут идти одновременно
+                model.AddBoolOr([is_subj_taught[c, s1, d, p].Not(), is_subj_taught[c, s2, d, p].Not()])
+
+
+    # --- Целевая функция (мягкие ограничения) ---
+    # Это цели, которые решатель будет стараться выполнить, но может нарушить, если это необходимо для выполнения жестких ограничений.
     objective_terms = []
+
+    # 1. Анти-окна: минимизация числа "окон" между уроками.
+    # Реализуется через минимизацию количества "начал блоков занятий".
     srun = { (c, d, p): model.NewBoolVar(f'srun_{c}_{d}_{p}') for c, d, p in itertools.product(C, D, P) }
     for c, d in itertools.product(C, D):
+        # Для первого урока дня, начало блока = это просто наличие урока.
         model.Add(srun[c, d, P[0]] == y[c, d, P[0]])
+        # Для остальных: начало блока = (есть урок СЕЙЧАС) И (не было урока РАНЬШЕ)
         for p_idx in range(1, len(P)):
             p, prev_p = P[p_idx], P[p_idx-1]
             sr, yp, yprev = srun[c,d,p], y[c,d,p], y[c,d,prev_p]
-            model.Add(sr == 1).OnlyEnforceIf([yp, yprev.Not()])
-            model.Add(sr == 0).OnlyEnforceIf(yp.Not())
-            model.Add(sr == 0).OnlyEnforceIf(yprev)
+            model.Add(sr == 1).OnlyEnforceIf([yp, yprev.Not()]) # Если y[p] и not y[p-1], то sr=1
+            model.Add(sr == 0).OnlyEnforceIf(yp.Not())          # Если not y[p], то sr=0
+            model.Add(sr == 0).OnlyEnforceIf(yprev)             # Если y[p-1], то sr=0
     objective_terms.append(weights.alpha_runs * sum(srun.values()))
+
+    # 2. Ранние слоты: легкое предпочтение ранних уроков (минимизация номера периода).
     objective_terms.append(weights.beta_early * sum(p * y[c, d, p] for c,d,p in y))
+
+    # 3. Баланс по дням: минимизация разницы между самым загруженным и самым свободным днем.
     for c in C:
         lessons_per_day = [sum(y[c, d, p] for p in P) for d in D]
         min_lessons, max_lessons = model.NewIntVar(0, len(P), f'minl_{c}'), model.NewIntVar(0, len(P), f'maxl_{c}')
         model.AddMinEquality(min_lessons, lessons_per_day)
         model.AddMaxEquality(max_lessons, lessons_per_day)
         objective_terms.append(weights.gamma_balance * (max_lessons - min_lessons))
+
+    # 4. Хвосты: штраф за уроки после определенного часа (например, после 6-го).
     objective_terms.append(weights.delta_tail * sum(y[c,d,p] for c,d,p in y if p > weights.last_ok_period))
 
     model.Minimize(sum(objective_terms))
@@ -91,9 +155,6 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True):
     solver = cp_model.CpSolver()
     solver.parameters.log_search_progress = log
     solver.parameters.num_search_workers = 16
-    # Устанавливаем относительный зазор для остановки.
-    # Решатель остановится, когда |best_bound - best_solution| / |best_solution| < 0.05
-    solver.parameters.relative_gap_limit = 0.05
     
     print("Начинаем решение...")
     status = solver.Solve(model)
@@ -130,11 +191,10 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True):
                 print(f"{d} | " + ", ".join(row))
 
         # Экспорт в Excel
-        output_filename = "timetable_or_tools_FINAL_solution.xlsx"
+        output_filename = "timetable_or_tools_solution.xlsx"
         final_maps = {"solver": solver, "x": x, "z": z}
         solution_maps = get_solution_maps(data, final_maps, is_pulp=False)
         export_full_schedule_to_excel(output_filename, data, solution_maps)
-        print(f"\nФинальное расписание сохранено в {output_filename}")
 
     else:
         print(f'Решение не найдено. Статус: {solver.StatusName(status)}')
