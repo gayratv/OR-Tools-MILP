@@ -189,11 +189,13 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
                         # Если current_lesson это 0, то и is_lonely будет 0.
                         is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{g}_{d}_{p}')
                         
-                        # is_lonely = 1 IFF current_lesson=1 AND prev_lesson=0 AND next_lesson=0
-                        model.AddBoolAnd([current_lesson, prev_lesson.Not(), next_lesson.Not()]).OnlyEnforceIf(is_lonely)
-                        model.AddImplication(is_lonely, current_lesson) # Если одинок, то урок точно есть
-                        model.AddImplication(is_lonely, prev_lesson.Not()) # Если одинок, то предыдущего нет
-                        model.AddImplication(is_lonely, next_lesson.Not()) # Если одинок, то следующего нет
+                        # Устанавливаем эквивалентность: is_lonely = 1 ТОГДА И ТОЛЬКО ТОГДА, КОГДА (урок есть И соседей нет)
+                        # Это ключевое исправление. Мы добавляем обратную импликацию.
+                        # ЕСЛИ (урок есть И соседей нет), ТО is_lonely ДОЛЖЕН быть 1.
+                        model.Add(is_lonely == 1).OnlyEnforceIf([current_lesson, prev_lesson.Not(), next_lesson.Not()])
+                        model.Add(is_lonely == 0).OnlyEnforceIf(current_lesson.Not()) # Если урока нет, он не может быть одиноким
+                        model.Add(is_lonely == 0).OnlyEnforceIf(prev_lesson) # Если есть сосед слева, он не одинокий
+                        model.Add(is_lonely == 0).OnlyEnforceIf(next_lesson) # Если есть сосед справа, он не одинокий
                         
                         lonely_lessons.append(is_lonely)
             else:
@@ -205,10 +207,11 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
                         next_lesson = x.get((c, s, d, P[p_idx + 1]), false_var) if p_idx < len(P) - 1 else false_var
 
                         is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{d}_{p}')
-                        model.AddBoolAnd([current_lesson, prev_lesson.Not(), next_lesson.Not()]).OnlyEnforceIf(is_lonely)
-                        model.AddImplication(is_lonely, current_lesson)
-                        model.AddImplication(is_lonely, prev_lesson.Not())
-                        model.AddImplication(is_lonely, next_lesson.Not())
+                        # Та же логика эквивалентности для не-делимых предметов
+                        model.Add(is_lonely == 1).OnlyEnforceIf([current_lesson, prev_lesson.Not(), next_lesson.Not()])
+                        model.Add(is_lonely == 0).OnlyEnforceIf(current_lesson.Not())
+                        model.Add(is_lonely == 0).OnlyEnforceIf(prev_lesson)
+                        model.Add(is_lonely == 0).OnlyEnforceIf(next_lesson)
                         lonely_lessons.append(is_lonely)
 
         if lonely_lessons and hasattr(weights, 'epsilon_pairing'):
