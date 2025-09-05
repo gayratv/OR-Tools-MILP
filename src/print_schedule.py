@@ -37,6 +37,19 @@ def get_solution_maps(data: InputData, solver_or_vars: Dict, is_pulp: bool) -> D
 # "teacher_names": teacher_map.set_index('teacher')['FAMIO'].to_dict()
 def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps: Dict[str, Dict[Tuple, float]], display_maps: Dict[str, Dict[str, str]]=None):
     x_sol, z_sol = solution_maps['x'], solution_maps['z']
+    
+    # --- Вспомогательные функции для получения полных имен ---
+    # Если display_maps не предоставлен, создаем пустые словари
+    display_maps = display_maps or {}
+    subject_names = display_maps.get("subject_names", {})
+    teacher_names = display_maps.get("teacher_names", {})
+
+    def get_subject_name(s_id):
+        return subject_names.get(s_id, s_id)
+
+    def get_teacher_name(t_id):
+        return teacher_names.get(t_id, t_id)
+
     wb = openpyxl.Workbook()
     bold_font = Font(bold=True)
     center_align = Alignment(horizontal='center', vertical='center')
@@ -60,7 +73,7 @@ def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps:
                     if s in data.split_subjects: continue
                     if x_sol.get((c, s, d, p), 0) > 0.5:
                         t = data.assigned_teacher.get((c, s), '?')
-                        cell_text = f"{s} ({t})"
+                        cell_text = f"{get_subject_name(s)} ({get_teacher_name(t)})"
                         break
                 # split
                 if cell_text is None:
@@ -69,7 +82,7 @@ def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps:
                         for g in data.subgroup_ids:
                             if z_sol.get((c, s, g, d, p), 0) > 0.5:
                                 t = data.subgroup_assigned_teacher.get((c, s, g), '?')
-                                pieces.append(f"{s}[g{g}::{t}]")
+                                pieces.append(f"{get_subject_name(s)}[g{g}::{get_teacher_name(t)}]")
                     if pieces:
                         cell_text = "+".join(pieces)
                 row.append(cell_text or "—")
@@ -79,7 +92,7 @@ def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps:
     # --- Лист: расписание по учителям ---
     ws_teachers = wb.create_sheet("Учителя_расписание")
     for t in data.teachers:
-        ws_teachers.append([f"Учитель {t}"])
+        ws_teachers.append([f"Учитель {get_teacher_name(t)}"])
         ws_teachers.cell(ws_teachers.max_row, 1).font = bold_font
         header = ["День"] + [f"Урок {p}" for p in data.periods]
         ws_teachers.append(header)
@@ -92,7 +105,7 @@ def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps:
                 for (c, s), tt in data.assigned_teacher.items():
                     if tt != t: continue
                     if x_sol.get((c, s, d, p), 0) > 0.5:
-                        cell_text = f"{c}-{s}"
+                        cell_text = f"{c}-{get_subject_name(s)}"
                         break
                 # split
                 if cell_text is None:
@@ -100,7 +113,7 @@ def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps:
                     for (c, s, g), tt in data.subgroup_assigned_teacher.items():
                         if tt != t: continue
                         if z_sol.get((c, s, g, d, p), 0) > 0.5:
-                            pieces.append(f"{c}-{s}[g{g}]")
+                            pieces.append(f"{c}-{get_subject_name(s)}[g{g}]")
                     if pieces:
                         cell_text = " + ".join(pieces)
                 row.append(cell_text or "—")
@@ -152,11 +165,11 @@ def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps:
         total_windows = 0
         for d in data.days:
             busy_periods = sorted(teacher_busy_periods[t][d])
-            if len(busy_periods) > 1: total_windows += sum(busy_periods[i+1] - busy_periods[i] - 1 for i in range(len(busy_periods) - 1))
+            if len(busy_periods) > 1: total_windows += sum(busy_periods[i+1] - busy_periods[i] - 1 for i in range(len(busy_periods) - 1)) # noqa
         warnings = []
         if total > data.teacher_weekly_cap: warnings.append(f"Перегруз! ({total}/{data.teacher_weekly_cap})")
         if total_windows > 5: warnings.append(f"Окна > 5")
-        row = [t, total, data.teacher_weekly_cap, f"{avg:.1f}", total_windows] + [per_day[d] for d in data.days] + [", ".join(warnings)]
+        row = [get_teacher_name(t), total, data.teacher_weekly_cap, f"{avg:.1f}", total_windows] + [per_day[d] for d in data.days] + [", ".join(warnings)]
         ws_summary.append(row)
 
     # --- Авто-ширина колонок и стиль ---
