@@ -15,8 +15,37 @@ from rasp_data_generated import create_timetable_data
 # Импорты для вывода и экспорта
 from print_schedule import get_solution_maps, export_full_schedule_to_excel
 
+def _calculate_teacher_windows(data: InputData, solver: cp_model.CpSolver, x: dict, z: dict) -> int:
+    """
+    Подсчитывает общее количество "окон" в расписании всех учителей на основе решенной модели.
+    "Окно" - это пустой урок между двумя занятыми уроками в течение одного дня.
+    """
+    teacher_busy_periods = {(t, d): [] for t, d in itertools.product(data.teachers, data.days)}
 
-def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMETABLE_TO_CONSOLE=None, display_maps: Dict[str, Dict[str, str]]=None):
+    # Собираем все занятые слоты для каждого учителя
+    # Не-делимые предметы
+    for (c, s, d, p), var in x.items():
+        if solver.Value(var) > 0:
+            teacher = data.assigned_teacher.get((c, s))
+            if teacher:
+                teacher_busy_periods[teacher, d].append(p)
+
+    # Делимые предметы
+    for (c, s, g, d, p), var in z.items():
+        if solver.Value(var) > 0:
+            teacher = data.subgroup_assigned_teacher.get((c, s, g))
+            if teacher:
+                teacher_busy_periods[teacher, d].append(p)
+
+    total_windows = 0
+    for t, d in itertools.product(data.teachers, data.days):
+        busy_periods = sorted(list(set(teacher_busy_periods[t, d]))) # Сортируем и убираем дубли
+        if len(busy_periods) > 1:
+            # Суммируем разрывы: (следующий_урок - текущий_урок - 1)
+            total_windows += sum(busy_periods[i+1] - busy_periods[i] - 1 for i in range(len(busy_periods) - 1))
+    return total_windows
+
+def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMETABLE_TO_CONSOLE=None, display_maps: Dict[str, Dict[str, str]]=None, optimize_teacher_windows: bool = True):
     """Основная функция для построения и решения модели расписания с помощью OR-Tools."""
     model = cp_model.CpModel()
     C, S, D, P = data.classes, data.subjects, data.days, data.periods
@@ -144,7 +173,36 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
             model.Add(sr == 0).OnlyEnforceIf(yprev)  # Если y[p-1], то sr=0
     objective_terms.append(weights.alpha_runs * sum(srun.values()))
 
-    # 2. Ранние слоты: легкое предпочтение ранних уроков (минимизация номера периода).
+    if optimize_teacher_windows:
+        # 1.1. Анти-окна для учителей: минимизация числа "окон" между уроками у учителей.
+        # Логика аналогична анти-окнам для классов.
+        teacher_busy = {(t, d, p): model.NewBoolVar(f'tbusy_{t}_{d}_{p}')
+                        for t, d, p in itertools.product(data.teachers, D, P)}
+        teacher_srun = {(t, d, p): model.NewBoolVar(f'tsrun_{t}_{d}_{p}')
+                        for t, d, p in itertools.product(data.teachers, D, P)}
+
+        for t, d, p in itertools.product(data.teachers, D, P):
+            lessons = teacher_lessons_in_slot.get((t, d, p), [])
+            if lessons:
+                # teacher_busy[t,d,p] = 1 <=> есть хотя бы один урок у учителя в этом слоте
+                model.AddBoolOr(lessons).OnlyEnforceIf(teacher_busy[t, d, p])
+                model.AddBoolAnd([v.Not() for v in lessons]).OnlyEnforceIf(teacher_busy[t, d, p].Not())
+            else:
+                model.Add(teacher_busy[t, d, p] == 0)
+
+
+        for t, d in itertools.product(data.teachers, D):
+            # Для первого урока дня, начало блока = это просто наличие урока.
+            model.Add(teacher_srun[t, d, P[0]] == teacher_busy[t, d, P[0]])
+            # Для остальных: начало блока = (есть урок СЕЙЧАС) И (не было урока РАНЬШЕ)
+            for p_idx in range(1, len(P)):
+                p, prev_p = P[p_idx], P[p_idx - 1]
+                model.Add(teacher_srun[t, d, p] == 1).OnlyEnforceIf([teacher_busy[t, d, p], teacher_busy[t, d, prev_p].Not()])
+                model.Add(teacher_srun[t, d, p] == 0).OnlyEnforceIf(teacher_busy[t, d, p].Not())
+                model.Add(teacher_srun[t, d, p] == 0).OnlyEnforceIf(teacher_busy[t, d, prev_p])
+        objective_terms.append(weights.alpha_runs_teacher * sum(teacher_srun.values()))
+
+# 2. Ранние слоты: легкое предпочтение ранних уроков (минимизация номера периода).
     objective_terms.append(weights.beta_early * sum(p * y[c, d, p] for c, d, p in y))
 
     # 3. Баланс по дням: минимизация разницы между самым загруженным и самым свободным днем.
@@ -240,6 +298,10 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
             total_lonely = sum(solver.Value(v) for v in lonely_lessons)
             print(f'Итоговое количество "одиноких" уроков (штраф): {total_lonely}')
 
+        # Подсчет и вывод общего количества "окон" у учителей
+        total_teacher_windows = _calculate_teacher_windows(data, solver, x, z)
+        print(f'Итоговое количество "окон" у учителей: {total_teacher_windows}')
+
         # Вывод финального расписания в консоль
         if PRINT_TIMETABLE_TO_CONSOLE:
             print("\n--- ФИНАЛЬНОЕ РАСПИСАНИЕ ---")
@@ -297,4 +359,4 @@ if __name__ == '__main__':
         exit()
 
     display_maps = load_display_maps(db_path_str)
-    build_and_solve_with_or_tools(data, PRINT_TIMETABLE_TO_CONSOLE=False, display_maps=display_maps)
+    build_and_solve_with_or_tools(data, PRINT_TIMETABLE_TO_CONSOLE=False, display_maps=display_maps, optimize_teacher_windows=True)
