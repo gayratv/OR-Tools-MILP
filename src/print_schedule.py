@@ -31,7 +31,11 @@ def get_solution_maps(data: InputData, solver_or_vars: Dict, is_pulp: bool) -> D
         for k, v in z_vars.items(): z_sol[k] = solver.Value(v)
     return {'x': x_sol, 'z': z_sol}
 
-def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps: Dict[str, Dict[Tuple, float]]):
+
+# display_maps
+# "subject_names": subject_map.set_index('предмет_eng')['предмет'].to_dict(),
+# "teacher_names": teacher_map.set_index('teacher')['FAMIO'].to_dict()
+def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps: Dict[str, Dict[Tuple, float]], display_maps: Dict[str, Dict[str, str]]=None):
     x_sol, z_sol = solution_maps['x'], solution_maps['z']
     wb = openpyxl.Workbook()
     bold_font = Font(bold=True)

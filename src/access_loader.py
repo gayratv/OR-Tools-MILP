@@ -4,6 +4,7 @@ from urllib.parse import quote_plus
 from input_data import InputData
 from pprint import pprint
 from sqlalchemy import text
+from typing import Dict
 import re
 
 
@@ -202,7 +203,7 @@ def load_data_from_access(db_path: str) -> InputData:
     )
 
 
-def load_display_maps(db_path: str) -> dict:
+def load_display_maps(db_path: str) -> Dict[str, Dict[str, str]]:
     """
     Загружает из базы данных словари для сопоставления
     технических (английских) названий с полными (русскими) для отчетов.

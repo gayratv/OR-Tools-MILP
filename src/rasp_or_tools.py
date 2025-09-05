@@ -1,20 +1,22 @@
 # rasp_or_tools.py (v16 - комментарии к переменным)
 
 import itertools
+from typing import Dict
+
 from ortools.sat.python import cp_model
 
 from input_data import InputData, OptimizationWeights
 
 # Импорты для разных источников данных
 from rasp_data import create_manual_data
-from access_loader import load_data_from_access
+from access_loader import load_data_from_access, load_display_maps
 from rasp_data_generated import create_timetable_data
 
 # Импорты для вывода и экспорта
 from print_schedule import get_solution_maps, export_full_schedule_to_excel
 
 
-def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMETABLE_TO_CONSOLE=None):
+def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMETABLE_TO_CONSOLE=None, display_maps: Dict[str, Dict[str, str]]=None):
     """Основная функция для построения и решения модели расписания с помощью OR-Tools."""
     model = cp_model.CpModel()
     C, S, D, P = data.classes, data.subjects, data.days, data.periods
@@ -23,17 +25,17 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
 
     # --- Переменные ---
     # x[(c, s, d, p)] = 1, если у класса c не-делимый предмет s в день d, урок p
-    x = { (c, s, d, p): model.NewBoolVar(f'x_{c}_{s}_{d}_{p}')
-          for c, s, d, p in itertools.product(C, S, D, P) if s not in splitS }
+    x = {(c, s, d, p): model.NewBoolVar(f'x_{c}_{s}_{d}_{p}')
+         for c, s, d, p in itertools.product(C, S, D, P) if s not in splitS}
 
     # z[(c, s, g, d, p)] = 1, если у класса c делимый предмет s для подгруппы g в день d, урок p
-    z = { (c, s, g, d, p): model.NewBoolVar(f'z_{c}_{s}_{g}_{d}_{p}')
-          for c, s, g, d, p in itertools.product(C, S, G, D, P) if s in splitS }
+    z = {(c, s, g, d, p): model.NewBoolVar(f'z_{c}_{s}_{g}_{d}_{p}')
+         for c, s, g, d, p in itertools.product(C, S, G, D, P) if s in splitS}
 
     # y[c, d, p] = 1, если у класса c есть любое занятие в день d, период p (вспомогательная переменная)
-    y = { (c, d, p): model.NewBoolVar(f'y_{c}_{d}_{p}')
-          for c, d, p in itertools.product(C, D, P) }
-          
+    y = {(c, d, p): model.NewBoolVar(f'y_{c}_{d}_{p}')
+         for c, d, p in itertools.product(C, D, P)}
+
     # is_subj_taught[(c, s, d, p)] = 1, если делимый предмет s преподается ЛЮБОЙ подгруппе класса c в данном слоте
     # (нужна для проверки совместимости)
     # Это ограничение говорит:•
@@ -41,12 +43,11 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
     # is_subj_taught[('10A', 'CS', 'Mon', 1)] будет 1, потому что z[('10A', 'CS', 2, 'Mon', 1)] равен 1.•
     # is_subj_taught[('10A', 'Trud', 'Mon', 1)] будет 0, потому что ни одна подгруппа не изучает труд в это время.
 
-    is_subj_taught = { (c, s, d, p): model.NewBoolVar(f'ist_{c}_{s}_{d}_{p}')
-                       for c, s, d, p in itertools.product(C, splitS, D, P) }
+    is_subj_taught = {(c, s, d, p): model.NewBoolVar(f'ist_{c}_{s}_{d}_{p}')
+                      for c, s, d, p in itertools.product(C, splitS, D, P)}
 
     false_var = model.NewBoolVar('false_var')
     model.Add(false_var == 0)
-
 
     # --- Жесткие ограничения (Hard Constraints) ---
     # Эти правила должны выполняться неукоснительно.
@@ -68,9 +69,9 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
 
     # 3. Ограничения для учителей
     # Создаем удобную структуру для быстрого доступа к урокам каждого учителя
-    teacher_lessons_in_slot = { (t,d,p): [] for t,d,p in itertools.product(data.teachers, D, P) }
+    teacher_lessons_in_slot = {(t, d, p): [] for t, d, p in itertools.product(data.teachers, D, P)}
     for (c, s), t in data.assigned_teacher.items():
-        if s not in splitS: 
+        if s not in splitS:
             for d, p in itertools.product(D, P): teacher_lessons_in_slot[t, d, p].append(x[c, s, d, p])
     for (c, s, g), t in data.subgroup_assigned_teacher.items():
         for d, p in itertools.product(D, P): teacher_lessons_in_slot[t, d, p].append(z[c, s, g, d, p])
@@ -78,10 +79,10 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
     for t in data.teachers:
         # a) Недельная нагрузка не более лимита
         all_lessons_for_teacher = []
-        for d,p in itertools.product(D,P):
-            all_lessons_for_teacher.extend(teacher_lessons_in_slot[t,d,p])
+        for d, p in itertools.product(D, P):
+            all_lessons_for_teacher.extend(teacher_lessons_in_slot[t, d, p])
         if all_lessons_for_teacher:
-             model.Add(sum(all_lessons_for_teacher) <= data.teacher_weekly_cap)
+            model.Add(sum(all_lessons_for_teacher) <= data.teacher_weekly_cap)
         # b) Не более одного урока в одном слоте (нет "накладок")
         for d, p in itertools.product(D, P):
             lessons = teacher_lessons_in_slot[t, d, p]
@@ -97,11 +98,11 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
         # a) Не более одного не-делимого урока в слоте
         non_split_vars = [x[c, s, d, p] for s in S if s not in splitS]
         model.AddAtMostOne(non_split_vars)
-        
+
         # b) У каждой подгруппы не более одного урока в слоте
         for g in G:
             model.AddAtMostOne(z[c, s, g, d, p] for s in splitS)
-        
+
         # c) Нельзя проводить не-делимый и делимый урок одновременно
         all_split_vars_in_slot = [z[c, s, g, d, p] for s in splitS for g in G]
         for nsv in non_split_vars:
@@ -124,28 +125,27 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
                 # Если предметы несовместимы, они не могут идти одновременно
                 model.AddBoolOr([is_subj_taught[c, s1, d, p].Not(), is_subj_taught[c, s2, d, p].Not()])
 
-
     # --- Целевая функция (мягкие ограничения) ---
     # Это цели, которые решатель будет стараться выполнить, но может нарушить, если это необходимо для выполнения жестких ограничений.
     objective_terms = []
 
     # 1. Анти-окна: минимизация числа "окон" между уроками.
     # Реализуется через минимизацию количества "начал блоков занятий".
-    srun = { (c, d, p): model.NewBoolVar(f'srun_{c}_{d}_{p}') for c, d, p in itertools.product(C, D, P) }
+    srun = {(c, d, p): model.NewBoolVar(f'srun_{c}_{d}_{p}') for c, d, p in itertools.product(C, D, P)}
     for c, d in itertools.product(C, D):
         # Для первого урока дня, начало блока = это просто наличие урока.
         model.Add(srun[c, d, P[0]] == y[c, d, P[0]])
         # Для остальных: начало блока = (есть урок СЕЙЧАС) И (не было урока РАНЬШЕ)
         for p_idx in range(1, len(P)):
-            p, prev_p = P[p_idx], P[p_idx-1]
-            sr, yp, yprev = srun[c,d,p], y[c,d,p], y[c,d,prev_p]
-            model.Add(sr == 1).OnlyEnforceIf([yp, yprev.Not()]) # Если y[p] и not y[p-1], то sr=1
-            model.Add(sr == 0).OnlyEnforceIf(yp.Not())          # Если not y[p], то sr=0
-            model.Add(sr == 0).OnlyEnforceIf(yprev)             # Если y[p-1], то sr=0
+            p, prev_p = P[p_idx], P[p_idx - 1]
+            sr, yp, yprev = srun[c, d, p], y[c, d, p], y[c, d, prev_p]
+            model.Add(sr == 1).OnlyEnforceIf([yp, yprev.Not()])  # Если y[p] и not y[p-1], то sr=1
+            model.Add(sr == 0).OnlyEnforceIf(yp.Not())  # Если not y[p], то sr=0
+            model.Add(sr == 0).OnlyEnforceIf(yprev)  # Если y[p-1], то sr=0
     objective_terms.append(weights.alpha_runs * sum(srun.values()))
 
     # 2. Ранние слоты: легкое предпочтение ранних уроков (минимизация номера периода).
-    objective_terms.append(weights.beta_early * sum(p * y[c, d, p] for c,d,p in y))
+    objective_terms.append(weights.beta_early * sum(p * y[c, d, p] for c, d, p in y))
 
     # 3. Баланс по дням: минимизация разницы между самым загруженным и самым свободным днем.
     for c in C:
@@ -156,7 +156,7 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
         objective_terms.append(weights.gamma_balance * (max_lessons - min_lessons))
 
     # 4. Хвосты: штраф за уроки после определенного часа (например, после 6-го).
-    objective_terms.append(weights.delta_tail * sum(y[c,d,p] for c,d,p in y if p > weights.last_ok_period))
+    objective_terms.append(weights.delta_tail * sum(y[c, d, p] for c, d, p in y if p > weights.last_ok_period))
 
     # 5. Спаренные уроки: штраф за "одиночные" уроки для предметов, которые должны идти парами.
 
@@ -177,7 +177,7 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
         for s in data.paired_subjects:
             if s in splitS:
                 # --- Для ДЕЛИМЫХ предметов (по каждой подгруппе отдельно) ---
-                for c, g, d in itertools.product(C, G, D): # Исправлена опечатка d -> D
+                for c, g, d in itertools.product(C, G, D):  # Исправлена опечатка d -> D
                     for p_idx, p in enumerate(P):
                         # Получаем переменные для текущего, предыдущего и следующего уроков.
                         # Если переменной нет, используем целочисленный 0, который решатель понимает как False.
@@ -188,15 +188,16 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
                         # Урок может быть "одиноким" только если он существует.
                         # Если current_lesson это 0, то и is_lonely будет 0.
                         is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{g}_{d}_{p}')
-                        
+
                         # Устанавливаем эквивалентность: is_lonely = 1 ТОГДА И ТОЛЬКО ТОГДА, КОГДА (урок есть И соседей нет)
                         # Это ключевое исправление. Мы добавляем обратную импликацию.
                         # ЕСЛИ (урок есть И соседей нет), ТО is_lonely ДОЛЖЕН быть 1.
                         model.Add(is_lonely == 1).OnlyEnforceIf([current_lesson, prev_lesson.Not(), next_lesson.Not()])
-                        model.Add(is_lonely == 0).OnlyEnforceIf(current_lesson.Not()) # Если урока нет, он не может быть одиноким
-                        model.Add(is_lonely == 0).OnlyEnforceIf(prev_lesson) # Если есть сосед слева, он не одинокий
-                        model.Add(is_lonely == 0).OnlyEnforceIf(next_lesson) # Если есть сосед справа, он не одинокий
-                        
+                        model.Add(is_lonely == 0).OnlyEnforceIf(
+                            current_lesson.Not())  # Если урока нет, он не может быть одиноким
+                        model.Add(is_lonely == 0).OnlyEnforceIf(prev_lesson)  # Если есть сосед слева, он не одинокий
+                        model.Add(is_lonely == 0).OnlyEnforceIf(next_lesson)  # Если есть сосед справа, он не одинокий
+
                         lonely_lessons.append(is_lonely)
             else:
                 # --- Для НЕ-ДЕЛИМЫХ предметов ---
@@ -224,7 +225,7 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
     solver.parameters.log_search_progress = log
     solver.parameters.num_search_workers = 16
     solver.parameters.relative_gap_limit = 0.05
-    
+
     print("Начинаем решение...")
     status = solver.Solve(model)
     print("\nРешение завершено.")
@@ -239,9 +240,8 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
             total_lonely = sum(solver.Value(v) for v in lonely_lessons)
             print(f'Итоговое количество "одиноких" уроков (штраф): {total_lonely}')
 
-
         # Вывод финального расписания в консоль
-        if PRINT_TIMETABLE_TO_CONSOLE :
+        if PRINT_TIMETABLE_TO_CONSOLE:
             print("\n--- ФИНАЛЬНОЕ РАСПИСАНИЕ ---")
             for c in data.classes:
                 print(f"\n=== Класс {c} ===")
@@ -270,18 +270,20 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
         output_filename = "timetable_or_tools_solution.xlsx"
         final_maps = {"solver": solver, "x": x, "z": z}
         solution_maps = get_solution_maps(data, final_maps, is_pulp=False)
-        export_full_schedule_to_excel(output_filename, data, solution_maps)
+        export_full_schedule_to_excel(output_filename, data, solution_maps,display_maps)
 
     else:
         print(f'Решение не найдено. Статус: {solver.StatusName(status)}')
+
 
 if __name__ == '__main__':
     data_source = 'generated'
     data = None
 
+    db_path_str = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3-new-calculation.accdb"
+
     if data_source == 'db':
         print("--- Источник данных: MS Access DB ---")
-        db_path_str = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3-new-calculation.accdb"
         data = load_data_from_access(db_path_str)
     elif data_source == 'generated':
         print("--- Источник данных: сгенерированный файл (rasp_data_generated.py) ---")
@@ -289,9 +291,10 @@ if __name__ == '__main__':
     elif data_source == 'manual':
         print("--- Источник данных: ручной файл (rasp_data.py) ---")
         data = create_manual_data()
-    
+
     if data is None:
         print(f"Ошибка: не удалось загрузить данные из источника '{data_source}'. Проверьте настройки.")
         exit()
 
-    build_and_solve_with_or_tools(data, PRINT_TIMETABLE_TO_CONSOLE=False)
+    display_maps = load_display_maps(db_path_str)
+    build_and_solve_with_or_tools(data, PRINT_TIMETABLE_TO_CONSOLE=False, display_maps=display_maps)
