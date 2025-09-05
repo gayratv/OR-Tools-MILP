@@ -174,55 +174,34 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
     objective_terms.append(weights.alpha_runs * sum(srun.values()))
 
     if optimize_teacher_windows:
-        # 1.1. Анти-окна для учителей: минимизация числа "окон" между уроками у учителей.
-        # --- НОВЫЙ ПОДХОД: Прямая минимизация "окон" ---
+        # 1.1. Анти-окна для учителей (минимизация "окон" через минимизацию "начал блоков занятий")
+        # Этот подход аналогичен минимизации окон для классов.
 
-        # teacher_busy[t,d,p] = 1 <=> есть хотя бы один урок у учителя в этом слоте
+        # teacher_busy[t,d,p] = 1, если у учителя t есть хотя бы один урок в этом слоте
         teacher_busy = {(t, d, p): model.NewBoolVar(f'tbusy_{t}_{d}_{p}')
                         for t, d, p in itertools.product(data.teachers, D, P)}
-
         for t, d, p in itertools.product(data.teachers, D, P):
             lessons = teacher_lessons_in_slot.get((t, d, p), [])
             if lessons:
                 model.AddBoolOr(lessons).OnlyEnforceIf(teacher_busy[t, d, p])
                 model.AddBoolAnd([v.Not() for v in lessons]).OnlyEnforceIf(teacher_busy[t, d, p].Not())
             else:
-                model.Add(teacher_busy[t, d, p] == 0)
+                model.Add(teacher_busy[t, d, p] == 0) # Если уроков нет, переменная = 0
 
-        # teacher_window[t,d,p] = 1 <=> у учителя t в день d в период p есть "окно"
-        teacher_window = {(t, d, p): model.NewBoolVar(f'twin_{t}_{d}_{p}')
-                          for t, d, p in itertools.product(data.teachers, D, P)}
-
+        # tsrun[t,d,p] = 1, если у учителя t в день d в период p начинается блок занятий
+        tsrun = {(t, d, p): model.NewBoolVar(f'tsrun_{t}_{d}_{p}')
+                 for t, d, p in itertools.product(data.teachers, D, P)}
         for t, d in itertools.product(data.teachers, D):
-            # Вспомогательные переменные для определения "окна"
-            has_lesson_before = {p: model.NewBoolVar(f't_before_{t}_{d}_{p}') for p in P}
-            has_lesson_after = {p: model.NewBoolVar(f't_after_{t}_{d}_{p}') for p in P}
+            # Для первого урока дня, начало блока = это просто наличие урока.
+            model.Add(tsrun[t, d, P[0]] == teacher_busy[t, d, P[0]])
+            # Для остальных: начало блока = (есть урок СЕЙЧАС) И (не было урока РАНЬШЕ)
+            for p_idx in range(1, len(P)):
+                p, prev_p = P[p_idx], P[p_idx - 1]
+                model.Add(tsrun[t, d, p] == 1).OnlyEnforceIf([teacher_busy[t, d, p], teacher_busy[t, d, prev_p].Not()])
+                model.Add(tsrun[t, d, p] == 0).OnlyEnforceIf(teacher_busy[t, d, p].Not())
+                model.Add(tsrun[t, d, p] == 0).OnlyEnforceIf(teacher_busy[t, d, prev_p])
 
-            # Заполняем has_lesson_before (был ли урок до этого периода)
-            model.Add(has_lesson_before[P[0]] == 0) # Перед первым уроком ничего не было
-            for i in range(1, len(P)):
-                # Урок был до p, если он был до p-1 ИЛИ был в p-1
-                model.AddBoolOr([has_lesson_before[P[i-1]], teacher_busy[t, d, P[i-1]]]).OnlyEnforceIf(has_lesson_before[P[i]])
-                model.AddImplication(has_lesson_before[P[i]].Not(), has_lesson_before[P[i-1]].Not())
-                model.AddImplication(has_lesson_before[P[i]].Not(), teacher_busy[t, d, P[i-1]].Not())
-
-            # Заполняем has_lesson_after (будет ли урок после этого периода)
-            model.Add(has_lesson_after[P[-1]] == 0) # После последнего урока ничего не будет
-            for i in range(len(P) - 2, -1, -1):
-                # Урок будет после p, если он будет после p+1 ИЛИ будет в p+1
-                model.AddBoolOr([has_lesson_after[P[i+1]], teacher_busy[t, d, P[i+1]]]).OnlyEnforceIf(has_lesson_after[P[i]])
-                model.AddImplication(has_lesson_after[P[i]].Not(), has_lesson_after[P[i+1]].Not())
-                model.AddImplication(has_lesson_after[P[i]].Not(), teacher_busy[t, d, P[i+1]].Not())
-
-            # Определяем "окно"
-            for p in P:
-                # Окно = (был урок до) И (будет урок после) И (нет урока сейчас)
-                model.AddBoolAnd([has_lesson_before[p], has_lesson_after[p], teacher_busy[t, d, p].Not()]).OnlyEnforceIf(teacher_window[t, d, p])
-                model.AddImplication(teacher_window[t, d, p], has_lesson_before[p])
-                model.AddImplication(teacher_window[t, d, p], has_lesson_after[p])
-                model.AddImplication(teacher_window[t, d, p], teacher_busy[t, d, p].Not())
-
-        objective_terms.append(weights.alpha_runs_teacher * sum(teacher_window.values()))
+        objective_terms.append(weights.alpha_runs_teacher * sum(tsrun.values()))
 
 # 2. Ранние слоты: легкое предпочтение ранних уроков (минимизация номера периода).
     objective_terms.append(weights.beta_early * sum(p * y[c, d, p] for c, d, p in y))
@@ -368,4 +347,4 @@ if __name__ == '__main__':
         exit()
 
     display_maps = load_display_maps(db_path_str)
-    build_and_solve_with_or_tools(data, PRINT_TIMETABLE_TO_CONSOLE=False, display_maps=display_maps, optimize_teacher_windows=False)
+    build_and_solve_with_or_tools(data, PRINT_TIMETABLE_TO_CONSOLE=False, display_maps=display_maps, optimize_teacher_windows=True)
