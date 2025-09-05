@@ -14,7 +14,7 @@ from rasp_data_generated import create_timetable_data
 from print_schedule import get_solution_maps, export_full_schedule_to_excel
 
 
-def build_and_solve_with_or_tools(data: InputData, log: bool = True):
+def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMETABLE_TO_CONSOLE=None):
     """Основная функция для построения и решения модели расписания с помощью OR-Tools."""
     model = cp_model.CpModel()
     C, S, D, P = data.classes, data.subjects, data.days, data.periods
@@ -232,29 +232,30 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True):
         print(f'Затрачено времени: {solver.WallTime()}s')
 
         # Вывод финального расписания в консоль
-        print("\n--- ФИНАЛЬНОЕ РАСПИСАНИЕ ---")
-        for c in data.classes:
-            print(f"\n=== Класс {c} ===")
-            for d in data.days:
-                row = []
-                for p in data.periods:
-                    cell = None
-                    for s in data.subjects:
-                        if s not in data.split_subjects and solver.Value(x.get((c, s, d, p), 0)):
-                            t = data.assigned_teacher.get((c, s), '?')
-                            cell = f"{p}: {s} ({t})"
-                            break
-                    if cell is None:
-                        pieces = []
-                        for s in data.split_subjects:
-                            for g in data.subgroup_ids:
-                                if solver.Value(z.get((c, s, g, d, p), 0)):
-                                    t = data.subgroup_assigned_teacher.get((c, s, g), '?')
-                                    pieces.append(f"{s}[g{g}::{t}]")
-                        if pieces:
-                            cell = f"{p}: " + "+".join(pieces)
-                    row.append(cell or f"{p}: —")
-                print(f"{d} | " + ", ".join(row))
+        if PRINT_TIMETABLE_TO_CONSOLE :
+            print("\n--- ФИНАЛЬНОЕ РАСПИСАНИЕ ---")
+            for c in data.classes:
+                print(f"\n=== Класс {c} ===")
+                for d in data.days:
+                    row = []
+                    for p in data.periods:
+                        cell = None
+                        for s in data.subjects:
+                            if s not in data.split_subjects and solver.Value(x.get((c, s, d, p), 0)):
+                                t = data.assigned_teacher.get((c, s), '?')
+                                cell = f"{p}: {s} ({t})"
+                                break
+                        if cell is None:
+                            pieces = []
+                            for s in data.split_subjects:
+                                for g in data.subgroup_ids:
+                                    if solver.Value(z.get((c, s, g, d, p), 0)):
+                                        t = data.subgroup_assigned_teacher.get((c, s, g), '?')
+                                        pieces.append(f"{s}[g{g}::{t}]")
+                            if pieces:
+                                cell = f"{p}: " + "+".join(pieces)
+                        row.append(cell or f"{p}: —")
+                    print(f"{d} | " + ", ".join(row))
 
         # Экспорт в Excel
         output_filename = "timetable_or_tools_solution.xlsx"
@@ -284,4 +285,4 @@ if __name__ == '__main__':
         print(f"Ошибка: не удалось загрузить данные из источника '{data_source}'. Проверьте настройки.")
         exit()
 
-    build_and_solve_with_or_tools(data)
+    build_and_solve_with_or_tools(data, PRINT_TIMETABLE_TO_CONSOLE=False)
