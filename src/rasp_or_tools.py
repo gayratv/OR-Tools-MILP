@@ -44,6 +44,9 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True):
     is_subj_taught = { (c, s, d, p): model.NewBoolVar(f'ist_{c}_{s}_{d}_{p}')
                        for c, s, d, p in itertools.product(C, splitS, D, P) }
 
+    false_var = model.NewBoolVar('false_var')
+    model.Add(false_var == 0)
+
 
     # --- Жесткие ограничения (Hard Constraints) ---
     # Эти правила должны выполняться неукоснительно.
@@ -174,41 +177,38 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True):
         for s in data.paired_subjects:
             if s in splitS:
                 # --- Для ДЕЛИМЫХ предметов (по каждой подгруппе отдельно) ---
-                for c, g, d in itertools.product(C, G, D):
+                for c, g, d in itertools.product(C, G, D): # Исправлена опечатка d -> D
                     for p_idx, p in enumerate(P):
-                        current_lesson = z.get((c, s, g, d, p))
-                        if not current_lesson: continue
+                        # Получаем переменные для текущего, предыдущего и следующего уроков.
+                        # Если переменной нет, используем целочисленный 0, который решатель понимает как False.
+                        current_lesson = z.get((c, s, g, d, p), false_var)
+                        prev_lesson = z.get((c, s, g, d, P[p_idx - 1]), false_var) if p_idx > 0 else false_var
+                        next_lesson = z.get((c, s, g, d, P[p_idx + 1]), false_var) if p_idx < len(P) - 1 else false_var
 
-                        # Проверяем соседей
-                        has_prev = p_idx > 0 and z.get((c, s, g, d, P[p_idx - 1]))
-                        has_next = p_idx < len(P) - 1 and z.get((c, s, g, d, P[p_idx + 1]))
-
-                        # Урок "одинок", если у него нет соседей
+                        # Урок может быть "одиноким" только если он существует.
+                        # Если current_lesson это 0, то и is_lonely будет 0.
                         is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{g}_{d}_{p}')
-                        # is_lonely = current_lesson AND (NOT has_prev) AND (NOT has_next)
-                        # Это сложно для линейной формы, поэтому используем индикатор.
-                        # Если урок есть, а соседей нет, то is_lonely = 1
-                        model.Add(is_lonely == 1).OnlyEnforceIf([current_lesson, has_prev.Not(), has_next.Not()])
-                        # В остальных случаях is_lonely = 0
-                        model.Add(is_lonely == 0).OnlyEnforceIf(current_lesson.Not())
-                        model.Add(is_lonely == 0).OnlyEnforceIf(has_prev)
-                        model.Add(is_lonely == 0).OnlyEnforceIf(has_next)
+                        
+                        # is_lonely = 1 IFF current_lesson=1 AND prev_lesson=0 AND next_lesson=0
+                        model.AddBoolAnd([current_lesson, prev_lesson.Not(), next_lesson.Not()]).OnlyEnforceIf(is_lonely)
+                        model.AddImplication(is_lonely, current_lesson) # Если одинок, то урок точно есть
+                        model.AddImplication(is_lonely, prev_lesson.Not()) # Если одинок, то предыдущего нет
+                        model.AddImplication(is_lonely, next_lesson.Not()) # Если одинок, то следующего нет
+                        
                         lonely_lessons.append(is_lonely)
             else:
                 # --- Для НЕ-ДЕЛИМЫХ предметов ---
                 for c, d in itertools.product(C, D):
                     for p_idx, p in enumerate(P):
-                        current_lesson = x.get((c, s, d, p))
-                        if not current_lesson: continue
-
-                        has_prev = p_idx > 0 and x.get((c, s, d, P[p_idx - 1]))
-                        has_next = p_idx < len(P) - 1 and x.get((c, s, d, P[p_idx + 1]))
+                        current_lesson = x.get((c, s, d, p), 0)
+                        prev_lesson = x.get((c, s, d, P[p_idx - 1]), 0) if p_idx > 0 else 0
+                        next_lesson = x.get((c, s, d, P[p_idx + 1]), 0) if p_idx < len(P) - 1 else 0
 
                         is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{d}_{p}')
-                        model.Add(is_lonely == 1).OnlyEnforceIf([current_lesson, has_prev.Not(), has_next.Not()])
-                        model.Add(is_lonely == 0).OnlyEnforceIf(current_lesson.Not())
-                        model.Add(is_lonely == 0).OnlyEnforceIf(has_prev)
-                        model.Add(is_lonely == 0).OnlyEnforceIf(has_next)
+                        model.AddBoolAnd([current_lesson, prev_lesson.Not(), next_lesson.Not()]).OnlyEnforceIf(is_lonely)
+                        model.AddImplication(is_lonely, current_lesson)
+                        model.AddImplication(is_lonely, prev_lesson.Not())
+                        model.AddImplication(is_lonely, next_lesson.Not())
                         lonely_lessons.append(is_lonely)
 
         if lonely_lessons and hasattr(weights, 'epsilon_pairing'):

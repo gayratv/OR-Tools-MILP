@@ -16,7 +16,7 @@ def create_timetable_data() -> InputData:
     classes = ['2V', '2A', '2B', '3G', '3V', '3B', '3A', '4A', '4B', '4V', '4G', '5G', '5A', '5B', '5V', '6A', '6B', '6V', '7A', '7V', '7_MK', '8B', '8A', '8V', '9V', '9A', '9B', '10B', '10A', '11B', '11A']
     subjects = ['Rus', 'Lit', 'Math', 'Phys', 'Bio', 'Chem', 'Geog', 'Env', 'Alg', 'Trud', 'Art', 'Hist', 'Eng', 'PE', 'VisArt', 'Mus', 'Draw', 'Soc', 'Safe', 'NatSci', 'CS', 'Geom', 'Stat', 'SchComp', 'Relig', 'ElParms', 'Proj', 'MathAdv', 'Fin', 'Pol', 'ElRu', 'El']
     teachers = ['Gas_ASh', 'Vac_2', 'Ula_OV', 'Zhi_VI', 'Bel_IV', 'Kol_IL', 'Sol_MA', 'Los_AS', 'Vac_1', 'Ode_OG', 'Gos_EO', 'Sha_VE', 'Par_VYu', 'Osi_EM', 'Gri_TV', 'Obu_KV', 'Bad_MV', 'Var_SG', 'Kuk_EN', 'Vor_IG', 'Per_SI', 'Zue_SG', 'Got_EV', 'Sak_EV', 'Che_LN', 'Ode_DV', 'Pys_LP', 'Rad_OV', 'Put_MG', 'Sta_EV', 'Vac_IT', 'May_AYu', 'Kam_OV', 'Bul_AS', 'Kam_SI', 'Zue_M', 'Vac_fizra', 'Bur_NS', 'Fil_DM', 'Vac_Physics', 'Zal_DI']
-    split_subjects = {'Eng', 'Trud', 'CS'}
+    split_subjects = {'CS', 'Eng', 'Trud'}
     subgroup_ids = [1, 2]
 
     # --- Учебные планы ---
@@ -798,6 +798,9 @@ def create_timetable_data() -> InputData:
 
     # --- Совместимости ---
     compatible_pairs = {('CS', 'Eng')}
+    
+    # --- Спаривание ---
+    paired_subjects = {'Trud'}
 
     return InputData(
         days=days,
@@ -816,5 +819,6 @@ def create_timetable_data() -> InputData:
         class_slot_weight=class_slot_weight,
         teacher_slot_weight=teacher_slot_weight,
         class_subject_day_weight=class_subject_day_weight,
-        compatible_pairs=compatible_pairs
+        compatible_pairs=compatible_pairs,
+        paired_subjects=paired_subjects
     )
