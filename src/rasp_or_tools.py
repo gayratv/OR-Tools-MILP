@@ -175,34 +175,54 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
 
     if optimize_teacher_windows:
         # 1.1. Анти-окна для учителей: минимизация числа "окон" между уроками у учителей.
-        # Логика аналогична анти-окнам для классов.
+        # --- НОВЫЙ ПОДХОД: Прямая минимизация "окон" ---
+
+        # teacher_busy[t,d,p] = 1 <=> есть хотя бы один урок у учителя в этом слоте
         teacher_busy = {(t, d, p): model.NewBoolVar(f'tbusy_{t}_{d}_{p}')
-                        for t, d, p in itertools.product(data.teachers, D, P)}
-        teacher_srun = {(t, d, p): model.NewBoolVar(f'tsrun_{t}_{d}_{p}')
                         for t, d, p in itertools.product(data.teachers, D, P)}
 
         for t, d, p in itertools.product(data.teachers, D, P):
             lessons = teacher_lessons_in_slot.get((t, d, p), [])
             if lessons:
-                # teacher_busy[t,d,p] = 1 <=> есть хотя бы один урок у учителя в этом слоте
                 model.AddBoolOr(lessons).OnlyEnforceIf(teacher_busy[t, d, p])
                 model.AddBoolAnd([v.Not() for v in lessons]).OnlyEnforceIf(teacher_busy[t, d, p].Not())
             else:
                 model.Add(teacher_busy[t, d, p] == 0)
 
+        # teacher_window[t,d,p] = 1 <=> у учителя t в день d в период p есть "окно"
+        teacher_window = {(t, d, p): model.NewBoolVar(f'twin_{t}_{d}_{p}')
+                          for t, d, p in itertools.product(data.teachers, D, P)}
 
         for t, d in itertools.product(data.teachers, D):
-            # Для первого урока дня, начало блока = это просто наличие урока.
-            model.Add(teacher_srun[t, d, P[0]] == teacher_busy[t, d, P[0]])
-            # Для остальных: начало блока = (есть урок СЕЙЧАС) И (не было урока РАНЬШЕ)
-            for p_idx in range(1, len(P)):
-                p, prev_p = P[p_idx], P[p_idx - 1]
-                # Оптимизированная версия: заменяем сложные OnlyEnforceIf на простые линейные неравенства.
-                # srun <= busy[p]  и  srun <= (1 - busy[p-1])
-                # Этого достаточно, т.к. решатель минимизирует сумму srun.
-                model.Add(teacher_srun[t, d, p] <= teacher_busy[t, d, p])
-                model.Add(teacher_srun[t, d, p] <= 1 - teacher_busy[t, d, prev_p])
-        objective_terms.append(weights.alpha_runs_teacher * sum(teacher_srun.values()))
+            # Вспомогательные переменные для определения "окна"
+            has_lesson_before = {p: model.NewBoolVar(f't_before_{t}_{d}_{p}') for p in P}
+            has_lesson_after = {p: model.NewBoolVar(f't_after_{t}_{d}_{p}') for p in P}
+
+            # Заполняем has_lesson_before (был ли урок до этого периода)
+            model.Add(has_lesson_before[P[0]] == 0) # Перед первым уроком ничего не было
+            for i in range(1, len(P)):
+                # Урок был до p, если он был до p-1 ИЛИ был в p-1
+                model.AddBoolOr([has_lesson_before[P[i-1]], teacher_busy[t, d, P[i-1]]]).OnlyEnforceIf(has_lesson_before[P[i]])
+                model.AddImplication(has_lesson_before[P[i]].Not(), has_lesson_before[P[i-1]].Not())
+                model.AddImplication(has_lesson_before[P[i]].Not(), teacher_busy[t, d, P[i-1]].Not())
+
+            # Заполняем has_lesson_after (будет ли урок после этого периода)
+            model.Add(has_lesson_after[P[-1]] == 0) # После последнего урока ничего не будет
+            for i in range(len(P) - 2, -1, -1):
+                # Урок будет после p, если он будет после p+1 ИЛИ будет в p+1
+                model.AddBoolOr([has_lesson_after[P[i+1]], teacher_busy[t, d, P[i+1]]]).OnlyEnforceIf(has_lesson_after[P[i]])
+                model.AddImplication(has_lesson_after[P[i]].Not(), has_lesson_after[P[i+1]].Not())
+                model.AddImplication(has_lesson_after[P[i]].Not(), teacher_busy[t, d, P[i+1]].Not())
+
+            # Определяем "окно"
+            for p in P:
+                # Окно = (был урок до) И (будет урок после) И (нет урока сейчас)
+                model.AddBoolAnd([has_lesson_before[p], has_lesson_after[p], teacher_busy[t, d, p].Not()]).OnlyEnforceIf(teacher_window[t, d, p])
+                model.AddImplication(teacher_window[t, d, p], has_lesson_before[p])
+                model.AddImplication(teacher_window[t, d, p], has_lesson_after[p])
+                model.AddImplication(teacher_window[t, d, p], teacher_busy[t, d, p].Not())
+
+        objective_terms.append(weights.alpha_runs_teacher * sum(teacher_window.values()))
 
 # 2. Ранние слоты: легкое предпочтение ранних уроков (минимизация номера периода).
     objective_terms.append(weights.beta_early * sum(p * y[c, d, p] for c, d, p in y))
@@ -283,7 +303,7 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
     # --- Решение ---
     solver = cp_model.CpSolver()
     solver.parameters.log_search_progress = log
-    solver.parameters.num_search_workers = 16
+    solver.parameters.num_search_workers = 20
     solver.parameters.relative_gap_limit = 0.05
 
     print("Начинаем решение...")
@@ -291,50 +311,37 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
     print("\nРешение завершено.")
 
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-        print(f'Финальный статус: {solver.StatusName(status)}')
-        print(f'Целевая функция: {solver.ObjectiveValue()}')
-        print(f'Затрачено времени: {solver.WallTime()}s')
+        # Собираем всю статистику по решению в один словарь
+        solution_stats = {
+            "status": solver.StatusName(status),
+            "objective_value": solver.ObjectiveValue(),
+            "wall_time_s": solver.WallTime(),
+            "total_lonely_lessons": -1, # Значение по умолчанию
+            "total_teacher_windows": -1 # Значение по умолчанию
+        }
 
         # Выводим итоговое количество "одиноких" уроков
         if 'lonely_lessons' in locals() and lonely_lessons:
             total_lonely = sum(solver.Value(v) for v in lonely_lessons)
-            print(f'Итоговое количество "одиноких" уроков (штраф): {total_lonely}')
+            solution_stats["total_lonely_lessons"] = total_lonely
 
         # Подсчет и вывод общего количества "окон" у учителей
         total_teacher_windows = _calculate_teacher_windows(data, solver, x, z)
-        print(f'Итоговое количество "окон" у учителей: {total_teacher_windows}')
+        solution_stats["total_teacher_windows"] = total_teacher_windows
 
-        # Вывод финального расписания в консоль
-        if PRINT_TIMETABLE_TO_CONSOLE:
-            print("\n--- ФИНАЛЬНОЕ РАСПИСАНИЕ ---")
-            for c in data.classes:
-                print(f"\n=== Класс {c} ===")
-                for d in data.days:
-                    row = []
-                    for p in data.periods:
-                        cell = None
-                        for s in data.subjects:
-                            if s not in data.split_subjects and solver.Value(x.get((c, s, d, p), 0)):
-                                t = data.assigned_teacher.get((c, s), '?')
-                                cell = f"{p}: {s} ({t})"
-                                break
-                        if cell is None:
-                            pieces = []
-                            for s in data.split_subjects:
-                                for g in data.subgroup_ids:
-                                    if solver.Value(z.get((c, s, g, d, p), 0)):
-                                        t = data.subgroup_assigned_teacher.get((c, s, g), '?')
-                                        pieces.append(f"{s}[g{g}::{t}]")
-                            if pieces:
-                                cell = f"{p}: " + "+".join(pieces)
-                        row.append(cell or f"{p}: —")
-                    print(f"{d} | " + ", ".join(row))
+        # Вывод основной информации в консоль
+        print(f'Финальный статус: {solution_stats["status"]}')
+        print(f'Целевая функция: {solution_stats["objective_value"]}')
+        print(f'Затрачено времени: {solution_stats["wall_time_s"]:.2f}s')
+        if solution_stats["total_lonely_lessons"] != -1:
+            print(f'Итоговое количество "одиноких" уроков (штраф): {solution_stats["total_lonely_lessons"]}')
+        print(f'Итоговое количество "окон" у учителей: {solution_stats["total_teacher_windows"]}')
 
         # Экспорт в Excel
         output_filename = "timetable_or_tools_solution.xlsx"
         final_maps = {"solver": solver, "x": x, "z": z}
         solution_maps = get_solution_maps(data, final_maps, is_pulp=False)
-        export_full_schedule_to_excel(output_filename, data, solution_maps,display_maps)
+        export_full_schedule_to_excel(output_filename, data, solution_maps, display_maps, solution_stats, weights)
 
     else:
         print(f'Решение не найдено. Статус: {solver.StatusName(status)}')
@@ -361,4 +368,4 @@ if __name__ == '__main__':
         exit()
 
     display_maps = load_display_maps(db_path_str)
-    build_and_solve_with_or_tools(data, PRINT_TIMETABLE_TO_CONSOLE=False, display_maps=display_maps, optimize_teacher_windows=True)
+    build_and_solve_with_or_tools(data, PRINT_TIMETABLE_TO_CONSOLE=False, display_maps=display_maps, optimize_teacher_windows=False)

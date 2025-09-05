@@ -5,11 +5,12 @@ Pretty-printers and Excel exporters for timetables.
 """
 
 from typing import Dict, Tuple, Any
+import dataclasses
 import pulp
 import openpyxl
 from openpyxl.styles import Font, Alignment
 
-from input_data import InputData
+from input_data import InputData, OptimizationWeights
 
 def _val(var: Any) -> float:
     """Универсальная функция для получения значения переменной (pulp или число)."""
@@ -35,7 +36,7 @@ def get_solution_maps(data: InputData, solver_or_vars: Dict, is_pulp: bool) -> D
 # display_maps
 # "subject_names": subject_map.set_index('предмет_eng')['предмет'].to_dict(),
 # "teacher_names": teacher_map.set_index('teacher')['FAMIO'].to_dict()
-def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps: Dict[str, Dict[Tuple, float]], display_maps: Dict[str, Dict[str, str]]=None):
+def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps: Dict[str, Dict[Tuple, float]], display_maps: Dict[str, Dict[str, str]]=None, solution_stats: Dict[str, Any]=None, weights: OptimizationWeights=None):
     x_sol, z_sol = solution_maps['x'], solution_maps['z']
     
     # --- Вспомогательные функции для получения полных имен ---
@@ -174,6 +175,37 @@ def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps:
         if total_windows > 5: warnings.append(f"Окна > 5")
         row = [get_teacher_name(t), total, data.teacher_weekly_cap, f"{avg:.1f}", total_windows] + [per_day[d] for d in data.days] + [", ".join(warnings)]
         ws_summary.append(row)
+
+    # --- Лист: Сводка по решению ---
+    if solution_stats:
+        ws_solve_stats = wb.create_sheet("Сводка_решения")
+        ws_solve_stats.append(["Параметр", "Значение"])
+        ws_solve_stats.cell(1, 1).font = bold_font
+        ws_solve_stats.cell(1, 2).font = bold_font
+
+        stats_map = {
+            "Финальный статус": solution_stats.get("status"),
+            "Целевая функция": f'{solution_stats.get("objective_value"):.2f}',
+            "Затрачено времени (сек)": f'{solution_stats.get("wall_time_s"):.2f}',
+            'Итоговое количество "одиноких" уроков': solution_stats.get("total_lonely_lessons"),
+            'Итоговое количество "окон" у учителей': solution_stats.get("total_teacher_windows")
+        }
+        for key, value in stats_map.items():
+            if value is not None and value != -1:
+                ws_solve_stats.append([key, value])
+
+    # --- Лист: Коэффициенты оптимизации ---
+    if weights:
+        ws_weights = wb.create_sheet("Коэффициенты")
+        ws_weights.append(["Коэффициент", "Значение", "Описание"])
+        for cell in ws_weights[1]: cell.font = bold_font
+
+        for f in dataclasses.fields(weights):
+            # Получаем комментарий (docstring) для поля
+            doc = f.metadata.get('doc', '') # Пока не используется, но можно добавить
+            value = getattr(weights, f.name)
+            # Извлекаем комментарий из файла input_data.py (немного магии)
+            ws_weights.append([f.name, value])
 
     # --- Авто-ширина колонок и стиль ---
     for ws in wb.worksheets:
