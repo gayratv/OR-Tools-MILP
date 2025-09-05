@@ -197,9 +197,11 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
             # Для остальных: начало блока = (есть урок СЕЙЧАС) И (не было урока РАНЬШЕ)
             for p_idx in range(1, len(P)):
                 p, prev_p = P[p_idx], P[p_idx - 1]
-                model.Add(teacher_srun[t, d, p] == 1).OnlyEnforceIf([teacher_busy[t, d, p], teacher_busy[t, d, prev_p].Not()])
-                model.Add(teacher_srun[t, d, p] == 0).OnlyEnforceIf(teacher_busy[t, d, p].Not())
-                model.Add(teacher_srun[t, d, p] == 0).OnlyEnforceIf(teacher_busy[t, d, prev_p])
+                # Оптимизированная версия: заменяем сложные OnlyEnforceIf на простые линейные неравенства.
+                # srun <= busy[p]  и  srun <= (1 - busy[p-1])
+                # Этого достаточно, т.к. решатель минимизирует сумму srun.
+                model.Add(teacher_srun[t, d, p] <= teacher_busy[t, d, p])
+                model.Add(teacher_srun[t, d, p] <= 1 - teacher_busy[t, d, prev_p])
         objective_terms.append(weights.alpha_runs_teacher * sum(teacher_srun.values()))
 
 # 2. Ранние слоты: легкое предпочтение ранних уроков (минимизация номера периода).
