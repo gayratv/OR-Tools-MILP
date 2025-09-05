@@ -1,0 +1,71 @@
+ # 5. Спаренные уроки: штраф за "одиночные" уроки для предметов, которые должны идти парами.
+
+    # Я применил подход, который называется "штраф и скидка" .
+    # 1.Штраф: Мы добавляем в целевую функцию штраф за каждый урок из списка paired_subjects.
+    # То есть, если решатель ставит один урок труда, он сразу получает "минус" в целевую функцию .
+    # 2.Скидка: Если решатель ставит два таких урока подряд(например, на 1 - м и 2 - м уроках),
+    # мы создаем специальную переменную - индикатор is_paired, которая становится 1.
+    # За каждую такую пару мы даем "скидку" в размере двойного штрафа.
+    # В итоге, для решателя становится выгоднее поставить два урока и получить штраф + штраф - 2 * штраф = 0,
+    # чем поставить один урок и получить штраф.
+    # Это эффективно мотивирует его спаривать уроки, но оставляет возможность поставить одиночный урок,
+    # если по - другому составить расписание не получается.
+
+    if hasattr(data, 'paired_subjects') and data.paired_subjects:
+        single_lessons = []
+        # Проходим по всем слотам, где может быть такой урок
+        for c, s, d, p in itertools.product(C, data.paired_subjects, D, P):
+            # Переменная для текущего урока
+            current_lesson_var = None
+            if s in z:  # Делимый предмет
+                # Для делимых предметов считаем, что урок есть, если он есть хотя бы у одной подгруппы
+                # Используем is_subj_taught, который уже агрегирует подгруппы
+                current_lesson_var = is_subj_taught.get((c, s, d, p))
+            elif s in x:  # Неделимый
+                current_lesson_var = x.get((c, s, d, p))
+
+            if not current_lesson_var: continue
+
+            # Урок считается "одиночным", если он есть, но нет такого же урока ни до, ни после него
+            prev_lesson_var = is_subj_taught.get((c, s, d, p - 1)) if p > P[0] else 0
+            next_lesson_var = is_subj_taught.get((c, s, d, p + 1)) if p < P[-1] else 0
+
+            # Штрафуем, если current_lesson_var=1, а соседи = 0.
+            # Это сложно выразить линейно, поэтому просто штрафуем за каждый урок,
+            # а за каждую созданную пару даем "скидку" в двойном размере штрафа.
+            # Minimize( A + B - 2*A*B ) -> поощряет A=B=1
+            single_lessons.append(current_lesson_var)
+            if next_lesson_var:
+                # Создаем переменную-индикатор того, что уроки спарены
+                is_paired = model.NewBoolVar(f'paired_{c}_{s}_{d}_{p}')
+                model.AddBoolAnd([current_lesson_var, next_lesson_var]).OnlyEnforceIf(is_paired)
+                # "Скидка" за пару
+                single_lessons.append(-2 * is_paired)
+
+    # if hasattr(data, 'paired_subjects') and data.paired_subjects:
+    #     pairing_objective_terms = []
+    #     # a) Штраф за каждый урок, который должен быть спарен
+    #     for c, s, d, p in itertools.product(C, data.paired_subjects, D, P):
+    #         if s in splitS:
+    #             pairing_objective_terms.append(is_subj_taught[c, s, d, p])
+    #         else:
+    #             pairing_objective_terms.append(x[c, s, d, p])
+    #
+    #     # b) Бонус (отрицательный штраф) за каждую созданную пару
+    #     for c, s, d, p_idx in itertools.product(C, data.paired_subjects, D, range(len(P) - 1)):
+    #         p1, p2 = P[p_idx], P[p_idx + 1]
+    #         if s in splitS:
+    #             lesson1_var, lesson2_var = is_subj_taught[c, s, d, p1], is_subj_taught[c, s, d, p2]
+    #         else:
+    #             lesson1_var, lesson2_var = x[c, s, d, p1], x[c, s, d, p2]
+    #
+    #         is_paired = model.NewBoolVar(f'paired_{c}_{s}_{d}_{p1}')
+    #         model.AddBoolAnd([lesson1_var, lesson2_var]).OnlyEnforceIf(is_paired)
+    #         model.AddImplication(is_paired, lesson1_var)
+    #         model.AddImplication(is_paired, lesson2_var)
+    #
+    #         pairing_objective_terms.append(-2 * is_paired)
+    #
+    #     # Добавляем компонент в общую целевую функцию с весом
+    #     if pairing_objective_terms and hasattr(weights, 'epsilon_pairing'):
+    #         objective_terms.append(weights.epsilon_pairing * sum(pairing_objective_terms))

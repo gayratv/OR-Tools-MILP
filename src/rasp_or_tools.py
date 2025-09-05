@@ -157,47 +157,62 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True):
 
     # 5. Спаренные уроки: штраф за "одиночные" уроки для предметов, которые должны идти парами.
 
-    # Я применил подход, который называется "штраф и скидка" .
-    # 1.Штраф: Мы добавляем в целевую функцию штраф за каждый урок из списка paired_subjects.
-    # То есть, если решатель ставит один урок труда, он сразу получает "минус" в целевую функцию .
-    # 2.Скидка: Если решатель ставит два таких урока подряд(например, на 1 - м и 2 - м уроках),
-    # мы создаем специальную переменную - индикатор is_paired, которая становится 1.
-    # За каждую такую пару мы даем "скидку" в размере двойного штрафа.
-    # В итоге, для решателя становится выгоднее поставить два урока и получить штраф + штраф - 2 * штраф = 0,
-    # чем поставить один урок и получить штраф.
-    # Это эффективно мотивирует его спаривать уроки, но оставляет возможность поставить одиночный урок,
-    # если по - другому составить расписание не получается.
+    # Мы минимизируем количество уроков, у которых нет "соседа" ни до, ни после.
+    # минимизировать количество "одиноких" уроков.
+    # 1. Итерация по предметам: Мы проходим по всем предметам из data.paired_subjects.
+    # 2. Разделение логики: Код отдельно обрабатывает делимые(splitS) и неделимые предметы.
+    # 3. Поиск "одиночек": Для каждого урока из списка paired_subjects мы проверяем, есть ли у него "сосед"
+    # (такой же урок того же класса / подгруппы) на предыдущем или следующем временном слоте.
+    # 4. Переменная is_lonely: Если у урока нет ни предыдущего, ни последующего соседа,
+    # мы помечаем его как "одинокий" с помощью вспомогательной булевой переменной is_lonely.
+    # 5. Минимизация: В целевую функцию добавляется сумма всех переменных is_lonely, умноженная на весовой коэффициент epsilon_pairing.
+    # Таким образом, решатель получает штраф за каждый урок, который он не смог спарить,
+    # что напрямую мотивирует его создавать пары, где это возможно, для минимизации целевой функции.
 
-    if data.paired_subjects:
-        single_lessons = []
-        # Проходим по всем слотам, где может быть такой урок
-        for c, s, d, p in itertools.product(C, data.paired_subjects, D, P):
-            # Переменная для текущего урока
-            current_lesson_var = None
-            if s in z:  # Делимый предмет
-                # Для делимых предметов считаем, что урок есть, если он есть хотя бы у одной подгруппы
-                # Используем is_subj_taught, который уже агрегирует подгруппы
-                current_lesson_var = is_subj_taught.get((c, s, d, p))
-            elif s in x:  # Неделимый
-                current_lesson_var = x.get((c, s, d, p))
+    if hasattr(data, 'paired_subjects') and data.paired_subjects:
+        lonely_lessons = []
+        for s in data.paired_subjects:
+            if s in splitS:
+                # --- Для ДЕЛИМЫХ предметов (по каждой подгруппе отдельно) ---
+                for c, g, d in itertools.product(C, G, D):
+                    for p_idx, p in enumerate(P):
+                        current_lesson = z.get((c, s, g, d, p))
+                        if not current_lesson: continue
 
-            if not current_lesson_var: continue
+                        # Проверяем соседей
+                        has_prev = p_idx > 0 and z.get((c, s, g, d, P[p_idx - 1]))
+                        has_next = p_idx < len(P) - 1 and z.get((c, s, g, d, P[p_idx + 1]))
 
-            # Урок считается "одиночным", если он есть, но нет такого же урока ни до, ни после него
-            prev_lesson_var = is_subj_taught.get((c, s, d, p - 1)) if p > P[0] else 0
-            next_lesson_var = is_subj_taught.get((c, s, d, p + 1)) if p < P[-1] else 0
+                        # Урок "одинок", если у него нет соседей
+                        is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{g}_{d}_{p}')
+                        # is_lonely = current_lesson AND (NOT has_prev) AND (NOT has_next)
+                        # Это сложно для линейной формы, поэтому используем индикатор.
+                        # Если урок есть, а соседей нет, то is_lonely = 1
+                        model.Add(is_lonely == 1).OnlyEnforceIf([current_lesson, has_prev.Not(), has_next.Not()])
+                        # В остальных случаях is_lonely = 0
+                        model.Add(is_lonely == 0).OnlyEnforceIf(current_lesson.Not())
+                        model.Add(is_lonely == 0).OnlyEnforceIf(has_prev)
+                        model.Add(is_lonely == 0).OnlyEnforceIf(has_next)
+                        lonely_lessons.append(is_lonely)
+            else:
+                # --- Для НЕ-ДЕЛИМЫХ предметов ---
+                for c, d in itertools.product(C, D):
+                    for p_idx, p in enumerate(P):
+                        current_lesson = x.get((c, s, d, p))
+                        if not current_lesson: continue
 
-            # Штрафуем, если current_lesson_var=1, а соседи = 0.
-            # Это сложно выразить линейно, поэтому просто штрафуем за каждый урок,
-            # а за каждую созданную пару даем "скидку" в двойном размере штрафа.
-            # Minimize( A + B - 2*A*B ) -> поощряет A=B=1
-            single_lessons.append(current_lesson_var)
-            if next_lesson_var:
-                # Создаем переменную-индикатор того, что уроки спарены
-                is_paired = model.NewBoolVar(f'paired_{c}_{s}_{d}_{p}')
-                model.AddBoolAnd([current_lesson_var, next_lesson_var]).OnlyEnforceIf(is_paired)
-                # "Скидка" за пару
-                single_lessons.append(-2 * is_paired)
+                        has_prev = p_idx > 0 and x.get((c, s, d, P[p_idx - 1]))
+                        has_next = p_idx < len(P) - 1 and x.get((c, s, d, P[p_idx + 1]))
+
+                        is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{d}_{p}')
+                        model.Add(is_lonely == 1).OnlyEnforceIf([current_lesson, has_prev.Not(), has_next.Not()])
+                        model.Add(is_lonely == 0).OnlyEnforceIf(current_lesson.Not())
+                        model.Add(is_lonely == 0).OnlyEnforceIf(has_prev)
+                        model.Add(is_lonely == 0).OnlyEnforceIf(has_next)
+                        lonely_lessons.append(is_lonely)
+
+        if lonely_lessons and hasattr(weights, 'epsilon_pairing'):
+            objective_terms.append(weights.epsilon_pairing * sum(lonely_lessons))
 
     model.Minimize(sum(objective_terms))
 

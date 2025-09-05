@@ -120,7 +120,7 @@ class OptimizationWeights:
     gamma_balance: float = 1.0  # баланс по дням (L1-отклонение от среднего)
     delta_tail: float = 10.0     # штраф за «хвосты» после 6-го урока (soft ban)
 
-    epsilon_pairing: float = 5.0 # штраф за каждый "одиночный" урок, который должен быть спарен
+    epsilon_pairing: float = 1.0 # штраф за каждый "одиночный" урок, который должен быть спарен
 
     pref_scale: float = 1.0      # масштаб для пользовательских предпочтений
 
