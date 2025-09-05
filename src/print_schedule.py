@@ -91,7 +91,10 @@ def export_full_schedule_to_excel(filename: str, data: InputData, solution_maps:
 
     # --- Лист: расписание по учителям ---
     ws_teachers = wb.create_sheet("Учителя_расписание")
-    for t in data.teachers:
+    # Сортируем учителей по их русским именам для упорядоченного вывода
+    sorted_teachers = sorted(data.teachers, key=lambda t_id: get_teacher_name(t_id))
+
+    for t in sorted_teachers:
         ws_teachers.append([f"Учитель {get_teacher_name(t)}"])
         ws_teachers.cell(ws_teachers.max_row, 1).font = bold_font
         header = ["День"] + [f"Урок {p}" for p in data.periods]
