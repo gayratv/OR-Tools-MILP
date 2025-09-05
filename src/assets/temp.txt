@@ -1,33 +1,7 @@
- (нужна для проверки совместимости)
-     # Это ограничение говорит:•
-     # is_subj_taught[('10A', 'Eng', 'Mon', 1)] будет 1, потому что z[('10A', 'Eng', 1, 'Mon', 1)] равен 1.•
-     # Создаем константную переменную, равную 0, для использования в качестве "пустышки"
-     # Это решает проблему с вызовом .Not() у целого числа.
-     false_var = model.NewBoolVar('false_var')
-     model.Add(false_var == 0)
+Итоговое количество "одиноких" уроков (штраф): 12
 
-     is_subj_taught = { (c, s, d, p): model.NewBoolVar(f'ist_{c}_{s}_{d}_{p}')
-                        for c, s, d, p in itertools.product(C, splitS, D, P) }
-// Hidden Lines
-                     for p_idx, p in enumerate(P):
-                         # Получаем переменные для текущего, предыдущего и следующего уроков.
-                         # Если переменной нет, используем целочисленный 0, который решатель понимает как False.
-                         current_lesson = z.get((c, s, g, d, p), false_var)
-                         prev_lesson = z.get((c, s, g, d, P[p_idx - 1]), false_var) if p_idx > 0 else false_var
-                         next_lesson = z.get((c, s, g, d, P[p_idx + 1]), false_var) if p_idx < len(P) - 1 else false_var
-
-                         # Урок может быть "одиноким" только если он существует.
-                         # Если current_lesson это 0, то и is_lonely будет 0.
-// Hidden Lines
-                 # --- Для НЕ-ДЕЛИМЫХ предметов ---
-                 for c, d in itertools.product(C, D):
-                     for p_idx, p in enumerate(P):
-                         current_lesson = x.get((c, s, d, p), false_var)
-                         prev_lesson = x.get((c, s, d, P[p_idx - 1]), false_var) if p_idx > 0 else false_var
-                         next_lesson = x.get((c, s, d, P[p_idx + 1]), false_var) if p_idx < len(P) - 1 else false_var
-
-
-
-
-                         is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{d}_{p}')
-                         model.AddBoolAnd([current_lesson, prev_lesson.Not(), next_lesson.Not()]).OnlyEnforceIf(is_lonely)
+Решение завершено.
+Финальный статус: OPTIMAL
+Целевая функция: 4355.0
+Затрачено времени: 71.1261305s
+Итоговое количество "одиноких" уроков (штраф): 12

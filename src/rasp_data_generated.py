@@ -15,8 +15,8 @@ def create_timetable_data() -> InputData:
     periods = [1, 2, 3, 4, 5, 6, 7, 8]
     classes = ['2V', '2A', '2B', '3G', '3V', '3B', '3A', '4A', '4B', '4V', '4G', '5G', '5A', '5B', '5V', '6A', '6B', '6V', '7A', '7V', '7_MK', '8B', '8A', '8V', '9V', '9A', '9B', '10B', '10A', '11B', '11A']
     subjects = ['Rus', 'Lit', 'Math', 'Phys', 'Bio', 'Chem', 'Geog', 'Env', 'Alg', 'Trud', 'Art', 'Hist', 'Eng', 'PE', 'VisArt', 'Mus', 'Draw', 'Soc', 'Safe', 'NatSci', 'CS', 'Geom', 'Stat', 'SchComp', 'Relig', 'ElParms', 'Proj', 'MathAdv', 'Fin', 'Pol', 'ElRu', 'El']
-    teachers = ['Gas_ASh', 'Vac_2', 'Ula_OV', 'Zhi_VI', 'Bel_IV', 'Kol_IL', 'Sol_MA', 'Los_AS', 'Vac_1', 'Ode_OG', 'Gos_EO', 'Sha_VE', 'Par_VYu', 'Osi_EM', 'Gri_TV', 'Obu_KV', 'Bad_MV', 'Var_SG', 'Kuk_EN', 'Vor_IG', 'Per_SI', 'Zue_SG', 'Got_EV', 'Sak_EV', 'Che_LN', 'Ode_DV', 'Pys_LP', 'Rad_OV', 'Put_MG', 'Sta_EV', 'Vac_IT', 'May_AYu', 'Kam_OV', 'Bul_AS', 'Kam_SI', 'Zue_M', 'Vac_fizra', 'Bur_NS', 'Fil_DM', 'Vac_Physics', 'Zal_DI', 'Trud_grp1', 'Trud_grp2']
-    split_subjects = {'Trud', 'CS', 'Eng'}
+    teachers = ['Gas_ASh', 'Vac_2', 'Ula_OV', 'Zhi_VI', 'Bel_IV', 'Kol_IL', 'Sol_MA', 'Los_AS', 'Vac_1', 'Ode_OG', 'Gos_EO', 'Sha_VE', 'Par_VYu', 'Osi_EM', 'Gri_TV', 'Obu_KV', 'Bad_MV', 'Var_SG', 'Kuk_EN', 'Vor_IG', 'Per_SI', 'Zue_SG', 'Got_EV', 'Sak_EV', 'Che_LN', 'Ode_DV', 'Pys_LP', 'Rad_OV', 'Put_MG', 'Sta_EV', 'Vac_IT', 'May_AYu', 'Kam_OV', 'Bul_AS', 'Kam_SI', 'Zue_M', 'Vac_fizra', 'Bur_NS', 'Fil_DM', 'Vac_Physics', 'Zal_DI']
+    split_subjects = {'Eng', 'CS', 'Trud'}
     subgroup_ids = [1, 2]
 
     # --- Учебные планы ---
@@ -680,24 +680,24 @@ def create_timetable_data() -> InputData:
     ('5A', 'Trud', 2): 'Kam_OV',
     ('5B', 'Eng', 1): 'Got_EV',
     ('5B', 'Eng', 2): 'Sha_VE',
-    ('5B', 'Trud', 1): 'Trud_grp1',
-    ('5B', 'Trud', 2): 'Trud_grp2',
+    ('5B', 'Trud', 1): 'Gri_TV',
+    ('5B', 'Trud', 2): 'Kam_OV',
     ('5G', 'Eng', 1): 'Zhi_VI',
     ('5G', 'Eng', 2): 'Sha_VE',
     ('5G', 'Trud', 1): 'Gri_TV',
     ('5G', 'Trud', 2): 'Kam_OV',
     ('5V', 'Eng', 1): 'Sha_VE',
     ('5V', 'Eng', 2): 'Zhi_VI',
-    ('5V', 'Trud', 1): 'Trud_grp1',
-    ('5V', 'Trud', 2): 'Trud_grp2',
+    ('5V', 'Trud', 1): 'Gri_TV',
+    ('5V', 'Trud', 2): 'Kam_OV',
     ('6A', 'Eng', 1): 'Got_EV',
     ('6A', 'Eng', 2): 'May_AYu',
     ('6A', 'Trud', 1): 'Gri_TV',
     ('6A', 'Trud', 2): 'Kam_OV',
     ('6B', 'Eng', 1): 'Got_EV',
     ('6B', 'Eng', 2): 'Par_VYu',
-    ('6B', 'Trud', 1): 'Trud_grp1',
-    ('6B', 'Trud', 2): 'Trud_grp2',
+    ('6B', 'Trud', 1): 'Gri_TV',
+    ('6B', 'Trud', 2): 'Kam_OV',
     ('6V', 'Eng', 1): 'Got_EV',
     ('6V', 'Eng', 2): 'Par_VYu',
     ('6V', 'Trud', 1): 'Gri_TV',
@@ -706,8 +706,8 @@ def create_timetable_data() -> InputData:
     ('7A', 'CS', 2): 'Kam_OV',
     ('7A', 'Eng', 1): 'Zhi_VI',
     ('7A', 'Eng', 2): 'Kuk_EN',
-    ('7A', 'Trud', 1): 'Trud_grp1',
-    ('7A', 'Trud', 2): 'Trud_grp2',
+    ('7A', 'Trud', 1): 'Gri_TV',
+    ('7A', 'Trud', 2): 'Kam_SI',
     ('7V', 'CS', 1): 'Kam_OV',
     ('7V', 'CS', 2): 'Kam_OV',
     ('7V', 'Eng', 1): 'Zue_SG',
@@ -730,8 +730,8 @@ def create_timetable_data() -> InputData:
     ('8B', 'CS', 2): 'Kam_OV',
     ('8B', 'Eng', 1): 'Zue_SG',
     ('8B', 'Eng', 2): 'Gos_EO',
-    ('8B', 'Trud', 1): 'Trud_grp1',
-    ('8B', 'Trud', 2): 'Trud_grp2',
+    ('8B', 'Trud', 1): 'Gri_TV',
+    ('8B', 'Trud', 2): 'Kam_SI',
     ('8V', 'CS', 1): 'Kam_OV',
     ('8V', 'CS', 2): 'Kam_OV',
     ('8V', 'Eng', 1): 'Zue_SG',
@@ -742,7 +742,7 @@ def create_timetable_data() -> InputData:
     ('9A', 'CS', 2): 'Bul_AS',
     ('9A', 'Eng', 1): 'Zhi_VI',
     ('9A', 'Eng', 2): 'Par_VYu',
-    ('9A', 'Trud', 1): 'Trud_grp1',
+    ('9A', 'Trud', 1): 'Gri_TV',
     ('9A', 'Trud', 2): 'Kam_SI',
     ('9B', 'CS', 1): 'Bul_AS',
     ('9B', 'CS', 2): 'Bul_AS',
