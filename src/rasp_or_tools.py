@@ -200,9 +200,9 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
                 # --- Для НЕ-ДЕЛИМЫХ предметов ---
                 for c, d in itertools.product(C, D):
                     for p_idx, p in enumerate(P):
-                        current_lesson = x.get((c, s, d, p), 0)
-                        prev_lesson = x.get((c, s, d, P[p_idx - 1]), 0) if p_idx > 0 else 0
-                        next_lesson = x.get((c, s, d, P[p_idx + 1]), 0) if p_idx < len(P) - 1 else 0
+                        current_lesson = x.get((c, s, d, p), false_var)
+                        prev_lesson = x.get((c, s, d, P[p_idx - 1]), false_var) if p_idx > 0 else false_var
+                        next_lesson = x.get((c, s, d, P[p_idx + 1]), false_var) if p_idx < len(P) - 1 else false_var
 
                         is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{d}_{p}')
                         model.AddBoolAnd([current_lesson, prev_lesson.Not(), next_lesson.Not()]).OnlyEnforceIf(is_lonely)
@@ -230,6 +230,12 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
         print(f'Финальный статус: {solver.StatusName(status)}')
         print(f'Целевая функция: {solver.ObjectiveValue()}')
         print(f'Затрачено времени: {solver.WallTime()}s')
+
+        # Выводим итоговое количество "одиноких" уроков
+        if 'lonely_lessons' in locals() and lonely_lessons:
+            total_lonely = sum(solver.Value(v) for v in lonely_lessons)
+            print(f'Итоговое количество "одиноких" уроков (штраф): {total_lonely}')
+
 
         # Вывод финального расписания в консоль
         if PRINT_TIMETABLE_TO_CONSOLE :
