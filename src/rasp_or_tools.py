@@ -16,7 +16,7 @@
 #  - has_split: замена квадратичного запрета (неделимый vs делимый) на одну булевую переменную-OR
 #  - «Окна» как длина «конверта»: prefix/suffix/inside для учителей и (опционально) классов
 #  - Линейная эквивалентность для «спаренных» (is_lonely = curr ∧ ¬prev ∧ ¬next)
-#  - Набор опций: лимиты на классы, синхронные сплиты
+#  - Набор опций: синхронные сплиты
 #  - Опциональная лексикографическая оптимизация (2 solve-а)
 # -----------------------------------------------------------------------------
 
@@ -47,21 +47,6 @@ def _as_int(x: Union[int, float]) -> int:
 def _get_weight(weights: OptimizationWeights, name: str, default: int = 0) -> int:
     """Достаём coefficient из OptimizationWeights; по умолчанию 0 (отключено)."""
     return _as_int(getattr(weights, name, default))
-
-
-def _get_scalar_or_dict_cap(store, key, fallback: Optional[int] = None) -> Optional[int]:
-    """
-    Удобное извлечение «лимита»: поддерживает как скаляр (одинаков для всех), так и словарь по ключу.
-    Вернёт None, если лимита нет.
-    """
-    if store is None:
-        return fallback
-    if isinstance(store, (int, float)):
-        return _as_int(store)
-    if isinstance(store, dict):
-        val = store.get(key, fallback)
-        return None if val is None else _as_int(val)
-    return fallback
 
 
 # ----------- 2) ПОДСЧЁТ ОКОН У ПРЕПОДАВАТЕЛЕЙ ИЗ ГОТОВОГО РЕШЕНИЯ (для отчёта) -----------
@@ -262,17 +247,7 @@ def build_and_solve_with_or_tools(
 
     # ------------------------- 3.3) ДОПОЛНИТЕЛЬНЫЕ ОПЦИИ (НЕОБЯЗ.) -------------------------
 
-    # (A) Лимит уроков в день на класс
-    class_daily_cap = getattr(data, 'class_daily_cap', None)
-    if class_daily_cap is not None:
-        for c in C:
-            cap_c = _get_scalar_or_dict_cap(class_daily_cap, c, None)
-            if cap_c is None:
-                continue
-            for d in D:
-                model.Add(sum(y[c, d, p] for p in P) <= cap_c)
-
-    # (B) Синхронность подгрупп для некоторых сплит‑предметов
+    # (A) Синхронность подгрупп для некоторых сплит‑предметов
     must_sync = set(getattr(data, 'must_sync_split_subjects', [])) & set(splitS)
     if must_sync:
         for s in must_sync:

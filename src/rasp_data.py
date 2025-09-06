@@ -1,8 +1,8 @@
 # rasp_data.py
 # -----------------------------------------------------------------------------
 # Тестовые данные для задачи составления школьного расписания.
-# Обновлено: добавлены поля, используемые улучшенной моделью (class_daily_cap,
-# teacher_forbidden_slots, must_sync_split_subjects и др.)
+# Обновлено: добавлены поля, используемые улучшенной моделью (teacher_forbidden_slots,
+# must_sync_split_subjects и др.)
 # -----------------------------------------------------------------------------
 
 from input_data import InputData
@@ -95,9 +95,6 @@ def create_manual_data() -> InputData:
     teacher_slot_weight = {("Petrov", "Tue", 1): 8.0}
     class_subject_day_weight = {("5B", "math", "Mon"): 6.0}
 
-    # Лимит уроков в день для классов (скаляр или словарь)
-    class_daily_cap = {"5A": 6, "5B": 6}
-
     # Запрещённые слоты для конкретных преподавателей
     teacher_forbidden_slots = {
         "Petrov": [("Tue", 1)],     # кроме days_off, ещё и «Вт‑1» нельзя
@@ -146,7 +143,6 @@ def create_manual_data() -> InputData:
         class_subject_day_weight=class_subject_day_weight,
 
         # Лимиты / запреты
-        class_daily_cap=class_daily_cap,
         teacher_forbidden_slots=teacher_forbidden_slots,
 
         # Частые «политики»
