@@ -3,8 +3,6 @@
 Pretty-printers and Excel exporters for timetables.
 
 Исправления:
-- Корректная обработка teacher_weekly_cap, который теперь может быть числом ИЛИ словарём {teacher: cap}.
-- В учительской сводке "Лимит" берётся персонально, если передан словарь.
 - В классной сводке проверка перегруза опирается на class_daily_cap (если задан), иначе остаётся исторический порог >7.
 """
 
@@ -217,7 +215,7 @@ def export_full_schedule_to_excel(
     ws_summary.append([])
     ws_summary.append(["Сводка по учителям"])
     ws_summary.cell(ws_summary.max_row, 1).font = bold_font
-    header = ["Учитель", "Всего", "Лимит/нед", "Сред./день", "Окна"] + data.days + ["Предупреждения"]
+    header = ["Учитель", "Всего", "Сред./день", "Окна"] + data.days + ["Предупреждения"]
     ws_summary.append(header)
 
     for t in data.teachers:
@@ -234,12 +232,6 @@ def export_full_schedule_to_excel(
                 total_windows += (last - first + 1) - len(busy)
 
         warnings = []
-        # ЛИМИТ НЕДЕЛЬНОЙ НАГРУЗКИ: число или словарь по учителям
-        weekly_cap = _get_cap_value(getattr(data, "teacher_weekly_cap", None), t)
-        weekly_cap_display = weekly_cap if weekly_cap is not None else "—"
-        if weekly_cap is not None and total > weekly_cap:
-            warnings.append(f"Перегруз! ({total}/{weekly_cap})")
-
         # Дополнительно можно предупредить об излишних окнах (условный порог)
         if total_windows > 5:
             warnings.append("Окна > 5")
@@ -247,7 +239,6 @@ def export_full_schedule_to_excel(
         row = [
             get_teacher_name(t),
             total,
-            weekly_cap_display,
             f"{avg:.1f}",
             total_windows
         ] + [per_day[d] for d in data.days] + [", ".join(warnings)]

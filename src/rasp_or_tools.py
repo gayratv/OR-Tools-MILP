@@ -16,7 +16,7 @@
 #  - has_split: замена квадратичного запрета (неделимый vs делимый) на одну булевую переменную-OR
 #  - «Окна» как длина «конверта»: prefix/suffix/inside для учителей и (опционально) классов
 #  - Линейная эквивалентность для «спаренных» (is_lonely = curr ∧ ¬prev ∧ ¬next)
-#  - Набор опций: дневные лимиты, синхронные сплиты
+#  - Набор опций: лимиты на классы, синхронные сплиты
 #  - Опциональная лексикографическая оптимизация (2 solve-а)
 # -----------------------------------------------------------------------------
 
@@ -198,41 +198,22 @@ def build_and_solve_with_or_tools(
 
     # (3) Ограничения для учителей
     for t in data.teachers:
-        # (3a) Недельная нагрузка (персональная либо общий лимит)
-        week_cap = _get_scalar_or_dict_cap(getattr(data, 'teacher_weekly_cap', None), t, None)
-        if week_cap is not None:
-            all_lessons_for_teacher: List[cp_model.IntVar] = []
-            for d, p in itertools.product(D, P):
-                all_lessons_for_teacher.extend(teacher_lessons_in_slot[t, d, p])
-            if all_lessons_for_teacher:
-                model.Add(sum(all_lessons_for_teacher) <= week_cap)
-
-        # (3b) Не более одного урока в слоте
+        # (3a) Не более одного урока в слоте
         for d, p in itertools.product(D, P):
             lessons = teacher_lessons_in_slot[t, d, p]
             if lessons:
                 model.AddAtMostOne(list(lessons))  # список, не генератор
 
-            # (3c) Индивидуальные выходные/недоступные дни
+            # (3b) Индивидуальные выходные/недоступные дни
             if d in getattr(data, 'days_off', {}).get(t, set()):
                 for v in lessons:
                     model.Add(v == 0)
 
-            # (3d) Явно запрещённые слоты учителя (если есть)
+            # (3c) Явно запрещённые слоты учителя (если есть)
             for (td, tp) in getattr(data, 'teacher_forbidden_slots', {}).get(t, []):
                 if td == d and tp == p:
                     for v in lessons:
                         model.Add(v == 0)
-
-        # (3e) Максимум уроков в день для преподавателя (если задан)
-        daily_cap = _get_scalar_or_dict_cap(getattr(data, 'teacher_daily_cap', None), t, None)
-        if daily_cap is not None:
-            for d in D:
-                day_vars = []
-                for p in P:
-                    day_vars.extend(teacher_lessons_in_slot[t, d, p])
-                if day_vars:
-                    model.Add(sum(day_vars) <= daily_cap)
 
     # (4) Ограничения внутри класса/слота
     for c, d, p in itertools.product(C, D, P):
