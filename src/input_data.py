@@ -3,7 +3,7 @@
 # Единый контейнер входных данных и весов для задачи составления школьного расписания.
 # Добавлены поля и веса, которые используются улучшенной моделью CP-SAT:
 #  - Лексикографическая оптимизация (use_lexico, lexico_primary)
-#  - Индивидуальные лимиты / запреты (teacher_daily_cap, teacher_forbidden_slots и т.п.)
+#  - Индивидуальные запреты (teacher_forbidden_slots и т.п.)
 #  - Часто используемые "политики" (must_sync_split_subjects)
 #  - Параметры решателя: num_search_workers, random_seed, time_limit_s, relative_gap_limit
 # -----------------------------------------------------------------------------
@@ -76,8 +76,6 @@ class InputData:
 
     Ограничения/предпочтения (жёсткие и мягкие):
       - days_off: выходные/недоступные дни учителей (на уровне дня)
-      - teacher_weekly_cap: лимит НЕДЕЛЬНОЙ нагрузки учителя (скаляр или {teacher: cap})
-      - teacher_daily_cap: лимит ДНЕВНОЙ нагрузки учителя (скаляр или {teacher: cap})
       - class_daily_cap: лимит уроков в день для класса (скаляр или {class: cap})
       - teacher_forbidden_slots: явные запреты слотов для преподавателей
       - forbidden_slots: жёсткий запрет проводить ЛЮБОЙ урок у класса в указанном слоте
@@ -114,12 +112,6 @@ class InputData:
 
     # --- Недоступные дни / лимиты / запреты ---
     days_off: DaysOff = field(default_factory=dict)
-
-    # Лимит недельной нагрузки на преподавателя (скаляр для всех или словарь по преподавателям)
-    teacher_weekly_cap: ScalarOrPerEntityInt = 35
-
-    # Лимит дневной нагрузки на преподавателя (скаляр или словарь). По умолчанию нет ограничения.
-    teacher_daily_cap: Optional[ScalarOrPerEntityInt] = None
 
     # Лимит уроков в день на класс (скаляр или словарь). По умолчанию нет ограничения.
     class_daily_cap: Optional[ScalarOrPerEntityInt] = None
