@@ -76,7 +76,6 @@ class InputData:
 
     Ограничения/предпочтения (жёсткие и мягкие):
       - days_off: выходные/недоступные дни учителей (на уровне дня)
-      - class_daily_cap: лимит уроков в день для класса (скаляр или {class: cap})
       - teacher_forbidden_slots: явные запреты слотов для преподавателей
       - forbidden_slots: жёсткий запрет проводить ЛЮБОЙ урок у класса в указанном слоте
       - class_slot_weight / teacher_slot_weight / class_subject_day_weight: пользовательские «мягкие» предпочтения
@@ -112,9 +111,6 @@ class InputData:
 
     # --- Недоступные дни / лимиты / запреты ---
     days_off: DaysOff = field(default_factory=dict)
-
-    # Лимит уроков в день на класс (скаляр или словарь). По умолчанию нет ограничения.
-    class_daily_cap: Optional[ScalarOrPerEntityInt] = None
 
     # Явные запреты слотов у преподавателей: teacher -> [(day, period), ...]
     teacher_forbidden_slots: TeacherForbiddenSlots = field(default_factory=dict)
