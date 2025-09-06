@@ -1,14 +1,24 @@
 # input_data.py
-from dataclasses import dataclass, field
-from typing import Dict, List, Set, Tuple
+# -----------------------------------------------------------------------------
+# Единый контейнер входных данных и весов для задачи составления школьного расписания.
+# Добавлены поля и веса, которые используются улучшенной моделью CP-SAT:
+#  - Лексикографическая оптимизация (use_lexico, lexico_primary)
+#  - Индивидуальные лимиты / запреты (teacher_daily_cap, teacher_forbidden_slots и т.п.)
+#  - Часто используемые "политики" (max_repeats_per_day, min_days_per_subject, must_sync_split_subjects)
+#  - "Максимум подряд" для классов и преподавателей
+#  - Параметры решателя: num_search_workers, random_seed, time_limit_s, relative_gap_limit
+# -----------------------------------------------------------------------------
 
-# ---------- Типы для удобства ----------
-Days = List[str]          # ["Mon","Tue","Wed","Thu","Fri"]
-Periods = List[int]       # [1,2,3,4,5,6,7]
-Classes = List[str]       # ["5A","5B", ...]
-Subjects = List[str]      # ["math","eng","cs","labor", ...]
-Teachers = List[str]      # ["Ivanov","Petrov", ...]
-Subgroups = List[int]     # обычно [1, 2]
+from dataclasses import dataclass, field
+from typing import Dict, List, Set, Tuple, Union, Optional
+
+# ---------- Удобные псевдонимы типов ----------
+Days = List[str]            # ["Mon","Tue","Wed","Thu","Fri"]
+Periods = List[int]         # [1,2,3,4,5,6,7]
+Classes = List[str]         # ["5A","5B", ...]
+Subjects = List[str]        # ["math","eng","cs","labor", ...]
+Teachers = List[str]        # ["Ivanov","Petrov", ...]
+Subgroups = List[int]       # обычно [1, 2]
 
 # План часов (НЕподгрупповые предметы): (class, subject) -> hours_per_week
 PlanHours = Dict[Tuple[str, str], int]
@@ -33,20 +43,37 @@ TeacherSlotWeight = Dict[Tuple[str, str, int], float]
 #  - по сочетанию (class, subject, day)
 ClassSubjectDayWeight = Dict[Tuple[str, str, str], float]
 
-# Жесткие запреты на слоты для классов: {(class, day, period), ...}
+# Жёсткие запреты слотов на уровне класса: {(class, day, period), ...}
 ForbiddenSlots = Set[Tuple[str, str, int]]
+
+# --- Новые удобные типы для расширенных настроек ---
+# Скалярное значение либо словарь {объект: значение}
+ScalarOrPerEntityInt = Union[int, Dict[str, int]]
+
+# Запреты слотов у преподавателя: teacher -> [(day, period), ...]
+TeacherForbiddenSlots = Dict[str, List[Tuple[str, int]]]
+
+# «Максимум повторов предмета в день»:
+#  - bool=True   -> максимум 1 раз в день
+#  - int         -> максимум k раз в день
+#  - dict[subj]  -> максимум k_s для каждого предмета
+MaxRepeatsPerDay = Union[bool, int, Dict[str, int]]
+
+# «Минимум разных дней в неделю для предмета»:
+#  ключ (class, subject) -> минимум N дней в неделе, где предмет появляется
+MinDaysPerSubject = Dict[Tuple[str, str], int]
 
 
 @dataclass
 class InputData:
     """
-    Единый контейнер всех входных данных для постановки MILP-задачи расписания.
+    Единый контейнер всех входных данных для постановки CP-SAT задачи расписания.
 
     Обязательные множества:
       - days, periods, classes, subjects, teachers
 
     Подгруппы:
-      - split_subjects: предметы, которые ведутся по двум подгруппам (обычно {"eng","cs","labor"})
+      - split_subjects: предметы, которые ведутся по двум подгруппам (например {"eng","cs","labor"})
       - subgroup_ids: номера подгрупп (обычно [1,2])
 
     Учебный план:
@@ -57,17 +84,26 @@ class InputData:
       - assigned_teacher: учитель за (class, subject) — для НЕподгрупповых
       - subgroup_assigned_teacher: учитель за (class, subject, subgroup) — для подгрупповых
 
-    Ограничения/предпочтения:
-      - days_off: выходные/недоступные дни учителей
-      - teacher_weekly_cap: лимит недельной нагрузки учителя
-      - forbidden_slots: жесткий запрет на проведение ЛЮБЫХ уроков для класса в данном слоте
-      - class_slot_weight, teacher_slot_weight, class_subject_day_weight: мягкие цели
+    Ограничения/предпочтения (жёсткие и мягкие):
+      - days_off: выходные/недоступные дни учителей (на уровне дня)
+      - teacher_weekly_cap: лимит НЕДЕЛЬНОЙ нагрузки учителя (скаляр или {teacher: cap})
+      - teacher_daily_cap: лимит ДНЕВНОЙ нагрузки учителя (скаляр или {teacher: cap})
+      - class_daily_cap: лимит уроков в день для класса (скаляр или {class: cap})
+      - teacher_forbidden_slots: явные запреты слотов для преподавателей
+      - forbidden_slots: жёсткий запрет проводить ЛЮБОЙ урок у класса в указанном слоте
+      - class_slot_weight / teacher_slot_weight / class_subject_day_weight: пользовательские «мягкие» предпочтения
 
     Совместимость подгрупп:
-      - compatible_pairs: множество разрешённых НЕУПОРЯДОЧЕННЫХ пар (s1, s2) split-предметов,
-        которые могут идти одновременно внутри одного класса и слота. Включайте и одинаковые пары,
-        если разрешаете параллельные подгруппы одного и того же предмета: например ("eng","eng").
-        Храните как tuple(sorted((s1,s2))).
+      - compatible_pairs: множество разрешённых НЕУПОРЯДОЧЕННЫХ пар (s1, s2) split‑предметов,
+        которые могут идти одновременно в одном классе и слоте.
+        Хранить как tuple(sorted((s1, s2))). Разрешение одного и того же предмета параллельно — пара ("eng","eng").
+
+    Дополнительные «политики»:
+      - paired_subjects: предметы, которые желательно ставить парами (два подряд)
+      - max_repeats_per_day: максимум повторений предмета в день (bool/int/dict)
+      - min_days_per_subject: минимум разных дней в неделю для заданного (class, subject)
+      - must_sync_split_subjects: сплит‑предметы, требующие одновременности подгрупп
+      - max_consecutive_lessons_for_class / for_teacher: максимум подряд (скаляр или словари по объектам)
     """
 
     # --- Базовые множества ---
@@ -91,9 +127,20 @@ class InputData:
 
     # --- Недоступные дни / лимиты / запреты ---
     days_off: DaysOff = field(default_factory=dict)
-    teacher_weekly_cap: int = 35
 
-    # запрщенные слоты для конкретного класса
+    # Лимит недельной нагрузки на преподавателя (скаляр для всех или словарь по преподавателям)
+    teacher_weekly_cap: ScalarOrPerEntityInt = 35
+
+    # Лимит дневной нагрузки на преподавателя (скаляр или словарь). По умолчанию нет ограничения.
+    teacher_daily_cap: Optional[ScalarOrPerEntityInt] = None
+
+    # Лимит уроков в день на класс (скаляр или словарь). По умолчанию нет ограничения.
+    class_daily_cap: Optional[ScalarOrPerEntityInt] = None
+
+    # Явные запреты слотов у преподавателей: teacher -> [(day, period), ...]
+    teacher_forbidden_slots: TeacherForbiddenSlots = field(default_factory=dict)
+
+    # Жёсткие запреты слотов на уровне класса: {(class, day, period), ...}
     forbidden_slots: ForbiddenSlots = field(default_factory=set)
 
     # --- Мягкие цели (необязательно) ---
@@ -101,28 +148,66 @@ class InputData:
     teacher_slot_weight: TeacherSlotWeight = field(default_factory=dict)
     class_subject_day_weight: ClassSubjectDayWeight = field(default_factory=dict)
 
-    # --- Совместимости split-предметов ---
-    # храним как отсортированные пары, напр.: {("eng","eng"), ("cs","eng"), ("labor","labor")}
+    # --- Совместимости split‑предметов ---
+    # Храним как отсортированные пары, напр.: {("eng","eng"), ("cs","eng"), ("labor","labor")}
     compatible_pairs: Set[Tuple[str, str]] = field(default_factory=set)
 
-    # --- Предпочтения по спариванию ---
+    # --- Предпочтения по «спариванию» ---
     # Предметы, которые желательно ставить по 2 урока подряд
     paired_subjects: Set[str] = field(default_factory=set)
+
+    # --- Часто используемые «политики» (необяз.) ---
+    # Максимум повторов предмета в день: True/1 -> не более одного, либо число/словарь по предметам
+    max_repeats_per_day: Optional[MaxRepeatsPerDay] = None
+
+    # Минимум разных дней в неделю для конкретного (class, subject)
+    min_days_per_subject: MinDaysPerSubject = field(default_factory=dict)
+
+    # Сплит‑предметы, у которых подгруппы должны идти синхронно (в один и тот же слот)
+    must_sync_split_subjects: Set[str] = field(default_factory=set)
+
+    # Максимум подряд для класса / преподавателя (скаляр или словари по объектам)
+    max_consecutive_lessons_for_class: Optional[ScalarOrPerEntityInt] = None
+    max_consecutive_lessons_for_teacher: Optional[ScalarOrPerEntityInt] = None
 
 
 @dataclass
 class OptimizationWeights:
     """
-    Весовые коэффициенты для составной целевой функции.
+    Весовые коэффициенты и параметры решателя для составной целевой функции.
+
+    Примечание к «окнам»:
+    - В улучшенной модели «окна» минимизируются как суммарная длина «конверта» (количество
+      занятых + пустых слотов между первым и последним занятием) для учителей/классов.
+      Поэтому веса alpha_runs / alpha_runs_teacher применяются к этой метрике.
+
+    Также добавлены:
+    - use_lexico, lexico_primary: включая «двухфазную» лексикографическую оптимизацию
+      (сначала окна одного типа, затем остальные цели).
+    - Параметры решателя: num_search_workers, random_seed, time_limit_s, relative_gap_limit.
     """
-    alpha_runs: int = 10   # анти-окна: минимизация числа блоков занятий
-    alpha_runs_teacher: int = 2   # анти-окна: минимизация числа блоков занятий для учителей
-    beta_early: int = 1      # лёгкое предпочтение ранних уроков
-    gamma_balance: int = 1  # баланс по дням (L1-отклонение от среднего)
-    delta_tail: int = 10     # штраф за «хвосты» после 6-го урока (soft ban)
+    # --- Веса целей ---
+    alpha_runs: int = 10             # «анти‑окна» для КЛАССОВ (суммарная длина конвертов по дням)
+    alpha_runs_teacher: int = 2      # «анти‑окна» для УЧИТЕЛЕЙ (суммарная длина конвертов по дням)
+    beta_early: int = 1              # предпочтение более ранних слотов (минимизация номера периода)
+    gamma_balance: int = 1           # баланс по дням (минимизируем разброс нагрузки)
+    delta_tail: int = 10             # штраф за «хвосты» — уроки после last_ok_period
+    epsilon_pairing: int = 20        # штраф за «одинокие» уроки у предметов, которые должны идти парами
 
-    epsilon_pairing: int = 20 # штраф за каждый "одиночный" урок, который должен быть спарен
+    # Пользовательские предпочтения (масштаб), если используются вне модели
+    pref_scale: int = 1
 
-    pref_scale: int = 1      # масштаб для пользовательских предпочтений
+    # После этого слота начинаются «хвосты» (используется в delta_tail)
+    last_ok_period: int = 6
 
-    last_ok_period: int = 6      # после этого слота начинаются «хвосты» (мягко штрафуем)
+    # --- Лексикографическая оптимизация ---
+    use_lexico: bool = False         # если True: двухфазная оптимизация (primary -> secondary)
+    # Что оптимизировать первичным при use_lexico:
+    # 'teacher_windows' или 'class_windows'
+    lexico_primary: str = "teacher_windows"
+
+    # --- Параметры решателя ---
+    num_search_workers: int = 20                 # число воркеров OR‑Tools
+    random_seed: Optional[int] = None            # фиксируем сид для воспроизводимости (None = выключено)
+    time_limit_s: Optional[float] = None         # лимит времени, сек (None = без лимита)
+    relative_gap_limit: float = 0.05             # относительный GAP для приближённого решения
