@@ -16,7 +16,7 @@
 #  - has_split: замена квадратичного запрета (неделимый vs делимый) на одну булевую переменную-OR
 #  - «Окна» как длина «конверта»: prefix/suffix/inside для учителей и (опционально) классов
 #  - Линейная эквивалентность для «спаренных» (is_lonely = curr ∧ ¬prev ∧ ¬next)
-#  - Набор опций: дневные лимиты, не повторять предмет в день, распределение по неделе, синхронные сплиты, максимум подряд
+#  - Набор опций: дневные лимиты, синхронные сплиты
 #  - Опциональная лексикографическая оптимизация (2 solve-а)
 # -----------------------------------------------------------------------------
 
@@ -62,12 +62,6 @@ def _get_scalar_or_dict_cap(store, key, fallback: Optional[int] = None) -> Optio
         val = store.get(key, fallback)
         return None if val is None else _as_int(val)
     return fallback
-
-
-def _sliding_windows(seq: List[Hashable], win_len: int) -> Iterable[List[Hashable]]:
-    """Генератор скользящих окон длины win_len."""
-    for i in range(0, len(seq) - win_len + 1):
-        yield seq[i:i + win_len]
 
 
 # ----------- 2) ПОДСЧЁТ ОКОН У ПРЕПОДАВАТЕЛЕЙ ИЗ ГОТОВОГО РЕШЕНИЯ (для отчёта) -----------
@@ -297,47 +291,7 @@ def build_and_solve_with_or_tools(
             for d in D:
                 model.Add(sum(y[c, d, p] for p in P) <= cap_c)
 
-    # (B) Запрет/лимит на «повторять один и тот же предмет в день»
-    #   ожидается: data.max_repeats_per_day — либо число (глобально),
-    #              либо dict по предметам, либо bool==1 (означает «максимум 1»)
-    repeats_spec = getattr(data, 'max_repeats_per_day', None)
-    if repeats_spec is not None:
-        def _cap_for_subject(s):
-            if isinstance(repeats_spec, bool):
-                return 1 if repeats_spec else None
-            if isinstance(repeats_spec, (int, float)):
-                return _as_int(repeats_spec)
-            if isinstance(repeats_spec, dict):
-                val = repeats_spec.get(s, None)
-                return None if val is None else _as_int(val)
-            return None
-
-        for c, s, d in itertools.product(C, S, D):
-            cap = _cap_for_subject(s)
-            if cap is None:
-                continue
-            if s in splitS:
-                # считаем по флагу is_subj_taught (идёт ли предмет в слоте хоть какой‑то подгруппе)
-                model.Add(sum(is_subj_taught[c, s, d, p] for p in P) <= cap)
-            else:
-                model.Add(sum(x[c, s, d, p] for p in P if (c, s, d, p) in x) <= cap)
-
-    # (C) Минимум разных дней в неделю для предмета: data.min_days_per_subject[(c,s)] = N
-    min_days_spec = getattr(data, 'min_days_per_subject', {})
-    if min_days_spec:
-        for (c, s), min_days in min_days_spec.items():
-            min_days = _as_int(min_days)
-            # binary day_has_subject[c,s,d] — предмет встречается хоть раз в день d
-            day_has = {d: model.NewBoolVar(f'day_has_{c}_{s}_{d}') for d in D}
-            for d in D:
-                if s in splitS:
-                    # day_has == OR_p is_subj_taught[c,s,d,p]
-                    model.AddMaxEquality(day_has[d], [is_subj_taught[c, s, d, p] for p in P])
-                else:
-                    model.AddMaxEquality(day_has[d], [x[c, s, d, p] for p in P if (c, s, d, p) in x])
-            model.Add(sum(day_has.values()) >= min_days)
-
-    # (D) Синхронность подгрупп для некоторых сплит‑предметов
+    # (B) Синхронность подгрупп для некоторых сплит‑предметов
     must_sync = set(getattr(data, 'must_sync_split_subjects', [])) & set(splitS)
     if must_sync:
         for s in must_sync:
@@ -346,30 +300,6 @@ def build_and_solve_with_or_tools(
                 for g1, g2 in itertools.combinations(G, 2):
                     if (c, s, g1, d, p) in z and (c, s, g2, d, p) in z:
                         model.Add(z[c, s, g1, d, p] == z[c, s, g2, d, p])
-
-    # (E) Максимум подряд для класса / учителя (если заданы)
-    max_consec_class = getattr(data, 'max_consecutive_lessons_for_class', None)
-    if max_consec_class is not None:
-        for c in C:
-            cap_c = _get_scalar_or_dict_cap(max_consec_class, c, None)
-            if cap_c is None:
-                continue
-            # Для каждого дня ограничиваем любую «полосу» длиной cap_c+1
-            L = cap_c + 1
-            for d in D:
-                for window in _sliding_windows(P, L):
-                    model.Add(sum(y[c, d, p] for p in window) <= cap_c)
-
-    max_consec_teacher = getattr(data, 'max_consecutive_lessons_for_teacher', None)
-    if max_consec_teacher is not None:
-        for t in data.teachers:
-            cap_t = _get_scalar_or_dict_cap(max_consec_teacher, t, None)
-            if cap_t is None:
-                continue
-            L = cap_t + 1
-            for d in D:
-                for window in _sliding_windows(P, L):
-                    model.Add(sum(teacher_busy[t, d, p] for p in window) <= cap_t)
 
     # ------------------------- 3.4) ЦЕЛЕВАЯ ФУНКЦИЯ / МЯГКИЕ ЦЕЛИ -------------------------
 

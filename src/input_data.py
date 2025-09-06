@@ -4,8 +4,7 @@
 # Добавлены поля и веса, которые используются улучшенной моделью CP-SAT:
 #  - Лексикографическая оптимизация (use_lexico, lexico_primary)
 #  - Индивидуальные лимиты / запреты (teacher_daily_cap, teacher_forbidden_slots и т.п.)
-#  - Часто используемые "политики" (max_repeats_per_day, min_days_per_subject, must_sync_split_subjects)
-#  - "Максимум подряд" для классов и преподавателей
+#  - Часто используемые "политики" (must_sync_split_subjects)
 #  - Параметры решателя: num_search_workers, random_seed, time_limit_s, relative_gap_limit
 # -----------------------------------------------------------------------------
 
@@ -53,15 +52,6 @@ ScalarOrPerEntityInt = Union[int, Dict[str, int]]
 # Запреты слотов у преподавателя: teacher -> [(day, period), ...]
 TeacherForbiddenSlots = Dict[str, List[Tuple[str, int]]]
 
-# «Максимум повторов предмета в день»:
-#  - bool=True   -> максимум 1 раз в день
-#  - int         -> максимум k раз в день
-#  - dict[subj]  -> максимум k_s для каждого предмета
-MaxRepeatsPerDay = Union[bool, int, Dict[str, int]]
-
-# «Минимум разных дней в неделю для предмета»:
-#  ключ (class, subject) -> минимум N дней в неделе, где предмет появляется
-MinDaysPerSubject = Dict[Tuple[str, str], int]
 
 
 @dataclass
@@ -100,10 +90,7 @@ class InputData:
 
     Дополнительные «политики»:
       - paired_subjects: предметы, которые желательно ставить парами (два подряд)
-      - max_repeats_per_day: максимум повторений предмета в день (bool/int/dict)
-      - min_days_per_subject: минимум разных дней в неделю для заданного (class, subject)
       - must_sync_split_subjects: сплит‑предметы, требующие одновременности подгрупп
-      - max_consecutive_lessons_for_class / for_teacher: максимум подряд (скаляр или словари по объектам)
     """
 
     # --- Базовые множества ---
@@ -157,18 +144,8 @@ class InputData:
     paired_subjects: Set[str] = field(default_factory=set)
 
     # --- Часто используемые «политики» (необяз.) ---
-    # Максимум повторов предмета в день: True/1 -> не более одного, либо число/словарь по предметам
-    max_repeats_per_day: Optional[MaxRepeatsPerDay] = None
-
-    # Минимум разных дней в неделю для конкретного (class, subject)
-    min_days_per_subject: MinDaysPerSubject = field(default_factory=dict)
-
     # Сплит‑предметы, у которых подгруппы должны идти синхронно (в один и тот же слот)
     must_sync_split_subjects: Set[str] = field(default_factory=set)
-
-    # Максимум подряд для класса / преподавателя (скаляр или словари по объектам)
-    max_consecutive_lessons_for_class: Optional[ScalarOrPerEntityInt] = None
-    max_consecutive_lessons_for_teacher: Optional[ScalarOrPerEntityInt] = None
 
 
 @dataclass
