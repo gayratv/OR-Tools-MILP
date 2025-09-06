@@ -1,12 +1,14 @@
 # print_schedule.py
 """
-Pretty-printers и Excel-экспорт расписаний.
+Pretty-printers and Excel exporters for timetables.
 
-ОЧИЩЕНО: удалены любые ссылки на teacher_weekly_cap / teacher_daily_cap / class_daily_cap.
-Сводки показывают фактическую нагрузку и «окна», без проверки лимитов.
+Исправления:
+- Корректная обработка teacher_weekly_cap, который теперь может быть числом ИЛИ словарём {teacher: cap}.
+- В учительской сводке "Лимит" берётся персонально, если передан словарь.
+- В классной сводке проверка перегруза опирается на class_daily_cap (если задан), иначе остаётся исторический порог >7.
 """
 
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Optional, Union
 import dataclasses
 import pulp
 import openpyxl
@@ -20,6 +22,28 @@ def _val(var: Any) -> float:
     if isinstance(var, pulp.LpVariable):
         return float(pulp.value(var)) if var is not None else 0.0
     return float(var) if var is not None else 0.0
+
+
+def _get_cap_value(cap: Optional[Union[int, float, Dict[str, int]]],
+                   key: Optional[str] = None) -> Optional[int]:
+    """
+    Нормализует значение "лимита". Поддерживает:
+      - cap = число (int/float) -> возвращается int(cap)
+      - cap = словарь -> возвращается cap[key] (или None, если ключа нет)
+      - cap = None -> None
+    """
+    if cap is None:
+        return None
+    if isinstance(cap, dict):
+        if key is None:
+            return None
+        val = cap.get(key, None)
+        return None if val is None else int(val)
+    # число
+    try:
+        return int(cap)
+    except Exception:
+        return None
 
 
 def get_solution_maps(data: InputData, solver_or_vars: Dict, is_pulp: bool) -> Dict:
@@ -41,6 +65,9 @@ def get_solution_maps(data: InputData, solver_or_vars: Dict, is_pulp: bool) -> D
     return {'x': x_sol, 'z': z_sol}
 
 
+# display_maps
+# "subject_names": subject_map.set_index('предмет_eng')['предмет'].to_dict(),
+# "teacher_names": teacher_map.set_index('teacher')['FAMIO'].to_dict()
 def export_full_schedule_to_excel(
     filename: str,
     data: InputData,
@@ -51,7 +78,7 @@ def export_full_schedule_to_excel(
 ):
     x_sol, z_sol = solution_maps['x'], solution_maps['z']
 
-    # --- Вспомогательные функции для имён ---
+    # --- Вспомогательные функции для получения полных имен ---
     display_maps = display_maps or {}
     subject_names = display_maps.get("subject_names", {})
     teacher_names = display_maps.get("teacher_names", {})
@@ -170,9 +197,16 @@ def export_full_schedule_to_excel(
         total = sum(per_day.values())
         avg = total / len(data.days) if data.days else 0.0
         warnings = []
-        # Историческая простая проверка перегруза >7 уроков в день
-        if any(v > 7 for v in per_day.values()):
-            warnings.append("Перегрузка >7")
+
+        # Проверка перегруза по дневному лимиту (если задан), иначе исторический порог >7
+        class_cap = _get_cap_value(getattr(data, "class_daily_cap", None), c)
+        if class_cap is not None:
+            if any(v > class_cap for v in per_day.values()):
+                warnings.append(f"Перегрузка >{class_cap}")
+        else:
+            if any(v > 7 for v in per_day.values()):
+                warnings.append("Перегрузка >7")
+
         if avg > 0 and any(abs(v - avg) > 0.3 * avg for v in per_day.values()):
             warnings.append("Перекос")
 
@@ -183,7 +217,7 @@ def export_full_schedule_to_excel(
     ws_summary.append([])
     ws_summary.append(["Сводка по учителям"])
     ws_summary.cell(ws_summary.max_row, 1).font = bold_font
-    header = ["Учитель", "Всего", "Сред./день", "Окна"] + data.days + ["Предупреждения"]
+    header = ["Учитель", "Всего", "Лимит/нед", "Сред./день", "Окна"] + data.days + ["Предупреждения"]
     ws_summary.append(header)
 
     for t in data.teachers:
@@ -191,7 +225,7 @@ def export_full_schedule_to_excel(
         total = sum(per_day.values())
         avg = total / len(data.days) if data.days else 0.0
 
-        # Подсчёт «окон»: пустые слоты внутри рамки [первый..последний] каждого дня
+        # Подсчет "окон" у учителя: пустые слоты внутри рамки [первый..последний] каждого дня
         total_windows = 0
         for d in data.days:
             busy = sorted(set(teacher_busy_periods[t][d]))
@@ -200,12 +234,20 @@ def export_full_schedule_to_excel(
                 total_windows += (last - first + 1) - len(busy)
 
         warnings = []
+        # ЛИМИТ НЕДЕЛЬНОЙ НАГРУЗКИ: число или словарь по учителям
+        weekly_cap = _get_cap_value(getattr(data, "teacher_weekly_cap", None), t)
+        weekly_cap_display = weekly_cap if weekly_cap is not None else "—"
+        if weekly_cap is not None and total > weekly_cap:
+            warnings.append(f"Перегруз! ({total}/{weekly_cap})")
+
+        # Дополнительно можно предупредить об излишних окнах (условный порог)
         if total_windows > 5:
             warnings.append("Окна > 5")
 
         row = [
             get_teacher_name(t),
             total,
+            weekly_cap_display,
             f"{avg:.1f}",
             total_windows
         ] + [per_day[d] for d in data.days] + [", ".join(warnings)]
@@ -240,7 +282,7 @@ def export_full_schedule_to_excel(
             value = getattr(weights, f.name)
             ws_weights.append([f.name, value, ""])
 
-    # --- Авто-ширина и выравнивание ---
+    # --- Авто-ширина колонок и стиль ---
     for ws in wb.worksheets:
         for col in ws.columns:
             max_length = 0
@@ -249,10 +291,12 @@ def export_full_schedule_to_excel(
                 if cell.font.bold:
                     cell.alignment = center_align
                 try:
-                    max_length = max(max_length, len(str(cell.value)))
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
                 except Exception:
                     pass
-            ws.column_dimensions[column].width = max_length + 2
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column].width = adjusted_width
 
     wb.save(filename)
     print(f"\nПолное расписание и сводка сохранены в {filename}")
