@@ -8,29 +8,6 @@
 from input_data import InputData
 
 
-def make_default_compat():
-    """Разрешённые пары одновременных split‑предметов (для разных предметов).
-
-    Логика совместимости применяется только к ПАРАМ предметов (s1 != s2):
-    внутри одного слота класс может вести два РАЗНЫХ split‑предмета для разных подгрупп
-    только если такая пара разрешена. Пары вида ("eng","eng") не нужны, так как
-    проверка делается только для разных предметов.
-    """
-    allowed = set()
-
-    def add(a, b):
-        allowed.add(tuple(sorted((a, b))))
-
-    # Разрешаем одновременно вести "cs" и "eng" (например, g1: cs; g2: eng)
-    add("cs", "eng")
-
-    # Пример: можем дополнить и другими парами при необходимости:
-    # add("labor", "eng")
-    # add("labor", "cs")
-
-    return allowed
-
-
 def create_manual_data() -> InputData:
     # --- Основные множества ---
     days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
@@ -131,9 +108,6 @@ def create_manual_data() -> InputData:
         # Закрепления
         assigned_teacher=assigned_teacher,
         subgroup_assigned_teacher=subgroup_assigned_teacher,
-
-        # Совместимости split‑предметов
-        compatible_pairs=make_default_compat(),
 
         # Жёсткие/мягкие предпочтения
         days_off=days_off,
