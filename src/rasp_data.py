@@ -2,8 +2,7 @@
 # -----------------------------------------------------------------------------
 # Тестовые данные для задачи составления школьного расписания.
 # Обновлено: добавлены поля, используемые улучшенной моделью (teacher_daily_cap,
-# class_daily_cap, teacher_forbidden_slots, max_repeats_per_day, min_days_per_subject,
-# must_sync_split_subjects, max_consecutive_* и др.)
+# class_daily_cap, teacher_forbidden_slots, must_sync_split_subjects и др.)
 # -----------------------------------------------------------------------------
 
 from input_data import InputData
@@ -124,30 +123,14 @@ def create_manual_data() -> InputData:
         # "Sidorov": [("Wed", 3)]
     }
 
-    # Максимум повторов предмета в день:
-    # True => для каждого класса любой предмет не чаще 1 раза в день
-    # (для split‑предметов считается по флагу is_subj_taught, т.е. «хоть какая‑то подгруппа»)
-    max_repeats_per_day = True
-
-    # Минимум разных дней в неделю для конкретного (class, subject)
-    # Для math задаём минимум 2 дня (разнести 2 часа по разным дням)
-    min_days_per_subject = {
-        ("5A", "math"): 2,
-        ("5B", "math"): 2,
-    }
-
     # Список split‑предметов, которые надо вести синхронно (обе подгруппы в один слот).
     # Выбираем "eng": у g1 и g2 разные учителя (Sidorov / Nikolaev), поэтому это реализуемо.
     # НЕ выбираем "labor", потому что обе подгруппы ведёт Smirnov — иначе будет конфликт
     # по ограничению «у учителя не более 1 урока в слоте».
     must_sync_split_subjects = {"eng"}
 
-    # «Максимум подряд» для классов/учителей (скаляр либо словарь по объектам)
-    max_consecutive_lessons_for_class = 4
-    max_consecutive_lessons_for_teacher = 4
-
     # Предметы, которые желательно ставить парами (два подряд).
-    # В демонстрационных данных оставляем пустым, чтобы не конфликтовать с max_repeats_per_day.
+    # В демонстрационных данных оставляем пустым.
     paired_subjects = set()
 
     data = InputData(
@@ -187,13 +170,7 @@ def create_manual_data() -> InputData:
         teacher_forbidden_slots=teacher_forbidden_slots,
 
         # Частые «политики»
-        max_repeats_per_day=max_repeats_per_day,
-        min_days_per_subject=min_days_per_subject,
         must_sync_split_subjects=must_sync_split_subjects,
-
-        # «Максимум подряд»
-        max_consecutive_lessons_for_class=max_consecutive_lessons_for_class,
-        max_consecutive_lessons_for_teacher=max_consecutive_lessons_for_teacher,
 
         # Предпочтения «спаривать» предметы
         paired_subjects=paired_subjects,
