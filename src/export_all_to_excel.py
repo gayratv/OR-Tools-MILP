@@ -52,7 +52,7 @@ def export_all_to_excel(filename: str,
 
     # ----- Лист: сводка по учителям -----
     ws_teachers = wb.create_sheet("Учителя")
-    header = ["Учитель", "Всего", "Лимит", "Среднее/день"] + data.days
+    header = ["Учитель", "Всего", "Среднее/день"] + data.days
     ws_teachers.append(header)
     for t in data.teachers:
         total = 0
@@ -74,7 +74,7 @@ def export_all_to_excel(filename: str,
                         total += val
                         per_day[d] += val
         avg = total / len(data.days) if data.days else 0
-        ws_teachers.append([t, int(total), data.teacher_weekly_cap, round(avg, 1)] + [int(per_day[d]) for d in data.days])
+        ws_teachers.append([t, int(total), round(avg, 1)] + [int(per_day[d]) for d in data.days])
     for cell in ws_teachers[1]:
         cell.font = Font(bold=True)
 

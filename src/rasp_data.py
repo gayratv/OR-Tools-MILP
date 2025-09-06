@@ -1,8 +1,8 @@
 # rasp_data.py
 # -----------------------------------------------------------------------------
 # Тестовые данные для задачи составления школьного расписания.
-# Обновлено: добавлены поля, используемые улучшенной моделью (teacher_daily_cap,
-# class_daily_cap, teacher_forbidden_slots, must_sync_split_subjects и др.)
+# Обновлено: добавлены поля, используемые улучшенной моделью (class_daily_cap,
+# teacher_forbidden_slots, must_sync_split_subjects и др.)
 # -----------------------------------------------------------------------------
 
 from input_data import InputData
@@ -95,25 +95,7 @@ def create_manual_data() -> InputData:
     teacher_slot_weight = {("Petrov", "Tue", 1): 8.0}
     class_subject_day_weight = {("5B", "math", "Mon"): 6.0}
 
-    # Лимиты недельной нагрузки учителей (персонально; можно оставить скаляр по умолчанию = 35)
-    teacher_weekly_cap = {
-        "Ivanov": 10,   # всего 4 урока math в неделю
-        "Petrov": 12,   # всего 4 урока cs (по подгруппам)
-        "Sidorov": 6,   # всего 2 урока eng (g1 * 2 класса)
-        "Nikolaev": 6,  # всего 2 урока eng (g2 * 2 класса)
-        "Smirnov": 10,  # всего 4 урока labor (по подгруппам)
-    }
-
-    # Лимит уроков в день:
-    #  - для преподавателей (0/None — не ограничиваем). Здесь задаём словарь для примера.
-    teacher_daily_cap = {
-        "Ivanov": 4,
-        "Petrov": 4,
-        "Sidorov": 4,
-        "Nikolaev": 4,
-        "Smirnov": 4,
-    }
-    #  - для классов (скаляр или словарь)
+    # Лимит уроков в день для классов (скаляр или словарь)
     class_daily_cap = {"5A": 6, "5B": 6}
 
     # Запрещённые слоты для конкретных преподавателей
@@ -164,8 +146,6 @@ def create_manual_data() -> InputData:
         class_subject_day_weight=class_subject_day_weight,
 
         # Лимиты / запреты
-        teacher_weekly_cap=teacher_weekly_cap,
-        teacher_daily_cap=teacher_daily_cap,
         class_daily_cap=class_daily_cap,
         teacher_forbidden_slots=teacher_forbidden_slots,
 
