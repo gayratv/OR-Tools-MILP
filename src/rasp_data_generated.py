@@ -796,9 +796,6 @@ def create_timetable_data() -> InputData:
     teacher_slot_weight = {('Vac_2', 'Tue', 1): 8}
     class_subject_day_weight = {('5A', 'Geog', 'Mon'): 6}
 
-    # --- Совместимости ---
-    compatible_pairs = {('CS', 'Eng')}
-    
     # --- Спаривание ---
     paired_subjects = {'Trud'}
 
@@ -819,6 +816,5 @@ def create_timetable_data() -> InputData:
         class_slot_weight=class_slot_weight,
         teacher_slot_weight=teacher_slot_weight,
         class_subject_day_weight=class_subject_day_weight,
-        compatible_pairs=compatible_pairs,
         paired_subjects=paired_subjects
     )
