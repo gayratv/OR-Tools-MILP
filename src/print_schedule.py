@@ -1,12 +1,9 @@
 # print_schedule.py
 """
 Pretty-printers and Excel exporters for timetables.
-
-Исправления:
-- В классной сводке проверка перегруза опирается на class_daily_cap (если задан), иначе остаётся исторический порог >7.
 """
 
-from typing import Dict, Tuple, Any, Optional, Union
+from typing import Dict, Tuple, Any, Optional
 import dataclasses
 import pulp
 import openpyxl
@@ -20,28 +17,6 @@ def _val(var: Any) -> float:
     if isinstance(var, pulp.LpVariable):
         return float(pulp.value(var)) if var is not None else 0.0
     return float(var) if var is not None else 0.0
-
-
-def _get_cap_value(cap: Optional[Union[int, float, Dict[str, int]]],
-                   key: Optional[str] = None) -> Optional[int]:
-    """
-    Нормализует значение "лимита". Поддерживает:
-      - cap = число (int/float) -> возвращается int(cap)
-      - cap = словарь -> возвращается cap[key] (или None, если ключа нет)
-      - cap = None -> None
-    """
-    if cap is None:
-        return None
-    if isinstance(cap, dict):
-        if key is None:
-            return None
-        val = cap.get(key, None)
-        return None if val is None else int(val)
-    # число
-    try:
-        return int(cap)
-    except Exception:
-        return None
 
 
 def get_solution_maps(data: InputData, solver_or_vars: Dict, is_pulp: bool) -> Dict:
@@ -196,14 +171,9 @@ def export_full_schedule_to_excel(
         avg = total / len(data.days) if data.days else 0.0
         warnings = []
 
-        # Проверка перегруза по дневному лимиту (если задан), иначе исторический порог >7
-        class_cap = _get_cap_value(getattr(data, "class_daily_cap", None), c)
-        if class_cap is not None:
-            if any(v > class_cap for v in per_day.values()):
-                warnings.append(f"Перегрузка >{class_cap}")
-        else:
-            if any(v > 7 for v in per_day.values()):
-                warnings.append("Перегрузка >7")
+        # Проверка перегруза по историческому порогу >7 уроков
+        if any(v > 7 for v in per_day.values()):
+            warnings.append("Перегрузка >7")
 
         if avg > 0 and any(abs(v - avg) > 0.3 * avg for v in per_day.values()):
             warnings.append("Перекос")
