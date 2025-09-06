@@ -167,18 +167,6 @@ def load_data_from_access(db_path: str) -> InputData:
     # class_subject_day_weight = {("5B", "math", "Mon"): 6.0}
     class_subject_day_weight = get_dict("v_class_subject_day_weight", ["ClassName", "SubjectName", "day_of_week"], "weight",value_is_numeric=True)
 
-    # Совместимость пар
-    # compatible_pairs = {('cs', 'eng')}
-    df_compat = pd.read_sql("SELECT * FROM v_сompatible_pairs", engine)
-    if not df_compat.empty:
-        # Санитайзим имена предметов в обеих колонках
-        for col in df_compat.columns:
-            if df_compat[col].dtype == 'object':
-                df_compat[col] = df_compat[col].str.strip().apply(_sanitize_lp_name)
-    compatible_pairs = {tuple(sorted(pair)) for pair in df_compat.to_records(index=False)}
-    # pprint(compatible_pairs)
-    # return
-
     # days=["Mon", "Tue", "Wed", "Thu", "Fri"]
     days = get_list("сп_days_of_week", "day_of_week")
     # pprint(days)
@@ -198,8 +186,7 @@ def load_data_from_access(db_path: str) -> InputData:
         class_slot_weight=class_slot_weight,
         teacher_slot_weight=teacher_slot_weight,
         class_subject_day_weight=class_subject_day_weight,
-        compatible_pairs=compatible_pairs,
-        paired_subjects = paired_subjects
+        paired_subjects=paired_subjects
     )
 
 

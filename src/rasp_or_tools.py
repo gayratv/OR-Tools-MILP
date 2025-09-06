@@ -236,15 +236,6 @@ def build_and_solve_with_or_tools(
         else:
             model.Add(is_subj_taught[c, s, d, p] == 0)
 
-    # Несовместимые пары сплит‑предметов: не могут идти одновременно у класса
-    split_list = sorted(list(splitS))
-    for c, d, p in itertools.product(C, D, P):
-        for s1, s2 in itertools.combinations(split_list, 2):
-            pair = tuple(sorted((s1, s2)))
-            if pair not in getattr(data, 'compatible_pairs', set()):
-                model.AddBoolOr([is_subj_taught[c, s1, d, p].Not(),
-                                 is_subj_taught[c, s2, d, p].Not()])
-
     # ------------------------- 3.3) ДОПОЛНИТЕЛЬНЫЕ ОПЦИИ (НЕОБЯЗ.) -------------------------
 
     # (A) Синхронность подгрупп для некоторых сплит‑предметов

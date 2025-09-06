@@ -45,9 +45,6 @@ def print_data_for_manual_creation(data: InputData):
     print("class_subject_day_weight = \\")
     pprint(data.class_subject_day_weight)
 
-    print("\n# --- Совместимости ---")
-    print(f"compatible_pairs = {data.compatible_pairs!r}")
-
     print("-" * 80)
     print("# Не забудьте в конце функции вернуть объект: return InputData(...)")
 
