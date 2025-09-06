@@ -1,4 +1,4 @@
-# rasp_or_tools.py (v16 - комментарии к переменным)
+# rasp_or_tools.py (cleaned: без teacher_weekly_cap/teacher_daily_cap/class_daily_cap)
 
 import itertools
 from typing import Dict
@@ -7,177 +7,195 @@ from ortools.sat.python import cp_model
 
 from input_data import InputData, OptimizationWeights
 
-# Импорты для разных источников данных
+# Источники данных
 from rasp_data import create_manual_data
 from access_loader import load_data_from_access, load_display_maps
 from rasp_data_generated import create_timetable_data
 
-# Импорты для вывода и экспорта
+# Вывод и экспорт
 from print_schedule import get_solution_maps, export_full_schedule_to_excel
+
 
 def _calculate_teacher_windows(data: InputData, solver: cp_model.CpSolver, x: dict, z: dict) -> int:
     """
-    Подсчитывает общее количество "окон" в расписании всех учителей на основе решенной модели.
-    "Окно" - это пустой урок между двумя занятыми уроками в течение одного дня.
+    Подсчитывает общее количество "окон" у учителей на основании найденного решения.
+    "Окно" — пустой период между двумя уроками в рамках одного дня.
     """
     teacher_busy_periods = {(t, d): [] for t, d in itertools.product(data.teachers, data.days)}
 
-    # Собираем все занятые слоты для каждого учителя
-    # Не-делимые предметы
+    # Неделимые предметы
     for (c, s, d, p), var in x.items():
         if solver.Value(var) > 0:
-            teacher = data.assigned_teacher.get((c, s))
-            if teacher:
-                teacher_busy_periods[teacher, d].append(p)
+            t = data.assigned_teacher.get((c, s))
+            if t:
+                teacher_busy_periods[t, d].append(p)
 
     # Делимые предметы
     for (c, s, g, d, p), var in z.items():
         if solver.Value(var) > 0:
-            teacher = data.subgroup_assigned_teacher.get((c, s, g))
-            if teacher:
-                teacher_busy_periods[teacher, d].append(p)
+            t = data.subgroup_assigned_teacher.get((c, s, g))
+            if t:
+                teacher_busy_periods[t, d].append(p)
 
     total_windows = 0
     for t, d in itertools.product(data.teachers, data.days):
-        busy_periods = sorted(list(set(teacher_busy_periods[t, d]))) # Сортируем и убираем дубли
-        if len(busy_periods) > 1:
-            # Суммируем разрывы: (следующий_урок - текущий_урок - 1)
-            total_windows += sum(busy_periods[i+1] - busy_periods[i] - 1 for i in range(len(busy_periods) - 1))
+        busy = sorted(set(teacher_busy_periods[t, d]))
+        if len(busy) > 1:
+            # сумма разрывов между соседними занятиями
+            total_windows += sum(busy[i + 1] - busy[i] - 1 for i in range(len(busy) - 1))
     return total_windows
 
-def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMETABLE_TO_CONSOLE=None, display_maps: Dict[str, Dict[str, str]]=None, optimize_teacher_windows: bool = True):
-    """Основная функция для построения и решения модели расписания с помощью OR-Tools."""
+
+def build_and_solve_with_or_tools(
+    data: InputData,
+    log: bool = True,
+    PRINT_TIMETABLE_TO_CONSOLE=None,
+    display_maps: Dict[str, Dict[str, str]] = None,
+    optimize_teacher_windows: bool = True
+):
+    """
+    Основная функция: строит и решает CP-SAT модель расписания.
+    Внимание: ограничения/поля teacher_weekly_cap, teacher_daily_cap, class_daily_cap — УДАЛЕНЫ.
+    """
     model = cp_model.CpModel()
     C, S, D, P = data.classes, data.subjects, data.days, data.periods
     G, splitS = data.subgroup_ids, data.split_subjects
     weights = OptimizationWeights()
 
-    # --- Переменные ---
-    # x[(c, s, d, p)] = 1, если у класса c не-делимый предмет s в день d, урок p
+    # ---------------- Переменные ----------------
+    # Неделимые
     x = {(c, s, d, p): model.NewBoolVar(f'x_{c}_{s}_{d}_{p}')
          for c, s, d, p in itertools.product(C, S, D, P) if s not in splitS}
 
-    # z[(c, s, g, d, p)] = 1, если у класса c делимый предмет s для подгруппы g в день d, урок p
+    # Делимые (по подгруппам)
     z = {(c, s, g, d, p): model.NewBoolVar(f'z_{c}_{s}_{g}_{d}_{p}')
          for c, s, g, d, p in itertools.product(C, S, G, D, P) if s in splitS}
 
-    # y[c, d, p] = 1, если у класса c есть любое занятие в день d, период p (вспомогательная переменная)
+    # Занятость класса в слоте
     y = {(c, d, p): model.NewBoolVar(f'y_{c}_{d}_{p}')
          for c, d, p in itertools.product(C, D, P)}
 
-    # is_subj_taught[(c, s, d, p)] = 1, если делимый предмет s преподается ЛЮБОЙ подгруппе класса c в данном слоте
-    # (нужна для проверки совместимости)
-    # Это ограничение говорит:•
-    # is_subj_taught[('10A', 'Eng', 'Mon', 1)] будет 1, потому что z[('10A', 'Eng', 1, 'Mon', 1)] равен 1.•
-    # is_subj_taught[('10A', 'CS', 'Mon', 1)] будет 1, потому что z[('10A', 'CS', 2, 'Mon', 1)] равен 1.•
-    # is_subj_taught[('10A', 'Trud', 'Mon', 1)] будет 0, потому что ни одна подгруппа не изучает труд в это время.
-
+    # Флаг «сплит-предмет s преподаётся хотя бы одной подгруппе»
     is_subj_taught = {(c, s, d, p): model.NewBoolVar(f'ist_{c}_{s}_{d}_{p}')
                       for c, s, d, p in itertools.product(C, splitS, D, P)}
 
     false_var = model.NewBoolVar('false_var')
     model.Add(false_var == 0)
 
-    # --- Жесткие ограничения (Hard Constraints) ---
-    # Эти правила должны выполняться неукоснительно.
+    # ---------------- Жёсткие ограничения ----------------
 
-    # 1. Связь y (слот занят) с x и z (конкретными уроками)
-    # Для каждого слота (класс, день, период), переменная y должна быть 1, если в этом слоте есть хотя бы один урок (x или z).
+    # 1) Связь y с уроками: y == OR(x, z) в слоте
     for c, d, p in itertools.product(C, D, P):
-        lessons_in_slot = [x.get((c, s, d, p)) for s in S if s not in splitS] + \
-                          [z.get((c, s, g, d, p)) for s in splitS for g in G]
-        lessons_in_slot = [v for v in lessons_in_slot if v is not None]
-        # y=1 эквивалентно тому, что хотя бы один из уроков в этом слоте активен.
-        model.AddBoolOr(lessons_in_slot).OnlyEnforceIf(y[c, d, p])
-        model.AddBoolAnd([v.Not() for v in lessons_in_slot]).OnlyEnforceIf(y[c, d, p].Not())
+        lessons = [x.get((c, s, d, p)) for s in S if s not in splitS] + \
+                  [z.get((c, s, g, d, p)) for s in splitS for g in G]
+        lessons = [v for v in lessons if v is not None]
+        model.AddBoolOr(lessons).OnlyEnforceIf(y[c, d, p])
+        model.AddBoolAnd([v.Not() for v in lessons]).OnlyEnforceIf(y[c, d, p].Not())
 
-    # 2. Выполнение учебного плана
-    # Сумма всех уроков по предмету за неделю должна быть равна часам в плане.
-    for (c, s), h in data.plan_hours.items(): model.Add(sum(x[c, s, d, p] for d in D for p in P) == h)
-    for (c, s, g), h in data.subgroup_plan_hours.items(): model.Add(sum(z[c, s, g, d, p] for d in D for p in P) == h)
+    # 2) Выполнение учебного плана
+    for (c, s), h in data.plan_hours.items():
+        model.Add(sum(x[c, s, d, p] for d in D for p in P) == h)
+    for (c, s, g), h in data.subgroup_plan_hours.items():
+        model.Add(sum(z[c, s, g, d, p] for d in D for p in P) == h)
 
-    # 3. Ограничения для учителей
-    # Создаем удобную структуру для быстрого доступа к урокам каждого учителя
+    # 3) Учителя: структура слотов / отсутствие накладок / недоступные дни
     teacher_lessons_in_slot = {(t, d, p): [] for t, d, p in itertools.product(data.teachers, D, P)}
+    # неделимые
     for (c, s), t in data.assigned_teacher.items():
-        if s not in splitS:
-            for d, p in itertools.product(D, P): teacher_lessons_in_slot[t, d, p].append(x[c, s, d, p])
+        if s in splitS:
+            continue
+        for d, p in itertools.product(D, P):
+            teacher_lessons_in_slot[t, d, p].append(x[c, s, d, p])
+    # делимые
     for (c, s, g), t in data.subgroup_assigned_teacher.items():
-        for d, p in itertools.product(D, P): teacher_lessons_in_slot[t, d, p].append(z[c, s, g, d, p])
+        for d, p in itertools.product(D, P):
+            teacher_lessons_in_slot[t, d, p].append(z[c, s, g, d, p])
 
     for t in data.teachers:
-        # a) Недельная нагрузка не более лимита
-        all_lessons_for_teacher = []
-        for d, p in itertools.product(D, P):
-            all_lessons_for_teacher.extend(teacher_lessons_in_slot[t, d, p])
-        if all_lessons_for_teacher:
-            model.Add(sum(all_lessons_for_teacher) <= data.teacher_weekly_cap)
-        # b) Не более одного урока в одном слоте (нет "накладок")
+        # 3b) Не более одного урока в одном слоте
         for d, p in itertools.product(D, P):
             lessons = teacher_lessons_in_slot[t, d, p]
-            if not lessons: continue
-            model.AddAtMostOne(lessons)
-            # c) Запрет работы в выходные дни учителя
-            # days_off = {'Osi_EM': {'Mon', 'Tue'}}
+            if lessons:
+                model.AddAtMostOne(lessons)
+            # 3c) Недоступные дни (days_off)
             if d in data.days_off.get(t, set()):
-                for lesson_var in lessons: model.Add(lesson_var == 0)
+                for v in lessons:
+                    model.Add(v == 0)
 
-    # 4. Ограничения на одновременные уроки в классе
+    # 4) Ограничения внутри класса
     for c, d, p in itertools.product(C, D, P):
-        # a) Не более одного не-делимого урока в слоте
+        # 4a) Не более одного неделимого в слоте
         non_split_vars = [x[c, s, d, p] for s in S if s not in splitS]
-        model.AddAtMostOne(non_split_vars)
+        if non_split_vars:
+            model.AddAtMostOne(non_split_vars)
 
-        # b) У каждой подгруппы не более одного урока в слоте
+        # 4b) У каждой подгруппы — не более одного сплит-урока в слоте
         for g in G:
-            model.AddAtMostOne(z[c, s, g, d, p] for s in splitS)
+            split_by_g = [z[c, s, g, d, p] for s in splitS]
+            if split_by_g:
+                model.AddAtMostOne(split_by_g)
 
-        # c) Нельзя проводить не-делимый и делимый урок одновременно
-        all_split_vars_in_slot = [z[c, s, g, d, p] for s in splitS for g in G]
+        # 4c) Неделимый одновременно со сплитом — запрещено (попарные OR)
+        all_split = [z[c, s, g, d, p] for s in splitS for g in G]
         for nsv in non_split_vars:
-            for sv in all_split_vars_in_slot:
+            for sv in all_split:
                 model.AddBoolOr([nsv.Not(), sv.Not()])
 
-    # 5. Совместимость "делящихся" предметов
-    # Связь z и is_subj_taught: флаг, что предмет s преподается классу c в слоте (d,p)
+    # 5) Совместимость сплитов
     for c, s, d, p in itertools.product(C, splitS, D, P):
         subgroup_lessons = [z[c, s, g, d, p] for g in G]
         model.AddBoolOr(subgroup_lessons).OnlyEnforceIf(is_subj_taught[c, s, d, p])
         model.AddBoolAnd([v.Not() for v in subgroup_lessons]).OnlyEnforceIf(is_subj_taught[c, s, d, p].Not())
 
-    # Ограничение на несовместимые пары: в одном слоте у класса могут быть только совместимые "делящиеся" предметы
     split_list = sorted(list(splitS))
     for c, d, p in itertools.product(C, D, P):
         for s1, s2 in itertools.combinations(split_list, 2):
             pair = tuple(sorted((s1, s2)))
             if pair not in data.compatible_pairs:
-                # Если предметы несовместимы, они не могут идти одновременно
-                model.AddBoolOr([is_subj_taught[c, s1, d, p].Not(), is_subj_taught[c, s2, d, p].Not()])
+                model.AddBoolOr([is_subj_taught[c, s1, d, p].Not(),
+                                 is_subj_taught[c, s2, d, p].Not()])
 
-    # --- Целевая функция (мягкие ограничения) ---
-    # Это цели, которые решатель будет стараться выполнить, но может нарушить, если это необходимо для выполнения жестких ограничений.
+    # --- Политика: максимум повторов предмета в день (по КЛАССУ и ПРЕДМЕТУ) ---
+    # Ожидаемый формат:
+    # data.max_repeats_per_day = {
+    #       "5A": {"math": 1, "eng": 2},
+    #       "5B": {"math": 2, "eng": 1, "cs": 2} }
+    # Для split-предметов считаем "повтор" по флагу is_subj_taught (идёт ли предмет у ЛЮБОЙ подгруппы в слоте).
+    if getattr(data, "max_repeats_per_day", None):
+        for c, subj_caps in data.max_repeats_per_day.items():
+            if c not in C:
+                continue
+            for s, cap in subj_caps.items():
+                if s not in S:
+                    continue
+                cap_int = int(cap)
+                for d in D:
+                    if s in splitS:
+                        # суммируем по слотам флаг "этот split-предмет идёт у какой-либо подгруппы"
+                        model.Add(sum(is_subj_taught[c, s, d, p] for p in P) <= cap_int)
+                    else:
+                        # для неделимых — суммируем x по слотам дня
+                        model.Add(sum(x[c, s, d, p] for p in P if (c, s, d, p) in x) <= cap_int)
+
+
+    # ---------------- Целевая функция (мягкие цели) ----------------
     objective_terms = []
 
-    # 1. Анти-окна: минимизация числа "окон" между уроками.
-    # Реализуется через минимизацию количества "начал блоков занятий".
-    srun = {(c, d, p): model.NewBoolVar(f'srun_{c}_{d}_{p}') for c, d, p in itertools.product(C, D, P)}
+    # 1) Анти-окна для классов: через начало блоков (srun)
+    srun = {(c, d, p): model.NewBoolVar(f'srun_{c}_{d}_{p}')
+            for c, d, p in itertools.product(C, D, P)}
     for c, d in itertools.product(C, D):
-        # Для первого урока дня, начало блока = это просто наличие урока.
         model.Add(srun[c, d, P[0]] == y[c, d, P[0]])
-        # Для остальных: начало блока = (есть урок СЕЙЧАС) И (не было урока РАНЬШЕ)
         for p_idx in range(1, len(P)):
             p, prev_p = P[p_idx], P[p_idx - 1]
             sr, yp, yprev = srun[c, d, p], y[c, d, p], y[c, d, prev_p]
-            model.Add(sr == 1).OnlyEnforceIf([yp, yprev.Not()])  # Если y[p] и not y[p-1], то sr=1
-            model.Add(sr == 0).OnlyEnforceIf(yp.Not())  # Если not y[p], то sr=0
-            model.Add(sr == 0).OnlyEnforceIf(yprev)  # Если y[p-1], то sr=0
+            model.Add(sr == 1).OnlyEnforceIf([yp, yprev.Not()])
+            model.Add(sr == 0).OnlyEnforceIf(yp.Not())
+            model.Add(sr == 0).OnlyEnforceIf(yprev)
     objective_terms.append(weights.alpha_runs * sum(srun.values()))
 
+    # 1.1) Анти-окна для учителей: аналогичная конструкция (tsrun)
     if optimize_teacher_windows:
-        # 1.1. Анти-окна для учителей (минимизация "окон" через минимизацию "начал блоков занятий")
-        # Этот подход аналогичен минимизации окон для классов.
-
-        # teacher_busy[t,d,p] = 1, если у учителя t есть хотя бы один урок в этом слоте
         teacher_busy = {(t, d, p): model.NewBoolVar(f'tbusy_{t}_{d}_{p}')
                         for t, d, p in itertools.product(data.teachers, D, P)}
         for t, d, p in itertools.product(data.teachers, D, P):
@@ -186,100 +204,71 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
                 model.AddBoolOr(lessons).OnlyEnforceIf(teacher_busy[t, d, p])
                 model.AddBoolAnd([v.Not() for v in lessons]).OnlyEnforceIf(teacher_busy[t, d, p].Not())
             else:
-                model.Add(teacher_busy[t, d, p] == 0) # Если уроков нет, переменная = 0
+                model.Add(teacher_busy[t, d, p] == 0)
 
-        # tsrun[t,d,p] = 1, если у учителя t в день d в период p начинается блок занятий
         tsrun = {(t, d, p): model.NewBoolVar(f'tsrun_{t}_{d}_{p}')
                  for t, d, p in itertools.product(data.teachers, D, P)}
         for t, d in itertools.product(data.teachers, D):
-            # Для первого урока дня, начало блока = это просто наличие урока.
             model.Add(tsrun[t, d, P[0]] == teacher_busy[t, d, P[0]])
-            # Для остальных: начало блока = (есть урок СЕЙЧАС) И (не было урока РАНЬШЕ)
             for p_idx in range(1, len(P)):
                 p, prev_p = P[p_idx], P[p_idx - 1]
-                model.Add(tsrun[t, d, p] == 1).OnlyEnforceIf([teacher_busy[t, d, p], teacher_busy[t, d, prev_p].Not()])
+                model.Add(tsrun[t, d, p] == 1).OnlyEnforceIf([teacher_busy[t, d, p],
+                                                              teacher_busy[t, d, prev_p].Not()])
                 model.Add(tsrun[t, d, p] == 0).OnlyEnforceIf(teacher_busy[t, d, p].Not())
                 model.Add(tsrun[t, d, p] == 0).OnlyEnforceIf(teacher_busy[t, d, prev_p])
 
         objective_terms.append(weights.alpha_runs_teacher * sum(tsrun.values()))
 
-# 2. Ранние слоты: легкое предпочтение ранних уроков (минимизация номера периода).
+    # 2) Ранние слоты
     objective_terms.append(weights.beta_early * sum(p * y[c, d, p] for c, d, p in y))
 
-    # 3. Баланс по дням: минимизация разницы между самым загруженным и самым свободным днем.
+    # 3) Баланс по дням
     for c in C:
         lessons_per_day = [sum(y[c, d, p] for p in P) for d in D]
-        min_lessons, max_lessons = model.NewIntVar(0, len(P), f'minl_{c}'), model.NewIntVar(0, len(P), f'maxl_{c}')
-        model.AddMinEquality(min_lessons, lessons_per_day)
-        model.AddMaxEquality(max_lessons, lessons_per_day)
-        objective_terms.append(weights.gamma_balance * (max_lessons - min_lessons))
+        minl = model.NewIntVar(0, len(P), f'minl_{c}')
+        maxl = model.NewIntVar(0, len(P), f'maxl_{c}')
+        model.AddMinEquality(minl, lessons_per_day)
+        model.AddMaxEquality(maxl, lessons_per_day)
+        objective_terms.append(weights.gamma_balance * (maxl - minl))
 
-    # 4. Хвосты: штраф за уроки после определенного часа (например, после 6-го).
+    # 4) «Хвосты» после разрешённого слота
     objective_terms.append(weights.delta_tail * sum(y[c, d, p] for c, d, p in y if p > weights.last_ok_period))
 
-    # 5. Спаренные уроки: штраф за "одиночные" уроки для предметов, которые должны идти парами.
-
-    # Мы минимизируем количество уроков, у которых нет "соседа" ни до, ни после.
-    # минимизировать количество "одиноких" уроков.
-    # 1. Итерация по предметам: Мы проходим по всем предметам из data.paired_subjects.
-    # 2. Разделение логики: Код отдельно обрабатывает делимые(splitS) и неделимые предметы.
-    # 3. Поиск "одиночек": Для каждого урока из списка paired_subjects мы проверяем, есть ли у него "сосед"
-    # (такой же урок того же класса / подгруппы) на предыдущем или следующем временном слоте.
-    # 4. Переменная is_lonely: Если у урока нет ни предыдущего, ни последующего соседа,
-    # мы помечаем его как "одинокий" с помощью вспомогательной булевой переменной is_lonely.
-    # 5. Минимизация: В целевую функцию добавляется сумма всех переменных is_lonely, умноженная на весовой коэффициент epsilon_pairing.
-    # Таким образом, решатель получает штраф за каждый урок, который он не смог спарить,
-    # что напрямую мотивирует его создавать пары, где это возможно, для минимизации целевой функции.
-
-    if hasattr(data, 'paired_subjects') and data.paired_subjects:
-        lonely_lessons = []
+    # 5) «Спаренные» уроки: штраф за одиночные
+    if getattr(data, 'paired_subjects', None):
+        lonely = []
         for s in data.paired_subjects:
             if s in splitS:
-                # --- Для ДЕЛИМЫХ предметов (по каждой подгруппе отдельно) ---
-                for c, g, d in itertools.product(C, G, D):  # Исправлена опечатка d -> D
-                    for p_idx, p in enumerate(P):
-                        # Получаем переменные для текущего, предыдущего и следующего уроков.
-                        # Если переменной нет, используем целочисленный 0, который решатель понимает как False.
-                        current_lesson = z.get((c, s, g, d, p), false_var)
-                        prev_lesson = z.get((c, s, g, d, P[p_idx - 1]), false_var) if p_idx > 0 else false_var
-                        next_lesson = z.get((c, s, g, d, P[p_idx + 1]), false_var) if p_idx < len(P) - 1 else false_var
-
-                        # Урок может быть "одиноким" только если он существует.
-                        # Если current_lesson это 0, то и is_lonely будет 0.
-                        is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{g}_{d}_{p}')
-
-                        # Устанавливаем эквивалентность: is_lonely = 1 ТОГДА И ТОЛЬКО ТОГДА, КОГДА (урок есть И соседей нет)
-                        # Это ключевое исправление. Мы добавляем обратную импликацию.
-                        # ЕСЛИ (урок есть И соседей нет), ТО is_lonely ДОЛЖЕН быть 1.
-                        model.Add(is_lonely == 1).OnlyEnforceIf([current_lesson, prev_lesson.Not(), next_lesson.Not()])
-                        model.Add(is_lonely == 0).OnlyEnforceIf(
-                            current_lesson.Not())  # Если урока нет, он не может быть одиноким
-                        model.Add(is_lonely == 0).OnlyEnforceIf(prev_lesson)  # Если есть сосед слева, он не одинокий
-                        model.Add(is_lonely == 0).OnlyEnforceIf(next_lesson)  # Если есть сосед справа, он не одинокий
-
-                        lonely_lessons.append(is_lonely)
+                for c, g, d in itertools.product(C, G, D):
+                    for idx, p in enumerate(P):
+                        curr = z.get((c, s, g, d, p), false_var)
+                        prev_ = z.get((c, s, g, d, P[idx - 1]), false_var) if idx > 0 else false_var
+                        next_ = z.get((c, s, g, d, P[idx + 1]), false_var) if idx < len(P) - 1 else false_var
+                        u = model.NewBoolVar(f'lonely_{c}_{s}_{g}_{d}_{p}')
+                        model.Add(u == 1).OnlyEnforceIf([curr, prev_.Not(), next_.Not()])
+                        model.Add(u == 0).OnlyEnforceIf(curr.Not())
+                        model.Add(u == 0).OnlyEnforceIf(prev_)
+                        model.Add(u == 0).OnlyEnforceIf(next_)
+                        lonely.append(u)
             else:
-                # --- Для НЕ-ДЕЛИМЫХ предметов ---
                 for c, d in itertools.product(C, D):
-                    for p_idx, p in enumerate(P):
-                        current_lesson = x.get((c, s, d, p), false_var)
-                        prev_lesson = x.get((c, s, d, P[p_idx - 1]), false_var) if p_idx > 0 else false_var
-                        next_lesson = x.get((c, s, d, P[p_idx + 1]), false_var) if p_idx < len(P) - 1 else false_var
+                    for idx, p in enumerate(P):
+                        curr = x.get((c, s, d, p), false_var)
+                        prev_ = x.get((c, s, d, P[idx - 1]), false_var) if idx > 0 else false_var
+                        next_ = x.get((c, s, d, P[idx + 1]), false_var) if idx < len(P) - 1 else false_var
+                        u = model.NewBoolVar(f'lonely_{c}_{s}_{d}_{p}')
+                        model.Add(u == 1).OnlyEnforceIf([curr, prev_.Not(), next_.Not()])
+                        model.Add(u == 0).OnlyEnforceIf(curr.Not())
+                        model.Add(u == 0).OnlyEnforceIf(prev_)
+                        model.Add(u == 0).OnlyEnforceIf(next_)
+                        lonely.append(u)
+        if lonely:
+            objective_terms.append(weights.epsilon_pairing * sum(lonely))
 
-                        is_lonely = model.NewBoolVar(f'lonely_{c}_{s}_{d}_{p}')
-                        # Та же логика эквивалентности для не-делимых предметов
-                        model.Add(is_lonely == 1).OnlyEnforceIf([current_lesson, prev_lesson.Not(), next_lesson.Not()])
-                        model.Add(is_lonely == 0).OnlyEnforceIf(current_lesson.Not())
-                        model.Add(is_lonely == 0).OnlyEnforceIf(prev_lesson)
-                        model.Add(is_lonely == 0).OnlyEnforceIf(next_lesson)
-                        lonely_lessons.append(is_lonely)
-
-        if lonely_lessons and hasattr(weights, 'epsilon_pairing'):
-            objective_terms.append(weights.epsilon_pairing * sum(lonely_lessons))
-
+    # Итоговая цель
     model.Minimize(sum(objective_terms))
 
-    # --- Решение ---
+    # ---------------- Решение ----------------
     solver = cp_model.CpSolver()
     solver.parameters.log_search_progress = log
     solver.parameters.num_search_workers = 20
@@ -289,39 +278,35 @@ def build_and_solve_with_or_tools(data: InputData, log: bool = True, PRINT_TIMET
     status = solver.Solve(model)
     print("\nРешение завершено.")
 
-    if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-        # Собираем всю статистику по решению в один словарь
+    if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         solution_stats = {
             "status": solver.StatusName(status),
             "objective_value": solver.ObjectiveValue(),
             "wall_time_s": solver.WallTime(),
-            "total_lonely_lessons": -1, # Значение по умолчанию
-            "total_teacher_windows": -1 # Значение по умолчанию
+            "total_lonely_lessons": -1,
+            "total_teacher_windows": -1
         }
 
-        # Выводим итоговое количество "одиноких" уроков
-        if 'lonely_lessons' in locals() and lonely_lessons:
-            total_lonely = sum(solver.Value(v) for v in lonely_lessons)
-            solution_stats["total_lonely_lessons"] = total_lonely
+        # Считаем одиночные (если были добавлены)
+        if 'lonely' in locals() and lonely:
+            solution_stats["total_lonely_lessons"] = int(sum(solver.Value(v) for v in lonely))
 
-        # Подсчет и вывод общего количества "окон" у учителей
+        # Считаем окна учителей
         total_teacher_windows = _calculate_teacher_windows(data, solver, x, z)
-        solution_stats["total_teacher_windows"] = total_teacher_windows
+        solution_stats["total_teacher_windows"] = int(total_teacher_windows)
 
-        # Вывод основной информации в консоль
         print(f'Финальный статус: {solution_stats["status"]}')
         print(f'Целевая функция: {solution_stats["objective_value"]}')
-        print(f'Затрачено времени: {solution_stats["wall_time_s"]:.2f}s')
+        print(f'Время решения: {solution_stats["wall_time_s"]:.2f}s')
         if solution_stats["total_lonely_lessons"] != -1:
-            print(f'Итоговое количество "одиноких" уроков (штраф): {solution_stats["total_lonely_lessons"]}')
-        print(f'Итоговое количество "окон" у учителей: {solution_stats["total_teacher_windows"]}')
+            print(f'Одинокие уроки (штраф): {solution_stats["total_lonely_lessons"]}')
+        print(f'Окна у учителей (сумма разрывов): {solution_stats["total_teacher_windows"]}')
 
         # Экспорт в Excel
         output_filename = "timetable_or_tools_solution.xlsx"
         final_maps = {"solver": solver, "x": x, "z": z}
         solution_maps = get_solution_maps(data, final_maps, is_pulp=False)
         export_full_schedule_to_excel(output_filename, data, solution_maps, display_maps, solution_stats, weights)
-
     else:
         print(f'Решение не найдено. Статус: {solver.StatusName(status)}')
 
@@ -347,4 +332,9 @@ if __name__ == '__main__':
         exit()
 
     display_maps = load_display_maps(db_path_str)
-    build_and_solve_with_or_tools(data, PRINT_TIMETABLE_TO_CONSOLE=False, display_maps=display_maps, optimize_teacher_windows=True)
+    build_and_solve_with_or_tools(
+        data,
+        PRINT_TIMETABLE_TO_CONSOLE=False,
+        display_maps=display_maps,
+        optimize_teacher_windows=True
+    )

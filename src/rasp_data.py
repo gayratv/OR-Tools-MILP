@@ -25,8 +25,7 @@ def make_default_compat():
 
     # здесь надо записать только разные предметы
     add("cs", "eng")
-    add("labor", "labor")
-    add("cs", "cs")
+
     return allowed
 
 
@@ -82,6 +81,10 @@ def create_manual_data() -> InputData:
     class_slot_weight = {("5A", "Fri", 7): 10.0, ("5A", "Fri", 6): 5.0}
     teacher_slot_weight = {("Petrov", "Tue", 1): 8.0}
     class_subject_day_weight = {("5B", "math", "Mon"): 6.0}
+    max_repeats_per_day = {
+        "5A": {"math": 1, "eng": 2},
+        "5B": {"math": 2, "eng": 1, "cs": 2},
+    }
 
     data = InputData(
         days=days, periods=periods, classes=classes, subjects=subjects, teachers=teachers,
@@ -96,7 +99,8 @@ def create_manual_data() -> InputData:
         class_slot_weight=class_slot_weight,
         teacher_slot_weight=teacher_slot_weight,
         class_subject_day_weight=class_subject_day_weight,
-        paired_subjects=paired_subjects
+        paired_subjects=paired_subjects,
+        max_repeats_per_day=max_repeats_per_day
     )
 
     return data
