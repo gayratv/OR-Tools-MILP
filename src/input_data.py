@@ -80,6 +80,11 @@ class InputData:
       - forbidden_slots: жёсткий запрет проводить ЛЮБОЙ урок у класса в указанном слоте
       - class_slot_weight / teacher_slot_weight / class_subject_day_weight: пользовательские «мягкие» предпочтения
 
+    Совместимость подгрупп:
+      - compatible_pairs: множество разрешённых НЕУПОРЯДОЧЕННЫХ пар (s1, s2) split‑предметов,
+        которые могут идти одновременно в одном классе и слоте.
+        Хранить как tuple(sorted((s1, s2))). Разрешение одного и того же предмета параллельно — пара ("eng","eng").
+
     Дополнительные «политики»:
       - paired_subjects: предметы, которые желательно ставить парами (два подряд)
       - must_sync_split_subjects: сплит‑предметы, требующие одновременности подгрупп
@@ -117,6 +122,10 @@ class InputData:
     class_slot_weight: ClassSlotWeight = field(default_factory=dict)
     teacher_slot_weight: TeacherSlotWeight = field(default_factory=dict)
     class_subject_day_weight: ClassSubjectDayWeight = field(default_factory=dict)
+
+    # --- Совместимости split‑предметов ---
+    # Храним как отсортированные пары, напр.: {("eng","eng"), ("cs","eng"), ("labor","labor")}
+    compatible_pairs: Set[Tuple[str, str]] = field(default_factory=set)
 
     # --- Предпочтения по «спариванию» ---
     # Предметы, которые желательно ставить по 2 урока подряд
