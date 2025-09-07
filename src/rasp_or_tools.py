@@ -262,47 +262,71 @@ def build_and_solve_with_or_tools(
     # ------------------------- 3.4) ЦЕЛЕВАЯ ФУНКЦИЯ / МЯГКИЕ ЦЕЛИ -------------------------
 
     # (A) «Окна» у классов и учителей через префикс/суффикс/inside
-    # prefix_class[c,d,p] = OR(y[c,d,<=p])
-    prefix_class = {}
-    suffix_class = {}
-    inside_class = {}
+    #
+    # Идея метода: для каждой комбинации "класс–день" и "учитель–день"
+    # построим оболочку, охватывающую все занятые уроки. Длина этой
+    # оболочки (от первого до последнего урока включительно) равна
+    # сумме переменных inside. Минимизируя её, мы сокращаем количество
+    # пустых слотов внутри дня, то есть «окон».
+
+    # --- Классы -------------------------------------------------------
+    # prefix_class[c,d,p]  — хотя бы один урок у класса c в день d в слотах
+    #                         до и включая период p.
+    # suffix_class[c,d,p]  — хотя бы один урок у класса c в день d в слотах
+    #                         начиная с p и далее.
+    # inside_class[c,d,p]  — слот находится между первым и последним
+    #                         уроком (внутри оболочки). Все значения 1
+    #                         образуют «конверт», который далее
+    #                         минимизируется.
+    prefix_class: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
+    suffix_class: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
+    inside_class: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
 
     for c, d in itertools.product(C, D):
-        # prefix
+        # prefix: накапливаем OR слева направо, чтобы определить, был ли
+        # хотя бы один урок до текущего периода включительно.
         for idx, p in enumerate(P):
             v = model.NewBoolVar(f'pref_c_{c}_{d}_{p}')
             prefix_class[c, d, p] = v
             if idx == 0:
-                model.Add(v == y[c, d, p])
+                model.Add(v == y[c, d, p])  # первая позиция совпадает с y
             else:
+                # v = prefix_class[p-1] OR y[p]
                 model.AddMaxEquality(v, [prefix_class[c, d, P[idx - 1]], y[c, d, p]])
-        # suffix
+        # suffix: аналогичная логика, но идём справа налево, чтобы знать,
+        # есть ли уроки после текущего периода.
         for idx in reversed(range(len(P))):
             p = P[idx]
             v = model.NewBoolVar(f'suff_c_{c}_{d}_{p}')
             suffix_class[c, d, p] = v
             if idx == len(P) - 1:
-                model.Add(v == y[c, d, p])
+                model.Add(v == y[c, d, p])  # последняя позиция совпадает с y
             else:
+                # v = suffix_class[p+1] OR y[p]
                 model.AddMaxEquality(v, [suffix_class[c, d, P[idx + 1]], y[c, d, p]])
 
     for c, d, p in itertools.product(C, D, P):
+        # inside = prefix AND suffix, т.е. единица только для слотов
+        # между первым и последним уроком (включая их).
         u = model.NewBoolVar(f'inside_c_{c}_{d}_{p}')
         inside_class[c, d, p] = u
-        # u = prefix AND suffix:
         model.Add(u <= prefix_class[c, d, p])
         model.Add(u <= suffix_class[c, d, p])
         model.Add(u >= prefix_class[c, d, p] + suffix_class[c, d, p] - 1)
 
-    sum_inside_class = sum(inside_class.values())  # минимизируем длину «конвертов» у классов
+    # Сумма inside_class — это длина оболочки для всех классов.
+    # Минимизируя её, непрямо наказываем за «окна» внутри дня.
+    sum_inside_class = sum(inside_class.values())
 
-    # Учителя: аналогично
-    prefix_teacher = {}
-    suffix_teacher = {}
-    inside_teacher = {}
+    # --- Учителя -----------------------------------------------------
+    # Аналогичные переменные для каждого учителя. Здесь вместо y мы
+    # используем подготовленный флаг teacher_busy[t,d,p].
+    prefix_teacher: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
+    suffix_teacher: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
+    inside_teacher: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
 
     for t, d in itertools.product(data.teachers, D):
-        # prefix
+        # prefix: «есть ли уже урок у учителя до текущего периода?»
         for idx, p in enumerate(P):
             v = model.NewBoolVar(f'pref_t_{t}_{d}_{p}')
             prefix_teacher[t, d, p] = v
@@ -310,7 +334,7 @@ def build_and_solve_with_or_tools(
                 model.Add(v == teacher_busy[t, d, p])
             else:
                 model.AddMaxEquality(v, [prefix_teacher[t, d, P[idx - 1]], teacher_busy[t, d, p]])
-        # suffix
+        # suffix: «будет ли ещё урок после текущего периода?»
         for idx in reversed(range(len(P))):
             p = P[idx]
             v = model.NewBoolVar(f'suff_t_{t}_{d}_{p}')
@@ -321,13 +345,17 @@ def build_and_solve_with_or_tools(
                 model.AddMaxEquality(v, [suffix_teacher[t, d, P[idx + 1]], teacher_busy[t, d, p]])
 
     for t, d, p in itertools.product(data.teachers, D, P):
+        # Слот внутри оболочки преподавателя, если до него и после него
+        # есть занятие (или он сам занят).
         u = model.NewBoolVar(f'inside_t_{t}_{d}_{p}')
         inside_teacher[t, d, p] = u
         model.Add(u <= prefix_teacher[t, d, p])
         model.Add(u <= suffix_teacher[t, d, p])
         model.Add(u >= prefix_teacher[t, d, p] + suffix_teacher[t, d, p] - 1)
 
-    sum_inside_teacher = sum(inside_teacher.values())  # ключевая метрика «окон» для преподавателей
+    # Ключевая метрика «окон» преподавателей: чем меньше оболочка,
+    # тем более компактно распределены уроки в течение дня.
+    sum_inside_teacher = sum(inside_teacher.values())
 
     # (B) Предпочтение ранних слотов (минимизируем номер периода)
     beta_early = _get_weight(weights, 'beta_early', 0)
