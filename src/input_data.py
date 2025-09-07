@@ -124,6 +124,14 @@ class InputData:
 
     # --- Часто используемые «политики» (необяз.) ---
     # Сплит‑предметы, у которых подгруппы должны идти синхронно (в один и тот же слот)
+    # must_sync_split_subjects — сплит‑предметы, у которых подгруппы должны идти синхронно(в один и тот же слот)
+    # must_sync_split_subjects = {"eng", "labor"}
+    # must_sync_split_subjects = {"eng"} — синхронизация только английского.
+    # must_sync_split_subjects = {"eng", "cs"} — английский и информатика идут одновременно.
+    # must_sync_split_subjects = {"eng", "cs", "labor"} — все три split‑предмета синхронны.
+    # must_sync_split_subjects = {"physics_lab", "chem_lab"} — синхронные лабораторные работы по физике и химии.
+    # must_sync_split_subjects = {"eng", "german"} — синхронное проведение английского и немецкого.
+
     must_sync_split_subjects: Set[str] = field(default_factory=set)
 
 
