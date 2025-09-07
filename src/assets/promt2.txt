@@ -1,0 +1,7 @@
+compatible_pairs
+
+удали эти переменные и ограничения из
+ rasp_or_tools.py
+input_data.py
+print_schedule.py
+rasp_data.py
