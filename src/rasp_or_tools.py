@@ -275,8 +275,15 @@ def build_and_solve_with_or_tools(
     # suffix_class[c,d,p]  — хотя бы один урок у класса c в день d в слотах
     #                         начиная с p и далее.
     # inside_class[c,d,p]  — слот находится между первым и последним
-    #                         уроком (внутри оболочки). Все значения 1
-    #                         образуют «конверт», который далее
+    #                         уроком класса c в день d (включая сами уроки).
+    #                         Например, если у класса «7А» в понедельник
+    #                         занятия стоят в слотах [2,3,5], то
+    #                         inside_class[7А,Пн,1] = 0,
+    #                         inside_class[7А,Пн,2] = 1,
+    #                         inside_class[7А,Пн,3] = 1,
+    #                         inside_class[7А,Пн,4] = 1,
+    #                         inside_class[7А,Пн,5] = 1, остальные = 0.
+    #                         Все значения 1 образуют «конверт», который далее
     #                         минимизируется.
     prefix_class: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
     suffix_class: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
