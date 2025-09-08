@@ -166,7 +166,7 @@ def create_manual_data() -> InputData:
     # Политики и предпочтения
     # ------------------------------------------------------------------
     grade_max_lessons_per_day = {5: 6, 2: 4}
-    subjects_not_last_lesson = {"math", "eng"}
+    subjects_not_last_lesson = {2: {"math", "eng"}, 5: {"math"}}
     elementary_english_periods = {2, 3, 4}
     grade_subject_max_consecutive_days = {5: {"PE": 2}}
     class_slot_weight = {
