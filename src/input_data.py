@@ -96,8 +96,8 @@ class InputData:
       - must_sync_split_subjects: сплит‑предметы, требующие одновременности подгрупп
       - grade_max_lessons_per_day: дневные ограничения по числу уроков
           Пример: {2: 4, 3: 5, 4: 5}
-      - subjects_not_last_lesson: предметы, которые не могут быть последними в дне
-          Пример: {"math", "physics"}
+      - subjects_not_last_lesson: предметы, которые не могут быть последними в дне по параллелям
+          Пример: {5: {"math"}, 7: {"math", "physics"}}
       - elementary_english_periods: допустимые номера уроков для английского в начальной школе
           Пример: {2, 3, 4}
       - grade_subject_max_consecutive_days: ограничения по макс. подряд идущим дням для предметов по параллелям
@@ -139,8 +139,10 @@ class InputData:
     # --- Дополнительные данные для школьных правил ---
     # Максимальное число уроков в день по параллели, например {2: 4, 3: 5, 4: 5}
     grade_max_lessons_per_day: Dict[int, int] = field(default_factory=lambda: {2: 4, 3: 5, 4: 5})
-    # Предметы, которые не могут быть последним уроком дня, например {"math", "physics"}
-    subjects_not_last_lesson: Set[str] = field(default_factory=lambda: {"math", "physics"})
+    # Предметы, которые не могут быть последним уроком дня по параллелям, например {5: {"math"}}
+    subjects_not_last_lesson: Dict[int, Set[str]] = field(
+        default_factory=lambda: {g: {"math", "physics"} for g in range(1, 9)}
+    )
     # Разрешённые номера уроков для английского языка в начальной школе, например {2, 3, 4}
     elementary_english_periods: Set[int] = field(default_factory=lambda: {2, 3, 4})
     # Максимальное число подряд идущих дней с предметом по параллели, например {3: {"PE": 2}}
