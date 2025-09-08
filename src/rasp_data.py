@@ -5,7 +5,7 @@
 # must_sync_split_subjects и др.)
 # -----------------------------------------------------------------------------
 
-from input_data import InputData
+from input_data import InputData, ClassInfo
 
 
 def make_default_compat():
@@ -35,7 +35,10 @@ def create_manual_data() -> InputData:
     # --- Основные множества ---
     days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
     periods = list(range(1, 8))  # 1..7
-    classes = ["5A", "5B"]
+    classes = [
+        ClassInfo(name="5A", grade=5),
+        ClassInfo(name="5B", grade=5),
+    ]
     subjects = ["math", "cs", "eng", "labor"]
     teachers = ["Ivanov", "Petrov", "Sidorov", "Nikolaev", "Smirnov"]
 
@@ -141,6 +144,7 @@ def create_manual_data() -> InputData:
 
         # Лимиты / запреты
         teacher_forbidden_slots=teacher_forbidden_slots,
+        grade_subject_max_consecutive_days={5: {"PE": 2}},
 
         # Совместимости split‑предметов
         compatible_pairs=make_default_compat(),
