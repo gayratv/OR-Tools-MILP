@@ -106,7 +106,10 @@ def build_and_solve_with_or_tools(
     """
 
     model = cp_model.CpModel()
-    C, S, D, P = data.classes, data.subjects, data.days, data.periods
+    class_names = [c.name for c in data.classes]
+    class_grades = {c.name: c.grade for c in data.classes}
+    grade_subject_limits = getattr(data, 'grade_subject_max_consecutive_days', {})
+    C, S, D, P = class_names, data.subjects, data.days, data.periods
     G, splitS = data.subgroup_ids, data.split_subjects
     weights = OptimizationWeights()
 
@@ -181,6 +184,17 @@ def build_and_solve_with_or_tools(
     for (c, s, g), h in data.subgroup_plan_hours.items():
         model.Add(sum(z[c, s, g, d, p] for d in D for p in P) == h)
 
+    # (2a) Предметы по 2 часа в неделю (не из paired_subjects) не ставим дважды в один день
+    paired = getattr(data, 'paired_subjects', set())
+    for (c, s), h in data.plan_hours.items():
+        if h == 2 and s not in paired:
+            for d in D:
+                model.Add(sum(x[c, s, d, p] for p in P) <= 1)
+    for (c, s, g), h in data.subgroup_plan_hours.items():
+        if h == 2 and s not in paired:
+            for d in D:
+                model.Add(sum(z[c, s, g, d, p] for p in P) <= 1)
+
     # (3) Ограничения для учителей
     for t in data.teachers:
         # (3a) Не более одного урока в слоте
@@ -246,6 +260,102 @@ def build_and_solve_with_or_tools(
                     is_subj_taught[c, s1, d, p].Not(),
                     is_subj_taught[c, s2, d, p].Not(),
                 ])
+
+    # (6) Дополнительные ограничения для начальной школы и общие правила
+    grade_max = getattr(data, 'grade_max_lessons_per_day', {})
+    subjects_not_last = set(getattr(data, 'subjects_not_last_lesson', set()))
+    english_periods = getattr(data, 'elementary_english_periods', {2, 3, 4})
+    last_period = max(P) if P else 0
+
+    # (6a) Ограничение по числу уроков в день
+    for c in C:
+        g = class_grades.get(c)
+        if g is not None:
+            for d in D:
+                day_load = sum(y[c, d, p] for p in P)
+                if g in grade_max:
+                    model.Add(day_load <= grade_max[g])
+
+    # (6b) Математика и физика не могут быть последним уроком (2-8 классы)
+    for c in C:
+        g = class_grades.get(c)
+        if g is not None and 2 <= g <= 8:
+            for s in subjects_not_last:
+                if s in splitS:
+                    for g_id in G:
+                        for d in D:
+                            if (c, s, g_id, d, last_period) in z:
+                                model.Add(z[c, s, g_id, d, last_period] == 0)
+                            for idx, p in enumerate(P[:-1]):
+                                var = z.get((c, s, g_id, d, p), false_var)
+                                after = [y[c, d, q] for q in P if q > p]
+                                if after:
+                                    model.Add(sum(after) >= 1).OnlyEnforceIf(var)
+                else:
+                    for d in D:
+                        if (c, s, d, last_period) in x:
+                            model.Add(x[c, s, d, last_period] == 0)
+                        for idx, p in enumerate(P[:-1]):
+                            var = x.get((c, s, d, p), false_var)
+                            after = [y[c, d, q] for q in P if q > p]
+                            if after:
+                                model.Add(sum(after) >= 1).OnlyEnforceIf(var)
+
+    # (6c) Правила для начальной школы (2-4 классы)
+    for c in C:
+        g = class_grades.get(c)
+        if g in {2, 3, 4}:
+            # Английский только на разрешённых уроках
+            subj = 'eng'
+            if subj in splitS:
+                for g_id in G:
+                    for d, p in itertools.product(D, P):
+                        if p not in english_periods and (c, subj, g_id, d, p) in z:
+                            model.Add(z[c, subj, g_id, d, p] == 0)
+            else:
+                for d, p in itertools.product(D, P):
+                    if p not in english_periods and (c, subj, d, p) in x:
+                        model.Add(x[c, subj, d, p] == 0)
+
+            # Запрет двух одинаковых предметов подряд
+            for s in S:
+                for d in D:
+                    for idx in range(len(P) - 1):
+                        p1 = P[idx]
+                        p2 = P[idx + 1]
+                        if s in splitS:
+                            v1 = is_subj_taught.get((c, s, d, p1), false_var)
+                            v2 = is_subj_taught.get((c, s, d, p2), false_var)
+                        else:
+                            v1 = x.get((c, s, d, p1), false_var)
+                            v2 = x.get((c, s, d, p2), false_var)
+                        model.Add(v1 + v2 <= 1)
+
+    # (6d) Максимум подряд идущих дней с предметом по параллелям
+    for c in C:
+        g = class_grades.get(c)
+        limits = grade_subject_limits.get(g, {})
+        for subj, limit in limits.items():
+            day_flag = {}
+            for d in D:
+                v = model.NewBoolVar(f'{subj}_day_{c}_{d}')
+                day_flag[d] = v
+                lessons = []
+                if subj in splitS:
+                    for g_id in G:
+                        for p in P:
+                            if (c, subj, g_id, d, p) in z:
+                                lessons.append(z[c, subj, g_id, d, p])
+                else:
+                    for p in P:
+                        if (c, subj, d, p) in x:
+                            lessons.append(x[c, subj, d, p])
+                if lessons:
+                    model.AddMaxEquality(v, lessons)
+                else:
+                    model.Add(v == 0)
+            for i in range(len(D) - limit):
+                model.Add(sum(day_flag[D[j]] for j in range(i, i + limit + 1)) <= limit)
 
     # ------------------------- 3.3) ДОПОЛНИТЕЛЬНЫЕ ОПЦИИ (НЕОБЯЗ.) -------------------------
 
@@ -334,7 +444,11 @@ def build_and_solve_with_or_tools(
 
     # Сумма inside_class — это длина оболочки для всех классов.
     # Минимизируя её, непрямо наказываем за «окна» внутри дня.
-    sum_inside_class = sum(inside_class.values())
+    sum_inside_class = sum(
+        inside_class[c, d, p]
+        for c in C if class_grades.get(c) not in {2, 3, 4}
+        for d in D for p in P
+    )
 
     # --- Учителя -----------------------------------------------------
     # Аналогичные переменные для каждого учителя. Здесь вместо y мы

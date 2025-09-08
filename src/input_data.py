@@ -14,7 +14,6 @@ from typing import Dict, List, Set, Tuple, Union, Optional
 # ---------- Удобные псевдонимы типов ----------
 Days = List[str]            # ["Mon","Tue","Wed","Thu","Fri"]
 Periods = List[int]         # [1,2,3,4,5,6,7]
-Classes = List[str]         # ["5A","5B", ...]
 Subjects = List[str]        # ["math","eng","cs","labor", ...]
 Teachers = List[str]        # ["Ivanov","Petrov", ...]
 Subgroups = List[int]       # обычно [1, 2]
@@ -55,6 +54,13 @@ TeacherForbiddenSlots = Dict[str, List[Tuple[str, int]]]
 
 
 @dataclass
+class ClassInfo:
+    """Информация о классе: название и год обучения."""
+    name: str
+    grade: int
+
+
+@dataclass
 class InputData:
     """
     Единый контейнер всех входных данных для постановки CP-SAT задачи расписания.
@@ -88,12 +94,24 @@ class InputData:
     Дополнительные «политики»:
       - paired_subjects: предметы, которые желательно ставить парами (два подряд)
       - must_sync_split_subjects: сплит‑предметы, требующие одновременности подгрупп
+      - grade_max_lessons_per_day: дневные ограничения по числу уроков
+          Пример: {2: 4, 3: 5, 4: 5}
+      - subjects_not_last_lesson: предметы, которые не могут быть последними в дне
+          Пример: {"math", "physics"}
+      - elementary_english_periods: допустимые номера уроков для английского в начальной школе
+          Пример: {2, 3, 4}
+      - grade_subject_max_consecutive_days: ограничения по макс. подряд идущим дням для предметов по параллелям
+          Пример: {3: {"PE": 2}}
+
+    classes — список ClassInfo, каждый элемент которого содержит:
+      - name: строковое имя класса (например, "5A")
+      - grade: номер параллели
     """
 
     # --- Базовые множества ---
     days: Days
     periods: Periods
-    classes: Classes
+    classes: List[ClassInfo]
     subjects: Subjects
     teachers: Teachers
 
@@ -117,6 +135,16 @@ class InputData:
 
     # Жёсткие запреты слотов на уровне класса: {(class, day, period), ...}
     forbidden_slots: ForbiddenSlots = field(default_factory=set)
+
+    # --- Дополнительные данные для школьных правил ---
+    # Максимальное число уроков в день по параллели, например {2: 4, 3: 5, 4: 5}
+    grade_max_lessons_per_day: Dict[int, int] = field(default_factory=lambda: {2: 4, 3: 5, 4: 5})
+    # Предметы, которые не могут быть последним уроком дня, например {"math", "physics"}
+    subjects_not_last_lesson: Set[str] = field(default_factory=lambda: {"math", "physics"})
+    # Разрешённые номера уроков для английского языка в начальной школе, например {2, 3, 4}
+    elementary_english_periods: Set[int] = field(default_factory=lambda: {2, 3, 4})
+    # Максимальное число подряд идущих дней с предметом по параллели, например {3: {"PE": 2}}
+    grade_subject_max_consecutive_days: Dict[int, Dict[str, int]] = field(default_factory=dict)
 
     # --- Мягкие цели (необязательно) ---
     class_slot_weight: ClassSlotWeight = field(default_factory=dict)
