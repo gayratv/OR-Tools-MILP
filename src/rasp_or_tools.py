@@ -263,7 +263,7 @@ def build_and_solve_with_or_tools(
 
     # (6) Дополнительные ограничения для начальной школы и общие правила
     grade_max = getattr(data, 'grade_max_lessons_per_day', {})
-    subjects_not_last = set(getattr(data, 'subjects_not_last_lesson', set()))
+    subjects_not_last_map = getattr(data, 'subjects_not_last_lesson', {})
     english_periods = getattr(data, 'elementary_english_periods', {2, 3, 4})
     last_period = max(P) if P else 0
 
@@ -276,11 +276,12 @@ def build_and_solve_with_or_tools(
                 if g in grade_max:
                     model.Add(day_load <= grade_max[g])
 
-    # (6b) Математика и физика не могут быть последним уроком (2-8 классы)
+    # (6b) Предметы, запрещённые последними уроками по параллелям
     for c in C:
         g = class_grades.get(c)
-        if g is not None and 2 <= g <= 8:
-            for s in subjects_not_last:
+        if g is not None:
+            banned_subjects = subjects_not_last_map.get(g, set())
+            for s in banned_subjects:
                 if s in splitS:
                     for g_id in G:
                         for d in D:
