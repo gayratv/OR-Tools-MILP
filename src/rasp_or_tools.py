@@ -89,6 +89,34 @@ def _calculate_teacher_windows(data: InputData,
     return total_windows
 
 
+def _validate_input_data(data: InputData) -> None:
+    """
+    Проверяет входные данные на наличие очевидных противоречий, которые сделают
+    решение невозможным. Вызывает ValueError, если найдена проблема.
+    """
+    # Sanity check: must_sync + один учитель на обе подгруппы -> противоречие
+    # Если предмет должен идти синхронно, а обе подгруппы ведет один и тот же
+    # учитель, это создаст невыполнимое ограничение (учитель должен быть в двух
+    # местах одновременно, если уроки несовместимы).
+    # --- Sanity check: must_sync + один учитель на обе подгруппы -> противоречие
+    # must_sync_split_subjects = {"labor"}
+    for s in getattr(data, 'must_sync_split_subjects', set()):
+        for c in [cls.name for cls in data.classes]:
+            teachers = {
+                data.subgroup_assigned_teacher.get((c, s, g))
+                for g in data.subgroup_ids
+            }
+            teachers.discard(None)
+            total_hours = sum(data.subgroup_plan_hours.get((c, s, g), 0)
+                              for g in data.subgroup_ids)
+            if total_hours > 0 and len(teachers) == 1:
+                raise ValueError(
+                    f"Невыполнимо: предмет '{s}' указан в must_sync, "
+                    f"но в классе {c} обе подгруппы ведёт один учитель ({next(iter(teachers))}). "
+                    f"Назначьте разных учителей или уберите '{s}' из must_sync_split_subjects."
+                )
+
+
 # ---------------------- 3) ОСНОВНАЯ ФУНКЦИЯ ПОСТРОЕНИЯ/РЕШЕНИЯ ----------------------
 
 def build_and_solve_with_or_tools(
@@ -119,6 +147,8 @@ def build_and_solve_with_or_tools(
     G, splitS = data.subgroup_ids, data.split_subjects
     weights = OptimizationWeights()
     optimizationGoals = OptimizationGoals()
+
+    _validate_input_data(data)
 
     # -------------------------- 3.1) ПЕРЕМЕННЫЕ МОДЕЛИ --------------------------
 
@@ -317,26 +347,45 @@ def build_and_solve_with_or_tools(
 
     # (6b) Предметы, запрещённые последними уроками по параллелям
     # Если урок запрещённого предмета s стоит в периоде p, то после него в этот день должен быть хотя бы ещё один урок (любой).
-    for c in C:
-        g = class_grades.get(c)
-        if g is not None:
-            banned_subjects = subjects_not_last_lesson.get(g, set())
-            for s in banned_subjects:
-                # Урок по этому предмету не может быть последним в этот день для данного класса.
-                # Это обеспечивается проверкой: если урок по предмету 's' стоит в периоде 'p',
-                # то сумма уроков в последующих периодах должна быть не меньше 1.
-                # Это естественным образом предотвращает его размещение в последний занятый слот
-                # для этого класса в этот день.
-                if s in splitS:
-                    for g_id, d, p in itertools.product(G, D, P):
-                        var = z.get((c, s, g_id, d, p), false_var)
-                        day_load_after = sum(y[c, d, q] for q in P if q > p)
-                        model.Add(day_load_after >= 1).OnlyEnforceIf(var)
-                else:
-                    for d, p in itertools.product(D, P):
-                        var = x.get((c, s, d, p), false_var)
-                        day_load_after = sum(y[c, d, q] for q in P if q > p)
-                        model.Add(day_load_after >= 1).OnlyEnforceIf(var)
+    # if optimizationGoals.subjects_not_last_lesson_optimization:
+    #     for c in C:
+    #         day_is_last_lesson = {
+    #             (d, p): model.NewBoolVar(f'is_last_{c}_{d}_{p}')
+    #             for d, p in itertools.product(D, P)
+    #         }
+    #         for d in D:
+    #             lessons_on_day = [y[c, d, p] for p in P]
+    #             for p_idx, p in enumerate(P):
+    #                 # p is the last lesson if it's taught and no lesson after it is taught
+    #                 no_lessons_after = model.NewBoolVar(f'no_lessons_after_{c}_{d}_{p}')
+    #                 lessons_after = [lessons_on_day[i] for i in range(p_idx + 1, len(P))]
+    #                 if lessons_after:
+    #                     # no_lessons_after <=> (OR(lessons_after) == 0)
+    #                     # Устанавливаем полную эквивалентность.
+    #                     # no_lessons_after истинно ТОГДА И ТОЛЬКО ТОГДА, когда все уроки после = 0.
+    #                     model.AddBoolOr([l.Not() for l in lessons_after]).OnlyEnforceIf(no_lessons_after)
+    #                     model.AddBoolOr(lessons_after).OnlyEnforceIf(no_lessons_after.Not())
+    #                 else: # last period
+    #                     model.Add(no_lessons_after == 1)
+    #                 # Правильная эквивалентность:
+    #                 # day_is_last_lesson[d, p] <=> (lessons_on_day[p_idx] AND no_lessons_after)
+    #                 # Это означает, что day_is_last_lesson[d, p] является результатом логического "И".
+    #                 model.AddBoolAnd([lessons_on_day[p_idx], no_lessons_after]).OnlyEnforceIf(day_is_last_lesson[d, p])
+    #                 model.AddImplication(day_is_last_lesson[d, p], lessons_on_day[p_idx])
+    #                 model.AddImplication(day_is_last_lesson[d, p], no_lessons_after)
+    #
+    #         g = class_grades.get(c)
+    #         if g is not None:
+    #             banned_subjects = subjects_not_last_lesson.get(g, set())
+    #             for s in banned_subjects:
+    #                 if s in splitS:
+    #                     for g_id, d, p in itertools.product(G, D, P):
+    #                         var = z.get((c, s, g_id, d, p), false_var)
+    #                         model.AddImplication(var, day_is_last_lesson[d, p].Not())
+    #                 else:
+    #                     for d, p in itertools.product(D, P):
+    #                         var = x.get((c, s, d, p), false_var)
+    #                         model.AddImplication(var, day_is_last_lesson[d, p].Not())
 
     # (6c) Правила для начальной школы (2-4 классы)
     for c in C:
@@ -356,7 +405,7 @@ def build_and_solve_with_or_tools(
                             model.Add(x[c, subj, d, p] == 0)
 
             # Запрет двух одинаковых предметов подряд
-            for s in S:
+            for s in set(S) - paired: # Исключаем paired_subjects из этого правила
                 for d in D:
                     for idx in range(len(P) - 1):
                         p1 = P[idx]

@@ -66,10 +66,13 @@ def export_full_schedule_to_excel(
     bold_font = Font(bold=True)
     center_align = Alignment(horizontal='center', vertical='center')
 
+    # Получаем список имен классов, чтобы использовать их как хешируемые ключи
+    class_names_list = [c.name for c in data.classes]
+
     # --- Лист: расписание по классам ---
     ws_classes = wb.active
     ws_classes.title = "Классы_расписание"
-    for c in data.classes:
+    for c in class_names_list:
         ws_classes.append([f"Класс {c}"])
         ws_classes.cell(ws_classes.max_row, 1).font = bold_font
         header = ["День"] + [f"Урок {p}" for p in data.periods]
@@ -142,7 +145,7 @@ def export_full_schedule_to_excel(
     # --- Лист: Сводка нагрузки ---
     ws_summary = wb.create_sheet("Сводка_нагрузки")
     teacher_load_per_day = {t: {d: 0 for d in data.days} for t in data.teachers}
-    class_load_per_day = {c: {d: 0 for d in data.days} for c in data.classes}
+    class_load_per_day = {c: {d: 0 for d in data.days} for c in class_names_list}
     teacher_busy_periods = {t: {d: [] for d in data.days} for t in data.teachers}
 
     for (c, s, d, p), val in x_sol.items():
@@ -165,7 +168,7 @@ def export_full_schedule_to_excel(
     ws_summary.cell(ws_summary.max_row, 1).font = bold_font
     header = ["Класс", "Всего", "Сред./день"] + data.days + ["Предупреждения"]
     ws_summary.append(header)
-    for c in data.classes:
+    for c in class_names_list:
         per_day = class_load_per_day[c]
         total = sum(per_day.values())
         avg = total / len(data.days) if data.days else 0.0

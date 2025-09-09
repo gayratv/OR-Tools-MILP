@@ -216,3 +216,6 @@ class OptimizationWeights:
 @dataclass
 class OptimizationGoals:
     teacher_slot_optimization: bool = False
+
+    # Предметы, запрещённые последними уроками по параллелям
+    subjects_not_last_lesson_optimization: bool = False

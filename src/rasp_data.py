@@ -77,6 +77,7 @@ def create_manual_data() -> InputData:
         "Smirnov",
         "Kuznetsov",  # history
         "Orlova",     # music
+        "Skvrocova_trud"
     ]
 
     # ------------------------------------------------------------------
@@ -140,13 +141,13 @@ def create_manual_data() -> InputData:
         ("5A", "cs", 1): "Petrov",
         ("5A", "cs", 2): "Petrov",
         ("5A", "labor", 1): "Smirnov",
-        ("5A", "labor", 2): "Smirnov",
+        ("5A", "labor", 2): "Skvrocova_trud",
         ("5B", "eng", 1): "Sidorov",
         ("5B", "eng", 2): "Nikolaev",
         ("5B", "cs", 1): "Petrov",
         ("5B", "cs", 2): "Petrov",
         ("5B", "labor", 1): "Smirnov",
-        ("5B", "labor", 2): "Smirnov",
+        ("5B", "labor", 2): "Skvrocova_trud",
         # Английский у второго класса
         ("2A", "eng", 1): "Sidorov",
         ("2A", "eng", 2): "Nikolaev",
