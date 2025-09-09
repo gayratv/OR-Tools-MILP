@@ -3,9 +3,10 @@
 Pretty-printers and Excel exporters for timetables.
 """
 
-from typing import Dict, Tuple, Any, Optional
+from typing import Dict, Tuple, Any
 import dataclasses
 import pulp
+from tabulate import tabulate
 import openpyxl
 from openpyxl.styles import Font, Alignment
 
@@ -36,6 +37,55 @@ def get_solution_maps(data: InputData, solver_or_vars: Dict, is_pulp: bool) -> D
         for k, v in z_vars.items():
             z_sol[k] = solver.Value(v)
     return {'x': x_sol, 'z': z_sol}
+
+
+def print_schedule_to_console(
+    data: InputData,
+    solution_maps: Dict[str, Dict[Tuple, float]],
+    display_maps: Dict[str, Dict[str, str]] = None
+):
+    """Выводит расписание по классам в консоль в виде таблицы."""
+    x_sol, z_sol = solution_maps['x'], solution_maps['z']
+
+    display_maps = display_maps or {}
+    subject_names = display_maps.get("subject_names", {})
+    teacher_names = display_maps.get("teacher_names", {})
+
+    def get_subject_name(s_id):
+        return subject_names.get(s_id, s_id)
+
+    def get_teacher_name(t_id):
+        return teacher_names.get(t_id, t_id)
+
+    class_names_list = [c.name for c in data.classes]
+
+    for c in class_names_list:
+        print("\n" + "="*80)
+        print(f"Расписание для класса: {c}")
+        print("="*80)
+
+        headers = ["День"] + [f"Урок {p}" for p in data.periods]
+        table_data = []
+
+        for d in data.days:
+            row = [d]
+            for p in data.periods:
+                cell_text = ""
+                # Неделимые предметы
+                for s in data.subjects:
+                    if s not in data.split_subjects and x_sol.get((c, s, d, p), 0) > 0.5:
+                        t = data.assigned_teacher.get((c, s), '?')
+                        cell_text = f"{get_subject_name(s)}\n({get_teacher_name(t)})"
+                        break
+                # Делимые предметы
+                if not cell_text:
+                    pieces = [f"{get_subject_name(s)}[g{g}]\n({get_teacher_name(data.subgroup_assigned_teacher.get((c, s, g), '?'))})"
+                              for s in data.split_subjects for g in data.subgroup_ids if z_sol.get((c, s, g, d, p), 0) > 0.5]
+                    if pieces:
+                        cell_text = "\n".join(pieces)
+                row.append(cell_text or "—")
+            table_data.append(row)
+        print(tabulate(table_data, headers=headers, tablefmt="grid"))
 
 
 # display_maps

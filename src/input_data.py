@@ -210,12 +210,15 @@ class OptimizationWeights:
     # --- Параметры решателя ---
     num_search_workers: int = 16                 # число воркеров OR‑Tools
     random_seed: Optional[int] = None            # фиксируем сид для воспроизводимости (None = выключено)
+    # random_seed: Optional[int] = 1            # фиксируем сид для воспроизводимости (None = выключено)
     time_limit_s: Optional[float] = None         # лимит времени, сек (None = без лимита)
     relative_gap_limit: float = 0.05             # относительный GAP для приближённого решения
+
 
 @dataclass
 class OptimizationGoals:
     teacher_slot_optimization: bool = False
 
     # Предметы, запрещённые последними уроками по параллелям
-    subjects_not_last_lesson_optimization: bool = False
+    subjects_not_last_lesson_optimization: bool = True
+    print_timetable_to_console: bool = False

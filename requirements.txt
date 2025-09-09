@@ -6,3 +6,4 @@ highspy
 openpyxl
 sqlalchemy
 sqlalchemy-access
+tabulate

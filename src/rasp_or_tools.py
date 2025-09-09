@@ -30,7 +30,7 @@ from input_data import InputData, OptimizationWeights, OptimizationGoals
 from rasp_data import create_manual_data
 from access_loader import load_data_from_access, load_display_maps
 from rasp_data_generated import create_timetable_data
-from print_schedule import get_solution_maps, export_full_schedule_to_excel
+from print_schedule import get_solution_maps, export_full_schedule_to_excel, print_schedule_to_console
 
 
 # ---------------------------- 1) ВСПОМОГАТЕЛЬНЫЕ ХЕЛПЕРЫ ----------------------------
@@ -122,7 +122,7 @@ def _validate_input_data(data: InputData) -> None:
 def build_and_solve_with_or_tools(
     data: InputData,
     log: bool = True,
-    PRINT_TIMETABLE_TO_CONSOLE: Optional[bool] = None,
+    PRINT_TIMETABLE_TO_CONSOLE: bool = False,
     display_maps: Optional[Dict[str, Dict[str, str]]] = None,
 
 ) -> None:
@@ -347,45 +347,45 @@ def build_and_solve_with_or_tools(
 
     # (6b) Предметы, запрещённые последними уроками по параллелям
     # Если урок запрещённого предмета s стоит в периоде p, то после него в этот день должен быть хотя бы ещё один урок (любой).
-    # if optimizationGoals.subjects_not_last_lesson_optimization:
-    #     for c in C:
-    #         day_is_last_lesson = {
-    #             (d, p): model.NewBoolVar(f'is_last_{c}_{d}_{p}')
-    #             for d, p in itertools.product(D, P)
-    #         }
-    #         for d in D:
-    #             lessons_on_day = [y[c, d, p] for p in P]
-    #             for p_idx, p in enumerate(P):
-    #                 # p is the last lesson if it's taught and no lesson after it is taught
-    #                 no_lessons_after = model.NewBoolVar(f'no_lessons_after_{c}_{d}_{p}')
-    #                 lessons_after = [lessons_on_day[i] for i in range(p_idx + 1, len(P))]
-    #                 if lessons_after:
-    #                     # no_lessons_after <=> (OR(lessons_after) == 0)
-    #                     # Устанавливаем полную эквивалентность.
-    #                     # no_lessons_after истинно ТОГДА И ТОЛЬКО ТОГДА, когда все уроки после = 0.
-    #                     model.AddBoolOr([l.Not() for l in lessons_after]).OnlyEnforceIf(no_lessons_after)
-    #                     model.AddBoolOr(lessons_after).OnlyEnforceIf(no_lessons_after.Not())
-    #                 else: # last period
-    #                     model.Add(no_lessons_after == 1)
-    #                 # Правильная эквивалентность:
-    #                 # day_is_last_lesson[d, p] <=> (lessons_on_day[p_idx] AND no_lessons_after)
-    #                 # Это означает, что day_is_last_lesson[d, p] является результатом логического "И".
-    #                 model.AddBoolAnd([lessons_on_day[p_idx], no_lessons_after]).OnlyEnforceIf(day_is_last_lesson[d, p])
-    #                 model.AddImplication(day_is_last_lesson[d, p], lessons_on_day[p_idx])
-    #                 model.AddImplication(day_is_last_lesson[d, p], no_lessons_after)
-    #
-    #         g = class_grades.get(c)
-    #         if g is not None:
-    #             banned_subjects = subjects_not_last_lesson.get(g, set())
-    #             for s in banned_subjects:
-    #                 if s in splitS:
-    #                     for g_id, d, p in itertools.product(G, D, P):
-    #                         var = z.get((c, s, g_id, d, p), false_var)
-    #                         model.AddImplication(var, day_is_last_lesson[d, p].Not())
-    #                 else:
-    #                     for d, p in itertools.product(D, P):
-    #                         var = x.get((c, s, d, p), false_var)
-    #                         model.AddImplication(var, day_is_last_lesson[d, p].Not())
+    if optimizationGoals.subjects_not_last_lesson_optimization:
+        for c in C:
+            day_is_last_lesson = {
+                (d, p): model.NewBoolVar(f'is_last_{c}_{d}_{p}')
+                for d, p in itertools.product(D, P)
+            }
+            for d in D:
+                lessons_on_day = [y[c, d, p] for p in P]
+                for p_idx, p in enumerate(P):
+                    # p is the last lesson if it's taught and no lesson after it is taught
+                    no_lessons_after = model.NewBoolVar(f'no_lessons_after_{c}_{d}_{p}')
+                    lessons_after = [lessons_on_day[i] for i in range(p_idx + 1, len(P))]
+                    if lessons_after:
+                        # no_lessons_after <=> (OR(lessons_after) == 0)
+                        # Устанавливаем полную эквивалентность.
+                        # no_lessons_after истинно ТОГДА И ТОЛЬКО ТОГДА, когда все уроки после = 0.
+                        model.AddBoolOr([l.Not() for l in lessons_after]).OnlyEnforceIf(no_lessons_after)
+                        model.AddBoolOr(lessons_after).OnlyEnforceIf(no_lessons_after.Not())
+                    else: # last period
+                        model.Add(no_lessons_after == 1)
+                    # Правильная эквивалентность:
+                    # day_is_last_lesson[d, p] <=> (lessons_on_day[p_idx] AND no_lessons_after)
+                    # Это означает, что day_is_last_lesson[d, p] является результатом логического "И".
+                    model.AddBoolAnd([lessons_on_day[p_idx], no_lessons_after]).OnlyEnforceIf(day_is_last_lesson[d, p])
+                    model.AddImplication(day_is_last_lesson[d, p], lessons_on_day[p_idx])
+                    model.AddImplication(day_is_last_lesson[d, p], no_lessons_after)
+
+            g = class_grades.get(c)
+            if g is not None:
+                banned_subjects = subjects_not_last_lesson.get(g, set())
+                for s in banned_subjects:
+                    if s in splitS:
+                        for g_id, d, p in itertools.product(G, D, P):
+                            var = z.get((c, s, g_id, d, p), false_var)
+                            model.AddImplication(var, day_is_last_lesson[d, p].Not())
+                    else:
+                        for d, p in itertools.product(D, P):
+                            var = x.get((c, s, d, p), false_var)
+                            model.AddImplication(var, day_is_last_lesson[d, p].Not())
 
     # (6c) Правила для начальной школы (2-4 классы)
     for c in C:
@@ -718,6 +718,10 @@ def build_and_solve_with_or_tools(
         final_maps = {"solver": solver, "x": x, "z": z}
         solution_maps = get_solution_maps(data, final_maps, is_pulp=False)
         export_full_schedule_to_excel(output_filename, data, solution_maps, display_maps, solution_stats, weights)
+        
+        if PRINT_TIMETABLE_TO_CONSOLE:
+            print("\n--- Расписание в консоли ---")
+            print_schedule_to_console(data, solution_maps, display_maps)
 
     else:
         print(f'Решение не найдено. Статус: {solver.StatusName(status)}')
@@ -753,7 +757,7 @@ if __name__ == '__main__':
     # Запуск
     build_and_solve_with_or_tools(
         data,
-        PRINT_TIMETABLE_TO_CONSOLE=False,
+        PRINT_TIMETABLE_TO_CONSOLE=OptimizationGoals().print_timetable_to_console, # <--- Установите True для вывода в консоль
         display_maps=display_maps
 
     )
