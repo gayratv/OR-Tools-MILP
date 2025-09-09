@@ -1103,7 +1103,7 @@ def build_and_solve_with_or_tools(
 
 if __name__ == '__main__':
     # Источник данных: 'db' | 'generated' | 'manual'
-    data_source = 'manual'
+    data_source = 'generated'
     data = None
 
     # Путь к вашей MS Access БД (используется при data_source == 'db')

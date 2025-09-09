@@ -34,7 +34,7 @@ def generate_function_string(data: InputData) -> str:
 
     # Собираем итоговый код функции в виде многострочной f-строки
     function_code = f"""
-from input_data import InputData
+from input_data import InputData, ClassInfo
 
 # ====================================================================
 # Этот файл был сгенерирован автоматически скриптом generate_static_data_file.py
