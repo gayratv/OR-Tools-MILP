@@ -288,7 +288,7 @@ def build_and_solve_with_or_tools(
 
     # (6) Дополнительные ограничения для начальной школы и общие правила
     # subjects_not_last_lesson = {2: {"math", "eng"}, 5: {"math"}}
-    subjects_not_last_map = getattr(data, 'subjects_not_last_lesson', {})
+    subjects_not_last_lesson = getattr(data, 'subjects_not_last_lesson', {})
     # elementary_english_periods = {2, 3, 4}
     english_periods = getattr(data, 'elementary_english_periods', {2, 3, 4})
 
@@ -317,12 +317,13 @@ def build_and_solve_with_or_tools(
     for c in C:
         g = class_grades.get(c)
         if g is not None:
-            banned_subjects = subjects_not_last_map.get(g, set())
+            banned_subjects = subjects_not_last_lesson.get(g, set())
             for s in banned_subjects:
-                # A lesson of this subject cannot be the last one of the day for this class.
-                # This is enforced by checking that if a lesson of subject 's' is at period 'p',
-                # the sum of lessons in subsequent periods must be at least 1.
-                # This naturally prevents placing it in the last scheduled slot for that class on that day.
+                # Урок по этому предмету не может быть последним в этот день для данного класса.
+                # Это обеспечивается проверкой: если урок по предмету 's' стоит в периоде 'p',
+                # то сумма уроков в последующих периодах должна быть не меньше 1.
+                # Это естественным образом предотвращает его размещение в последний занятый слот
+                # для этого класса в этот день.
                 if s in splitS:
                     for g_id, d, p in itertools.product(G, D, P):
                         var = z.get((c, s, g_id, d, p), false_var)
