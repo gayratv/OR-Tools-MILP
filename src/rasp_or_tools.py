@@ -472,6 +472,53 @@ def _validate_input_data(data: InputData) -> None:
                             f"но доступных слотов на разрешённых периодах всего {eng_cap} "
                             f"(разрешённые: {sorted(english_periods)}; учитываются forbidden_slots класса).")
 
+    # (5d) учительская вместимость на «узких» периодах для английского в начальной школе
+    # Проверяем: часы английского у учителя в 2–4 классах <= кол-ва доступных слотов на english_periods
+    if eng_name and english_periods:
+        allowed_p = {p for p in english_periods if p in period_set}
+        if allowed_p:
+            from collections import defaultdict
+            # Требование по часам английского в начальной школе на каждого учителя
+            teacher_elem_eng_hours = defaultdict(int)
+
+            # НЕДЕЛИМЫЕ (на случай, если английский не сплит)
+            for (c, s), h in getattr(data, 'plan_hours', {}).items():
+                if h > 0 and s == eng_name and class_grade.get(c) in {2, 3, 4}:
+                    t = getattr(data, 'assigned_teacher', {}).get((c, s))
+                    if t in teacher_set:
+                        teacher_elem_eng_hours[t] += h
+
+            # СПЛИТ-ПРЕДМЕТ (обычный случай: английский сплит у 2–4 классов)
+            for (c, s, g_id), h in getattr(data, 'subgroup_plan_hours', {}).items():
+                if h > 0 and s == eng_name and class_grade.get(c) in {2, 3, 4}:
+                    t = getattr(data, 'subgroup_assigned_teacher', {}).get((c, s, g_id))
+                    if t in teacher_set:
+                        teacher_elem_eng_hours[t] += h
+
+            # Ёмкость учителя по разрешённым периодам: суммируем по дням, исключая days_off и запрещённые слоты учителя
+            from collections import defaultdict as _dd
+            t_forb = _dd(set)  # teacher -> {(day, period)}
+            for t, slots in getattr(data, 'teacher_forbidden_slots', {}).items():
+                for d, p in slots or []:
+                    t_forb[t].add((d, p))
+            t_days_off = {t: set(v) for t, v in getattr(data, 'days_off', {}).items()}
+
+            for t, req in teacher_elem_eng_hours.items():
+                cap = 0
+                for d in days:
+                    if d in t_days_off.get(t, set()):
+                        continue
+                    forb_count = sum(1 for p in allowed_p if (d, p) in t_forb.get(t, set()))
+                    cap += max(0, len(allowed_p) - forb_count)
+                if req > cap:
+                    add_err(
+                        f"Невыполнимо: учитель '{t}' имеет {req} ч/нед английского в начальной школе (2–4 кл.), "
+                        f"но доступная недельная вместимость по разрешённым периодам {sorted(allowed_p)} равна {cap} "
+                        f"(учтены days_off и teacher_forbidden_slots учителя). "
+                        f"Уменьшите нагрузку, перераспределите подгруппы или расширьте elementary_english_periods."
+                    )
+
+
     # ---------- Финал ----------
     if errors:
         raise ValueError("Обнаружены проблемы во входных данных:\n  - " + "\n  - ".join(errors))
