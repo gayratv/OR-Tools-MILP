@@ -221,4 +221,4 @@ class OptimizationGoals:
 
     # Предметы, запрещённые последними уроками по параллелям
     subjects_not_last_lesson_optimization: bool = True
-    print_timetable_to_console: bool = False
+    print_timetable_to_console: bool = True

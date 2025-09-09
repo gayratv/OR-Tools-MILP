@@ -155,11 +155,13 @@ def build_and_solve_with_or_tools(
     # x[c,s,d,p] — неделимый предмет
     # Переменная x[класс, предмет, день, период] принимает значение 1, если неделимый предмет назначен в данный слот, иначе 0.
     x = {(c, s, d, p): model.NewBoolVar(f'x_{c}_{s}_{d}_{p}')
-         for c, s, d, p in itertools.product(C, S, D, P) if s not in splitS}
+         for c, s, d, p in itertools.product(C, S, D, P)
+         if s not in splitS and (c, s) in data.plan_hours}
 
     # z[c,s,g,d,p] — делимый предмет по подгруппе g
     z = {(c, s, g, d, p): model.NewBoolVar(f'z_{c}_{s}_{g}_{d}_{p}')
-         for c, s, g, d, p in itertools.product(C, S, G, D, P) if s in splitS}
+         for c, s, g, d, p in itertools.product(C, S, G, D, P)
+         if s in splitS and (c, s, g) in data.subgroup_plan_hours}
 
     # y[c,d,p] — в слоте у класса есть ЛЮБОЙ урок
     y = {(c, d, p): model.NewBoolVar(f'y_{c}_{d}_{p}')
@@ -348,51 +350,54 @@ def build_and_solve_with_or_tools(
     # (6b) Предметы, запрещённые последними уроками по параллелям
     # версия после рефакторинга
     # Идея: если запрещённый предмет стоит в периоде p, то ПОСЛЕ него в этот день должен быть хотя бы один любой урок. Иначе — запрещаем.
+    # (6b) Предметы, запрещённые последними уроками по параллелям
+    # Если урок запрещённого предмета s стоит в периоде p, то после него в этот день должен быть хотя бы ещё один урок (любой).
     if optimizationGoals.subjects_not_last_lesson_optimization:
         for c in C:
-            grade = class_grades.get(c)
-            if grade is None:
+            g = class_grades.get(c)
+
+            # NEW: полностью отключаем правило для начальной школы (1–4 классы)
+            if g is None or g in {1, 2, 3, 4}:
                 continue
 
-            banned_subjects = subjects_not_last_lesson.get(grade, set())
+            # Если для этой параллели нет запрещённых предметов — ничего не делаем и не плодим переменные
+            banned_subjects = subjects_not_last_lesson.get(g, set())
             if not banned_subjects:
                 continue
 
+            # Служебные флаги "этот слот является последним уроком дня" — только для нужных параллелей
+            day_is_last_lesson = {
+                (d, p): model.NewBoolVar(f'is_last_{c}_{d}_{p}')
+                for d, p in itertools.product(D, P)
+            }
             for d in D:
-                # Для каждого периода p подготовим список флагов "уроки после p" у класса c.
-                after_y = {
-                    p: [y[c, d, q] for q in P[idx + 1:]]
-                    for idx, p in enumerate(P)
-                }
+                lessons_on_day = [y[c, d, p] for p in P]
+                for p_idx, p in enumerate(P):
+                    # p — последний, если в p есть урок и ПОСЛЕ него уроков нет
+                    no_lessons_after = model.NewBoolVar(f'no_lessons_after_{c}_{d}_{p}')
+                    lessons_after = [lessons_on_day[i] for i in range(p_idx + 1, len(P))]
+                    if lessons_after:
+                        # no_lessons_after <=> (OR(lessons_after) == 0)
+                        model.AddBoolOr([l.Not() for l in lessons_after]).OnlyEnforceIf(no_lessons_after)
+                        model.AddBoolOr(lessons_after).OnlyEnforceIf(no_lessons_after.Not())
+                    else:  # последний период дня
+                        model.Add(no_lessons_after == 1)
 
-                for s in banned_subjects:
-                    if s in splitS:
-                        # Подгрупповые предметы: проверяем каждый возможный (c,s,g,d,p)
-                        for g_id in G:
-                            for p in P:
-                                key = (c, s, g_id, d, p)
-                                if key not in z:
-                                    continue
-                                var = z[key]
-                                later = after_y[p]
-                                if later:
-                                    # var ⇒ OR(later)  эквивалентно (¬var ∨ y_{p+1} ∨ ... ∨ y_last)
-                                    model.AddBoolOr([var.Not()] + later)
-                                else:
-                                    # Нет слотов позже — запрещаем ставить этот предмет в последний период
-                                    model.Add(var == 0)
-                    else:
-                        # Недельные (неподгрупповые) предметы
-                        for p in P:
-                            key = (c, s, d, p)
-                            if key not in x:
-                                continue
-                            var = x[key]
-                            later = after_y[p]
-                            if later:
-                                model.AddBoolOr([var.Not()] + later)
-                            else:
-                                model.Add(var == 0)
+                    # day_is_last_lesson[d, p] <=> (lessons_on_day[p_idx] AND no_lessons_after)
+                    model.AddBoolAnd([lessons_on_day[p_idx], no_lessons_after]).OnlyEnforceIf(day_is_last_lesson[d, p])
+                    model.AddImplication(day_is_last_lesson[d, p], lessons_on_day[p_idx])
+                    model.AddImplication(day_is_last_lesson[d, p], no_lessons_after)
+
+            # Запрещённые предметы не могут стоять в последнем слоте дня
+            for s in banned_subjects:
+                if s in splitS:
+                    for g_id, d, p in itertools.product(G, D, P):
+                        var = z.get((c, s, g_id, d, p), false_var)
+                        model.AddImplication(var, day_is_last_lesson[d, p].Not())
+                else:
+                    for d, p in itertools.product(D, P):
+                        var = x.get((c, s, d, p), false_var)
+                        model.AddImplication(var, day_is_last_lesson[d, p].Not())
 
     # (6c) Правила для начальной школы (2-4 классы)
     for c in C:
