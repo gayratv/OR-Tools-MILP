@@ -207,12 +207,6 @@ class OptimizationWeights:
     # После этого слота начинаются «хвосты» (используется в delta_tail)
     last_ok_period: int = 6
 
-    # --- Лексикографическая оптимизация ---
-    use_lexico: bool = False         # если True: двухфазная оптимизация (primary -> secondary)
-    # Что оптимизировать первичным при use_lexico:
-    # 'teacher_windows' или 'class_windows'
-    lexico_primary: str = "teacher_windows"
-
     # --- Параметры решателя ---
     num_search_workers: int = 16                 # число воркеров OR‑Tools
     random_seed: Optional[int] = None            # фиксируем сид для воспроизводимости (None = выключено)
@@ -221,4 +215,4 @@ class OptimizationWeights:
 
 @dataclass
 class OptimizationGoals:
-    teacher_slot_optimization: bool = True
+    teacher_slot_optimization: bool = False
