@@ -147,6 +147,8 @@ def build_and_solve_with_or_tools(
     false_var = model.NewBoolVar('false_var')
     model.Add(false_var == 0)
 
+    zero_var = model.NewConstant(0)
+
     # Предварительно соберём «уроки класса в слоте» для удобного OR
     # Эта вспомогательная функция собирает все переменные CP-SAT,
     # которые представляют уроки для данного класса (c) в определённый
@@ -507,6 +509,7 @@ def build_and_solve_with_or_tools(
     suffix_teacher: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
     inside_teacher: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
 
+    sum_inside_teacher = zero_var
     if optimizationGoals.teacher_slot_optimization:
         for t, d in itertools.product(data.teachers, D):
             # prefix: «есть ли уже урок у учителя до текущего периода?»
@@ -540,8 +543,10 @@ def build_and_solve_with_or_tools(
         # тем более компактно распределены уроки в течение дня.
         sum_inside_teacher = sum(inside_teacher.values())
 
+
     # (B) Предпочтение ранних слотов (минимизируем номер периода)
     beta_early = _get_weight(weights, 'beta_early', 0)
+    # y[c,d,p] — в слоте у класса есть ЛЮБОЙ урок
     early_term = beta_early * sum(p * y[c, d, p] for c, d, p in y)
 
     # (C) Баланс по дням: минимизировать разброс нагрузки в днях
@@ -566,6 +571,7 @@ def build_and_solve_with_or_tools(
     epsilon_pairing = _get_weight(weights, 'epsilon_pairing', 0)
     lonely_vars: List[cp_model.IntVar] = []
 
+    # попытка провести спаренные предметы
     if epsilon_pairing and getattr(data, 'paired_subjects', None):
         for s in data.paired_subjects:
             if s in splitS:
@@ -600,40 +606,23 @@ def build_and_solve_with_or_tools(
     alpha_runs = _get_weight(weights, 'alpha_runs', 0)  # для классов
     alpha_runs_teacher = _get_weight(weights, 'alpha_runs_teacher', 0)  # для учителей
 
-    # Для лексикографики удобно иметь чистые выражения без весов:
-    primary_expr = sum_inside_teacher  # по умолчанию: основная цель — окна учителей
-    secondary_expr = (
+    # Формируем единую целевую функцию как взвешенную сумму всех компонентов.
+    # Лексикографическая оптимизация отключена.
+    objective = (
+        alpha_runs_teacher * sum_inside_teacher +
         alpha_runs * sum_inside_class +
         early_term +
         balance_term +
         tail_term +
         pairing_term
     )
-
-    use_lexico = bool(getattr(weights, 'use_lexico', False))
-    lexico_primary = getattr(weights, 'lexico_primary', 'teacher_windows')  # 'teacher_windows' | 'class_windows'
-
-    if lexico_primary == 'class_windows':
-        primary_expr, secondary_expr = sum_inside_class, (
-            alpha_runs_teacher * sum_inside_teacher +
-            early_term + balance_term + tail_term + pairing_term
-        )
-
-    # Если лексикографика выключена — минимизируем взвешенную сумму
-    if not use_lexico:
-        objective = (
-            alpha_runs_teacher * sum_inside_teacher +
-            alpha_runs * sum_inside_class +
-            early_term + balance_term + tail_term + pairing_term
-        )
-        model.Minimize(objective)
+    model.Minimize(objective)
 
     # --------------------------- 3.5) ЗАПУСК РЕШАТЕЛЯ ---------------------------
 
     solver = cp_model.CpSolver()
     solver.parameters.log_search_progress = log
     solver.parameters.num_search_workers = getattr(weights, 'num_search_workers', 20)
-    # Опциональные параметры для воспроизводимости/тайм‑лимита
     if getattr(weights, 'random_seed', None) is not None:
         solver.parameters.random_seed = int(weights.random_seed)
     if getattr(weights, 'time_limit_s', None):
@@ -643,27 +632,8 @@ def build_and_solve_with_or_tools(
 
     print("Начинаем решение...")
 
-    if use_lexico:
-        # Фаза A: минимизируем primary_expr
-        model.Minimize(primary_expr)
-        status_A = solver.Solve(model)
-        print("Фаза A (лексикографика): завершена.")
-        if status_A not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-            print(f'Решение не найдено (фаза A). Статус: {solver.StatusName(status_A)}')
-            return
-
-        primary_value = int(round(solver.ObjectiveValue()))
-        print(f'Оптимум фазы A (primary) = {primary_value}')
-
-        # Фиксируем ограничение «primary ≤ найденный уровень»
-        model.Add(primary_expr <= primary_value)
-
-        # Фаза B: минимизируем secondary_expr
-        model.Minimize(secondary_expr)
-        status = solver.Solve(model)
-        print("Фаза B (лексикографика): завершена.")
-    else:
-        status = solver.Solve(model)
+    # Запускаем решатель с единой целевой функцией
+    status = solver.Solve(model)
 
     print("\nРешение завершено.")
 

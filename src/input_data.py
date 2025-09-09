@@ -221,4 +221,4 @@ class OptimizationWeights:
 
 @dataclass
 class OptimizationGoals:
-    teacher_slot_optimization: bool = True
+    teacher_slot_optimization: bool = False
