@@ -347,6 +347,7 @@ def build_and_solve_with_or_tools(
 
     # (6b) Предметы, запрещённые последними уроками по параллелям
     # Если урок запрещённого предмета s стоит в периоде p, то после него в этот день должен быть хотя бы ещё один урок (любой).
+    # версия до рефакторинга
     if optimizationGoals.subjects_not_last_lesson_optimization:
         for c in C:
             day_is_last_lesson = {
