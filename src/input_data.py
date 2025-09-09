@@ -214,7 +214,11 @@ class OptimizationWeights:
     lexico_primary: str = "teacher_windows"
 
     # --- Параметры решателя ---
-    num_search_workers: int = 20                 # число воркеров OR‑Tools
+    num_search_workers: int = 16                 # число воркеров OR‑Tools
     random_seed: Optional[int] = None            # фиксируем сид для воспроизводимости (None = выключено)
     time_limit_s: Optional[float] = None         # лимит времени, сек (None = без лимита)
     relative_gap_limit: float = 0.05             # относительный GAP для приближённого решения
+
+@dataclass
+class OptimizationGoals:
+    teacher_slot_optimization: bool = True

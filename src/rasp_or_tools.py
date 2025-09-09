@@ -26,7 +26,7 @@ from typing import Dict, Iterable, Hashable, Tuple, List, Optional, Union
 from ortools.sat.python import cp_model
 
 # Ваша инфраструктура данных/вывода
-from input_data import InputData, OptimizationWeights
+from input_data import InputData, OptimizationWeights, OptimizationGoals
 from rasp_data import create_manual_data
 from access_loader import load_data_from_access, load_display_maps
 from rasp_data_generated import create_timetable_data
@@ -118,6 +118,7 @@ def build_and_solve_with_or_tools(
     # split_subjects = {"eng", "cs", "labor"}
     G, splitS = data.subgroup_ids, data.split_subjects
     weights = OptimizationWeights()
+    optimizationGoals = OptimizationGoals()
 
     # -------------------------- 3.1) ПЕРЕМЕННЫЕ МОДЕЛИ --------------------------
 
@@ -506,37 +507,38 @@ def build_and_solve_with_or_tools(
     suffix_teacher: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
     inside_teacher: Dict[Tuple[Hashable, Hashable, Hashable], cp_model.IntVar] = {}
 
-    for t, d in itertools.product(data.teachers, D):
-        # prefix: «есть ли уже урок у учителя до текущего периода?»
-        for idx, p in enumerate(P):
-            v = model.NewBoolVar(f'pref_t_{t}_{d}_{p}')
-            prefix_teacher[t, d, p] = v
-            if idx == 0:
-                model.Add(v == teacher_busy[t, d, p])
-            else:
-                model.AddMaxEquality(v, [prefix_teacher[t, d, P[idx - 1]], teacher_busy[t, d, p]])
-        # suffix: «будет ли ещё урок после текущего периода?»
-        for idx in reversed(range(len(P))):
-            p = P[idx]
-            v = model.NewBoolVar(f'suff_t_{t}_{d}_{p}')
-            suffix_teacher[t, d, p] = v
-            if idx == len(P) - 1:
-                model.Add(v == teacher_busy[t, d, p])
-            else:
-                model.AddMaxEquality(v, [suffix_teacher[t, d, P[idx + 1]], teacher_busy[t, d, p]])
+    if optimizationGoals.teacher_slot_optimization:
+        for t, d in itertools.product(data.teachers, D):
+            # prefix: «есть ли уже урок у учителя до текущего периода?»
+            for idx, p in enumerate(P):
+                v = model.NewBoolVar(f'pref_t_{t}_{d}_{p}')
+                prefix_teacher[t, d, p] = v
+                if idx == 0:
+                    model.Add(v == teacher_busy[t, d, p])
+                else:
+                    model.AddMaxEquality(v, [prefix_teacher[t, d, P[idx - 1]], teacher_busy[t, d, p]])
+            # suffix: «будет ли ещё урок после текущего периода?»
+            for idx in reversed(range(len(P))):
+                p = P[idx]
+                v = model.NewBoolVar(f'suff_t_{t}_{d}_{p}')
+                suffix_teacher[t, d, p] = v
+                if idx == len(P) - 1:
+                    model.Add(v == teacher_busy[t, d, p])
+                else:
+                    model.AddMaxEquality(v, [suffix_teacher[t, d, P[idx + 1]], teacher_busy[t, d, p]])
 
-    for t, d, p in itertools.product(data.teachers, D, P):
-        # Слот внутри оболочки преподавателя, если до него и после него
-        # есть занятие (или он сам занят).
-        u = model.NewBoolVar(f'inside_t_{t}_{d}_{p}')
-        inside_teacher[t, d, p] = u
-        model.Add(u <= prefix_teacher[t, d, p])
-        model.Add(u <= suffix_teacher[t, d, p])
-        model.Add(u >= prefix_teacher[t, d, p] + suffix_teacher[t, d, p] - 1)
+        for t, d, p in itertools.product(data.teachers, D, P):
+            # Слот внутри оболочки преподавателя, если до него и после него
+            # есть занятие (или он сам занят).
+            u = model.NewBoolVar(f'inside_t_{t}_{d}_{p}')
+            inside_teacher[t, d, p] = u
+            model.Add(u <= prefix_teacher[t, d, p])
+            model.Add(u <= suffix_teacher[t, d, p])
+            model.Add(u >= prefix_teacher[t, d, p] + suffix_teacher[t, d, p] - 1)
 
-    # Ключевая метрика «окон» преподавателей: чем меньше оболочка,
-    # тем более компактно распределены уроки в течение дня.
-    sum_inside_teacher = sum(inside_teacher.values())
+        # Ключевая метрика «окон» преподавателей: чем меньше оболочка,
+        # тем более компактно распределены уроки в течение дня.
+        sum_inside_teacher = sum(inside_teacher.values())
 
     # (B) Предпочтение ранних слотов (минимизируем номер периода)
     beta_early = _get_weight(weights, 'beta_early', 0)
