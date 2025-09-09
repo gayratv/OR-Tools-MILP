@@ -339,18 +339,18 @@ def build_and_solve_with_or_tools(
     for c in C:
         g = class_grades.get(c)
         if g in {2, 3, 4}:
-            # Английский только на разрешённых уроках
-            subj = 'eng'
-            if subj in splitS:
-                for g_id in G:
+            # Английский только на разрешённых уроках (если предмет указан в data.english_subject_name)
+            if data.english_subject_name:
+                subj = data.english_subject_name
+                if subj in splitS:
+                    for g_id in G:
+                        for d, p in itertools.product(D, P):
+                            if p not in english_periods and (c, subj, g_id, d, p) in z:
+                                model.Add(z[c, subj, g_id, d, p] == 0)
+                else:
                     for d, p in itertools.product(D, P):
-                        if p not in english_periods and (c, subj, g_id, d, p) in z:
-                            model.Add(z[c, subj, g_id, d, p] == 0)
-            else:
-                for d, p in itertools.product(D, P):
-                    if p not in english_periods and (c, subj, d, p) in x:
-                        model.Add(x[c, subj, d, p] == 0)
-
+                        if p not in english_periods and (c, subj, d, p) in x:
+                            model.Add(x[c, subj, d, p] == 0)
             # Запрет двух одинаковых предметов подряд
             for s in S:
                 for d in D:

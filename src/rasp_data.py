@@ -162,6 +162,8 @@ def create_manual_data() -> InputData:
     }
     forbidden_slots = {("5A", "Mon", 1)}
 
+    english_subject_name = "eng"
+
     # ------------------------------------------------------------------
     # Политики и предпочтения
     # ------------------------------------------------------------------
@@ -207,6 +209,7 @@ def create_manual_data() -> InputData:
         compatible_pairs=compatible_pairs,
         paired_subjects=paired_subjects,
         must_sync_split_subjects=must_sync_split_subjects,
+        english_subject_name=english_subject_name
     )
 
 

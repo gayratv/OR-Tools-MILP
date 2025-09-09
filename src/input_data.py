@@ -115,6 +115,9 @@ class InputData:
     subjects: Subjects
     teachers: Teachers
 
+    # название предмета английский
+    english_subject_name: str
+
     # --- Подгруппы ---
     split_subjects: Set[str] = field(default_factory=set)
     subgroup_ids: Subgroups = field(default_factory=lambda: [1, 2])
