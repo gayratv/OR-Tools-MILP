@@ -63,6 +63,8 @@ def _calculate_teacher_windows(data: InputData,
     """
     teacher_busy_periods = {(t, d): [] for t, d in itertools.product(data.teachers, data.days)}
 
+    # x[c,s,d,p] — неделимый предмет
+
     # Не-делимые предметы
     for (c, s, d, p), var in x.items():
         if solver.Value(var) > 0:
@@ -108,14 +110,19 @@ def build_and_solve_with_or_tools(
     model = cp_model.CpModel()
     class_names = [c.name for c in data.classes]
     class_grades = {c.name: c.grade for c in data.classes}
+
+    # grade_subject_max_consecutive_days = {5: {"PE": 2}}
     grade_subject_limits = getattr(data, 'grade_subject_max_consecutive_days', {})
     C, S, D, P = class_names, data.subjects, data.days, data.periods
+
+    # split_subjects = {"eng", "cs", "labor"}
     G, splitS = data.subgroup_ids, data.split_subjects
     weights = OptimizationWeights()
 
     # -------------------------- 3.1) ПЕРЕМЕННЫЕ МОДЕЛИ --------------------------
 
     # x[c,s,d,p] — неделимый предмет
+    # Переменная x[класс, предмет, день, период] принимает значение 1, если неделимый предмет назначен в данный слот, иначе 0.
     x = {(c, s, d, p): model.NewBoolVar(f'x_{c}_{s}_{d}_{p}')
          for c, s, d, p in itertools.product(C, S, D, P) if s not in splitS}
 
@@ -140,6 +147,11 @@ def build_and_solve_with_or_tools(
     model.Add(false_var == 0)
 
     # Предварительно соберём «уроки класса в слоте» для удобного OR
+    # Эта вспомогательная функция собирает все переменные CP-SAT,
+    # которые представляют уроки для данного класса (c) в определённый
+    # день (d) и период (p). Она объединяет как неделимые предметы (x),
+    # так и делимые предметы (z) для всех подгрупп.
+    # Используется для построения ограничения (1) и расчёта "y".
     def _class_lessons_in_slot(c, d, p) -> List[cp_model.IntVar]:
         non_split = [x[(c, s, d, p)] for s in S if s not in splitS if (c, s, d, p) in x]
         split = [z[(c, s, g, d, p)] for s in splitS for g in G if (c, s, g, d, p) in z]
@@ -149,13 +161,12 @@ def build_and_solve_with_or_tools(
     teacher_lessons_in_slot: Dict[Tuple[Hashable, Hashable, Hashable], List[cp_model.IntVar]] = {
         (t, d, p): [] for t, d, p in itertools.product(data.teachers, D, P)
     }
-    for (c, s), t in data.assigned_teacher.items():
-        if s not in splitS:
-            for d, p in itertools.product(D, P):
-                teacher_lessons_in_slot[t, d, p].append(x[c, s, d, p])
-    for (c, s, g), t in data.subgroup_assigned_teacher.items():
-        for d, p in itertools.product(D, P):
-            teacher_lessons_in_slot[t, d, p].append(z[c, s, g, d, p])
+    for c, s, d, p in itertools.product(C, S, D, P):
+        if s not in splitS and (c, s) in data.assigned_teacher:
+            teacher_lessons_in_slot[data.assigned_teacher[c, s], d, p].append(x[c, s, d, p])
+    for c, s, g, d, p in itertools.product(C, splitS, G, D, P):
+        if (c, s, g) in data.subgroup_assigned_teacher:
+            teacher_lessons_in_slot[data.subgroup_assigned_teacher[c, s, g], d, p].append(z[c, s, g, d, p])
 
     # teacher_busy[t,d,p] — у учителя есть хотя бы 1 урок в слоте
     teacher_busy = {(t, d, p): model.NewBoolVar(f'tbusy_{t}_{d}_{p}')
@@ -171,6 +182,7 @@ def build_and_solve_with_or_tools(
     # --------------------------- 3.2) ЖЁСТКИЕ ОГРАНИЧЕНИЯ ---------------------------
 
     # (1) Связь y с уроками: y == OR(x, z) в слоте
+    # y[c,d,p] — в слоте у класса есть ЛЮБОЙ урок
     for c, d, p in itertools.product(C, D, P):
         lessons = _class_lessons_in_slot(c, d, p)
         if lessons:
@@ -186,6 +198,7 @@ def build_and_solve_with_or_tools(
 
     # (2a) Предметы по 2 часа в неделю (не из paired_subjects) не ставим дважды в один день
     paired = getattr(data, 'paired_subjects', set())
+    # plan_hours = { ("5A", "math"): 2,
     for (c, s), h in data.plan_hours.items():
         if h == 2 and s not in paired:
             for d in D:
@@ -203,12 +216,18 @@ def build_and_solve_with_or_tools(
             if lessons:
                 model.AddAtMostOne(list(lessons))  # список, не генератор
 
-            # (3b) Индивидуальные выходные/недоступные дни
+            # (3b) Индивидуальные выходные/недоступные дни - выходные дни учителя
+            # days_off = {"Petrov": {"Mon"}}
             if d in getattr(data, 'days_off', {}).get(t, set()):
                 for v in lessons:
                     model.Add(v == 0)
 
             # (3c) Явно запрещённые слоты учителя (если есть)
+            #  teacher_forbidden_slots = {
+            #         "Petrov": [("Tue", 1)],
+            #         "Nikolaev": [("Thu", 7)],
+            #     }
+            # учитель не может вести уроки в определенные слоты
             for (td, tp) in getattr(data, 'teacher_forbidden_slots', {}).get(t, []):
                 if td == d and tp == p:
                     for v in lessons:
@@ -217,6 +236,7 @@ def build_and_solve_with_or_tools(
     # (4) Ограничения внутри класса/слота
     for c, d, p in itertools.product(C, D, P):
         # (4a) Не более одного НЕДЕЛИМОГО предмета
+        # в одном классе в один и тот же момент времени может идти не более одного "цельного" (неделимого на подгруппы) урока.
         non_split_vars = [x[(c, s, d, p)] for s in S if s not in splitS if (c, s, d, p) in x]
         if non_split_vars:
             model.AddAtMostOne(list(non_split_vars))
@@ -229,8 +249,12 @@ def build_and_solve_with_or_tools(
 
         # (4c) Неделимый и какой‑либо сплит одновременно — запрещено.
         # Вводим has_split[c,d,p] = OR всех z в слоте и «конкурируем» его с неделимыми:
+        # all_split_vars_in_slot[c,d,p]
+        # собирает в один список все возможные уроки, делимые на подгруппы, которые могут проходить у класса c в слоте (d, p).
         all_split_vars_in_slot = [z[(c, s, g, d, p)] for s in splitS for g in G if (c, s, g, d, p) in z]
         if all_split_vars_in_slot:
+            # has_split[c,d,p] — в слоте есть ХОТЯ БЫ ОДИН сплит‑урок (любой предмет, любая подгруппа)
+            # устанавливает эквивалентность между переменной has_split и логической операцией ИЛИ(OR) над всеми переменными в списке all_split_vars_in_slot.
             model.AddMaxEquality(has_split[c, d, p], all_split_vars_in_slot)
         else:
             model.Add(has_split[c, d, p] == 0)
@@ -243,6 +267,7 @@ def build_and_solve_with_or_tools(
             pass
 
     # (5) Совместимость сплитов: is_subj_taught[c,s,d,p] == OR_g z[c,s,g,d,p]
+    # is_subj_taught[c,s,d,p] — флаг, что сплит‑предмет s преподаётся (какой‑то подгруппе) в слоте
     for c, s, d, p in itertools.product(C, splitS, D, P):
         subgroup_vars = [z[(c, s, g, d, p)] for g in G if (c, s, g, d, p) in z]
         if subgroup_vars:
@@ -262,45 +287,52 @@ def build_and_solve_with_or_tools(
                 ])
 
     # (6) Дополнительные ограничения для начальной школы и общие правила
-    grade_max = getattr(data, 'grade_max_lessons_per_day', {})
+    # subjects_not_last_lesson = {2: {"math", "eng"}, 5: {"math"}}
     subjects_not_last_map = getattr(data, 'subjects_not_last_lesson', {})
+    # elementary_english_periods = {2, 3, 4}
     english_periods = getattr(data, 'elementary_english_periods', {2, 3, 4})
-    last_period = max(P) if P else 0
+
+    # Максимальное число уроков в день по параллели, например {2: 4, 3: 5, 4: 5}
+    # grade_max_lessons_per_day = {5: 7, 2: 4}
+    grade_max_lessons_per_day = getattr(data, 'grade_max_lessons_per_day', {})
+
+    # Дополняем grade_max_lessons_per_day для всех уникальных классов
+    unique_grades = {class_grades.get(c) for c in C if class_grades.get(c) is not None}
+    for g in unique_grades:
+        if g not in grade_max_lessons_per_day:
+            grade_max_lessons_per_day[g] = max(P)
+
 
     # (6a) Ограничение по числу уроков в день
     for c in C:
-        g = class_grades.get(c)
+        g = class_grades.get(c)  # class_grades - год обучения
         if g is not None:
             for d in D:
-                day_load = sum(y[c, d, p] for p in P)
-                if g in grade_max:
-                    model.Add(day_load <= grade_max[g])
+                day_load = sum(y[c, d, p] for p in P) # y[c,d,p] — в слоте у класса есть ЛЮБОЙ урок
+                if g in grade_max_lessons_per_day:
+                    model.Add(day_load <= grade_max_lessons_per_day[g])
 
     # (6b) Предметы, запрещённые последними уроками по параллелям
+    # Если урок запрещённого предмета s стоит в периоде p, то после него в этот день должен быть хотя бы ещё один урок (любой).
     for c in C:
         g = class_grades.get(c)
         if g is not None:
             banned_subjects = subjects_not_last_map.get(g, set())
             for s in banned_subjects:
+                # A lesson of this subject cannot be the last one of the day for this class.
+                # This is enforced by checking that if a lesson of subject 's' is at period 'p',
+                # the sum of lessons in subsequent periods must be at least 1.
+                # This naturally prevents placing it in the last scheduled slot for that class on that day.
                 if s in splitS:
-                    for g_id in G:
-                        for d in D:
-                            if (c, s, g_id, d, last_period) in z:
-                                model.Add(z[c, s, g_id, d, last_period] == 0)
-                            for idx, p in enumerate(P[:-1]):
-                                var = z.get((c, s, g_id, d, p), false_var)
-                                after = [y[c, d, q] for q in P if q > p]
-                                if after:
-                                    model.Add(sum(after) >= 1).OnlyEnforceIf(var)
+                    for g_id, d, p in itertools.product(G, D, P):
+                        var = z.get((c, s, g_id, d, p), false_var)
+                        day_load_after = sum(y[c, d, q] for q in P if q > p)
+                        model.Add(day_load_after >= 1).OnlyEnforceIf(var)
                 else:
-                    for d in D:
-                        if (c, s, d, last_period) in x:
-                            model.Add(x[c, s, d, last_period] == 0)
-                        for idx, p in enumerate(P[:-1]):
-                            var = x.get((c, s, d, p), false_var)
-                            after = [y[c, d, q] for q in P if q > p]
-                            if after:
-                                model.Add(sum(after) >= 1).OnlyEnforceIf(var)
+                    for d, p in itertools.product(D, P):
+                        var = x.get((c, s, d, p), false_var)
+                        day_load_after = sum(y[c, d, q] for q in P if q > p)
+                        model.Add(day_load_after >= 1).OnlyEnforceIf(var)
 
     # (6c) Правила для начальной школы (2-4 классы)
     for c in C:
@@ -361,6 +393,7 @@ def build_and_solve_with_or_tools(
     # ------------------------- 3.3) ДОПОЛНИТЕЛЬНЫЕ ОПЦИИ (НЕОБЯЗ.) -------------------------
 
     # (A) Синхронность подгрупп для некоторых сплит‑предметов
+    # must_sync_split_subjects = {"eng", "cs"}
     must_sync = set(getattr(data, 'must_sync_split_subjects', [])) & set(splitS)
     if must_sync:
         for s in must_sync:

@@ -108,14 +108,14 @@ def create_manual_data() -> InputData:
         ("5A", "eng", 2): 1,
         ("5A", "cs", 1): 1,
         ("5A", "cs", 2): 1,
-        ("5A", "labor", 1): 1,
-        ("5A", "labor", 2): 1,
+        ("5A", "labor", 1): 2,
+        ("5A", "labor", 2): 2,
         ("5B", "eng", 1): 1,
         ("5B", "eng", 2): 1,
         ("5B", "cs", 1): 1,
         ("5B", "cs", 2): 1,
-        ("5B", "labor", 1): 1,
-        ("5B", "labor", 2): 1,
+        ("5B", "labor", 1): 2,
+        ("5B", "labor", 2): 2,
         # Класс 2A получает две части английского — по одному часу на подгруппу
         ("2A", "eng", 1): 1,
         ("2A", "eng", 2): 1,
@@ -165,9 +165,12 @@ def create_manual_data() -> InputData:
     # ------------------------------------------------------------------
     # Политики и предпочтения
     # ------------------------------------------------------------------
-    grade_max_lessons_per_day = {5: 6, 2: 4}
+    grade_max_lessons_per_day = {5: 7, 2: 4}
     subjects_not_last_lesson = {2: {"math", "eng"}, 5: {"math"}}
     elementary_english_periods = {2, 3, 4}
+
+    # - grade_subject_max_consecutive_days: ограничения по макс. подряд идущим дням для предметов по параллелям
+    # физкультура не более 2 дней подряд для 5 класса
     grade_subject_max_consecutive_days = {5: {"PE": 2}}
     class_slot_weight = {
         ("5A", "Fri", 7): 10.0,
@@ -176,8 +179,8 @@ def create_manual_data() -> InputData:
     teacher_slot_weight = {("Petrov", "Tue", 1): 8.0}
     class_subject_day_weight = {("5B", "math", "Mon"): 6.0}
     compatible_pairs = make_default_compat()
-    paired_subjects = {"math"}
-    must_sync_split_subjects = {"eng", "cs"}
+    paired_subjects = {"labor"}
+    must_sync_split_subjects = {"labor"}
 
     return InputData(
         days=days,
