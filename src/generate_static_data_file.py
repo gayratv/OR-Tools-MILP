@@ -24,6 +24,13 @@ def generate_function_string(data: InputData) -> str:
     split_subjects_str = pprint.pformat(data.split_subjects, indent=4, width=120)
     compatible_pairs_str = pprint.pformat(data.compatible_pairs, indent=4, width=120)
     paired_subjects_str = pprint.pformat(data.paired_subjects, indent=4, width=120)
+    # Новые поля
+    grade_max_lessons_per_day_str = pprint.pformat(data.grade_max_lessons_per_day, indent=4, width=120)
+    teacher_forbidden_slots_str = pprint.pformat(data.teacher_forbidden_slots, indent=4, width=120)
+    subjects_not_last_lesson_str = pprint.pformat(data.subjects_not_last_lesson, indent=4, width=120)
+    elementary_english_periods_str = pprint.pformat(data.elementary_english_periods, indent=4, width=120)
+    grade_subject_max_consecutive_days_str = pprint.pformat(data.grade_subject_max_consecutive_days, indent=4, width=120)
+    must_sync_split_subjects_str = pprint.pformat(data.must_sync_split_subjects, indent=4, width=120)
 
     # Собираем итоговый код функции в виде многострочной f-строки
     function_code = f"""
@@ -70,6 +77,15 @@ def create_timetable_data() -> InputData:
     # --- Спаривание ---
     paired_subjects = {paired_subjects_str}
 
+    # --- Дополнительные политики ---
+    english_subject_name = "{data.english_subject_name}"
+    teacher_forbidden_slots = {teacher_forbidden_slots_str}
+    grade_max_lessons_per_day = {grade_max_lessons_per_day_str}
+    subjects_not_last_lesson = {subjects_not_last_lesson_str}
+    elementary_english_periods = {elementary_english_periods_str}
+    grade_subject_max_consecutive_days = {grade_subject_max_consecutive_days_str}
+    must_sync_split_subjects = {must_sync_split_subjects_str}
+
     return InputData(
         days=days,
         periods=periods,
@@ -88,7 +104,14 @@ def create_timetable_data() -> InputData:
         teacher_slot_weight=teacher_slot_weight,
         class_subject_day_weight=class_subject_day_weight,
         compatible_pairs=compatible_pairs,
-        paired_subjects=paired_subjects
+        paired_subjects=paired_subjects,
+        english_subject_name=english_subject_name,
+        teacher_forbidden_slots=teacher_forbidden_slots,
+        grade_max_lessons_per_day=grade_max_lessons_per_day,
+        subjects_not_last_lesson=subjects_not_last_lesson,
+        elementary_english_periods=elementary_english_periods,
+        grade_subject_max_consecutive_days=grade_subject_max_consecutive_days,
+        must_sync_split_subjects=must_sync_split_subjects
     )
 """
     return function_code

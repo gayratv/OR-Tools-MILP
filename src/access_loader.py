@@ -1,10 +1,10 @@
 import pandas as pd
 from sqlalchemy import create_engine
 from urllib.parse import quote_plus
-from input_data import InputData
+from input_data import InputData, ClassInfo
 from pprint import pprint
 from sqlalchemy import text
-from typing import Dict
+from typing import Dict, Set, List
 import re
 
 
@@ -83,13 +83,25 @@ def load_data_from_access(db_path: str) -> InputData:
             print(f"ВНИМАНИЕ: Не удалось загрузить {view_name}. Возвращен пустой словарь. Ошибка: {e}")
             return {}
 
+    def get_class_info_list(view_name: str) -> List[ClassInfo]:
+        """Читает представление и возвращает список объектов ClassInfo."""
+        try:
+            df = pd.read_sql(f"SELECT * FROM {view_name}", engine)
+            if df.empty:
+                return []
+
+            return [ClassInfo(name=row['класс_eng'], grade=int(row['grade'])) for _, row in df.iterrows()]
+        except Exception as e:
+            print(f"ВНИМАНИЕ: Не удалось загрузить {view_name}. Возвращен пустой список ClassInfo. Ошибка: {e}")
+            return []
+
     # --- Загрузка данных из ваших представлений в Access ---
     # Предполагается, что вы создали представления с именами vClasses, vSubjects и т.д.
 
-    # 1. Простые списки
-    # classes = ["5A", "5B"]
-    classes = get_list("vCLASS", "класс_eng")
+    # 1. Списки
+    classes = get_class_info_list("vCLASS")
     # print(classes)
+    # return
 
 
     # subjects = ["math", "cs", "eng", "labor", "history"]
@@ -184,6 +196,93 @@ def load_data_from_access(db_path: str) -> InputData:
     # pprint(days)
     # return
 
+    english_subject_name = "Eng"
+
+    # Явные запреты слотов у преподавателей: teacher -> [(day, period), ...]
+    # учитель не работает в этот день и слот
+    # teacher_forbidden_slots = {
+    #     "Petrov": [("Tue", 1)],
+    #     "Nikolaev": [("Thu", 7)],
+    # }
+    teacher_forbidden_slots: Dict[str, list] = {}
+    try:
+        df_teacher_forbidden = pd.read_sql("SELECT * FROM v_teacher_forbidden_slots", engine)
+        if not df_teacher_forbidden.empty:
+            # Группируем по учителю и собираем кортежи (день, слот) в список
+            teacher_forbidden_slots = (
+                df_teacher_forbidden.groupby('teacher')[['DayName', 'slot']]
+                .apply(lambda x: [tuple(y) for y in x.to_numpy()], include_groups=False)
+                .to_dict()
+            )
+    except Exception as e:
+        print(f"ВНИМАНИЕ: Не удалось загрузить v_teacher_forbidden_slots. Возвращен пустой словарь. Ошибка: {e}")
+
+    # pprint(teacher_forbidden_slots)
+    # return
+
+    # Максимальное число уроков в день по параллели, например {2: 4, 3: 5, 4: 5}
+    # grade_max_lessons_per_day=  {2: 4, 3: 5, 4: 5}
+    grade_max_lessons_per_day = get_dict(
+        "сп_макс_уроков_в_день",
+        key_cols=["grade"],
+        value_col="max_lessons_per_day",
+        value_is_numeric=True)
+    # pprint(grade_max_lessons_per_day)
+    # return
+
+    # subjects_not_last_lesson={5: {"math"}, 7: {"math", "physics"}}
+    subjects_not_last_lesson: Dict[int, set] = {}
+    try:
+        df_not_last = pd.read_sql("SELECT * FROM v_subjects_not_last_lesson", engine)
+        if not df_not_last.empty:
+            # Группируем по параллели (grade) и собираем предметы в множество (set)
+            subjects_not_last_lesson = df_not_last.groupby('grade')['subject'].apply(set).to_dict()
+    except Exception as e:
+        print(f"ВНИМАНИЕ: Не удалось загрузить v_subjects_not_last_lesson. Возвращен пустой словарь. Ошибка: {e}")
+    # pprint(subjects_not_last_lesson)
+    # return
+
+    # elementary_english_periods
+    # Разрешённые номера уроков для английского в начальной школе. Пример: {2, 3, 4}.
+
+    elementary_english_periods: Set[int] = set()
+    try:
+        # Предполагается, что существует представление 'v_elementary_english_periods'
+        # со столбцом 'period_number', содержащим разрешенные номера уроков.
+        df_elem_eng_periods = pd.read_sql("SELECT period_number FROM elementary_english_periods", engine)
+        if not df_elem_eng_periods.empty:
+            # Преобразуем столбец в набор целых чисел
+            elementary_english_periods = set(df_elem_eng_periods['period_number'].astype(int).tolist())
+    except Exception as e:
+        print(f"ВНИМАНИЕ: Не удалось загрузить v_elementary_english_periods. Возвращен пустой набор. Ошибка: {e}")
+    # pprint(elementary_english_periods)
+    # return
+
+    # grade_subject_max_consecutive_days
+    # Ограничения по максимальному числу подряд идущих дней, когда у параллели может быть один и тот же предмет. Пример: {3: {"PE": 2}}.
+
+    grade_subject_max_consecutive_days: Dict[int, Dict[str, int]] = {}
+    try:
+        # Предполагается, что существует представление 'v_grade_subject_max_consecutive_days'
+        # со столбцами 'grade', 'subject', 'max_days'.
+        df_max_days = pd.read_sql("SELECT * FROM v_grade_subject_max_consecutive_days", engine)
+        if not df_max_days.empty:
+            # Группируем по 'grade', а затем для каждой группы создаем вложенный словарь {subject: max_days}
+            for grade, group in df_max_days.groupby('grade'):
+                grade_subject_max_consecutive_days[int(grade)] = (
+                    group.set_index('subject')['max_days'].astype(int).to_dict()
+                )
+    except Exception as e:
+        print(f"ВНИМАНИЕ: Не удалось загрузить v_grade_subject_max_consecutive_days. Возвращен пустой словарь. Ошибка: {e}")
+    # pprint(grade_subject_max_consecutive_days)
+    # return
+    
+    # must_sync_split_subjects
+    # Набор сплит-предметов, которые должны вестись синхронно у всех подгрупп.
+    # must_sync_split_subjects = {"labor"}
+    must_sync_split_subjects = set(get_list("v_must_sync_split_subjects", "subject_name"))
+    # pprint(must_sync_split_subjects)
+    # return
 
     # --- Сборка и возврат объекта InputData ---
     return InputData(
@@ -199,7 +298,14 @@ def load_data_from_access(db_path: str) -> InputData:
         teacher_slot_weight=teacher_slot_weight,
         class_subject_day_weight=class_subject_day_weight,
         compatible_pairs=compatible_pairs,
-        paired_subjects=paired_subjects
+        paired_subjects=paired_subjects,
+        english_subject_name=english_subject_name,
+        teacher_forbidden_slots=teacher_forbidden_slots,
+        grade_max_lessons_per_day=grade_max_lessons_per_day,
+        subjects_not_last_lesson=subjects_not_last_lesson,
+        elementary_english_periods=elementary_english_periods,
+        grade_subject_max_consecutive_days=grade_subject_max_consecutive_days,
+        must_sync_split_subjects=must_sync_split_subjects
     )
 
 
