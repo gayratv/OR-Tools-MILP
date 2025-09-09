@@ -346,47 +346,53 @@ def build_and_solve_with_or_tools(
                     model.Add(day_load <= grade_max_lessons_per_day[g])
 
     # (6b) Предметы, запрещённые последними уроками по параллелям
-    # Если урок запрещённого предмета s стоит в периоде p, то после него в этот день должен быть хотя бы ещё один урок (любой).
-    # версия до рефакторинга
+    # версия после рефакторинга
+    # Идея: если запрещённый предмет стоит в периоде p, то ПОСЛЕ него в этот день должен быть хотя бы один любой урок. Иначе — запрещаем.
     if optimizationGoals.subjects_not_last_lesson_optimization:
         for c in C:
-            day_is_last_lesson = {
-                (d, p): model.NewBoolVar(f'is_last_{c}_{d}_{p}')
-                for d, p in itertools.product(D, P)
-            }
-            for d in D:
-                lessons_on_day = [y[c, d, p] for p in P]
-                for p_idx, p in enumerate(P):
-                    # p is the last lesson if it's taught and no lesson after it is taught
-                    no_lessons_after = model.NewBoolVar(f'no_lessons_after_{c}_{d}_{p}')
-                    lessons_after = [lessons_on_day[i] for i in range(p_idx + 1, len(P))]
-                    if lessons_after:
-                        # no_lessons_after <=> (OR(lessons_after) == 0)
-                        # Устанавливаем полную эквивалентность.
-                        # no_lessons_after истинно ТОГДА И ТОЛЬКО ТОГДА, когда все уроки после = 0.
-                        model.AddBoolOr([l.Not() for l in lessons_after]).OnlyEnforceIf(no_lessons_after)
-                        model.AddBoolOr(lessons_after).OnlyEnforceIf(no_lessons_after.Not())
-                    else: # last period
-                        model.Add(no_lessons_after == 1)
-                    # Правильная эквивалентность:
-                    # day_is_last_lesson[d, p] <=> (lessons_on_day[p_idx] AND no_lessons_after)
-                    # Это означает, что day_is_last_lesson[d, p] является результатом логического "И".
-                    model.AddBoolAnd([lessons_on_day[p_idx], no_lessons_after]).OnlyEnforceIf(day_is_last_lesson[d, p])
-                    model.AddImplication(day_is_last_lesson[d, p], lessons_on_day[p_idx])
-                    model.AddImplication(day_is_last_lesson[d, p], no_lessons_after)
+            grade = class_grades.get(c)
+            if grade is None:
+                continue
 
-            g = class_grades.get(c)
-            if g is not None:
-                banned_subjects = subjects_not_last_lesson.get(g, set())
+            banned_subjects = subjects_not_last_lesson.get(grade, set())
+            if not banned_subjects:
+                continue
+
+            for d in D:
+                # Для каждого периода p подготовим список флагов "уроки после p" у класса c.
+                after_y = {
+                    p: [y[c, d, q] for q in P[idx + 1:]]
+                    for idx, p in enumerate(P)
+                }
+
                 for s in banned_subjects:
                     if s in splitS:
-                        for g_id, d, p in itertools.product(G, D, P):
-                            var = z.get((c, s, g_id, d, p), false_var)
-                            model.AddImplication(var, day_is_last_lesson[d, p].Not())
+                        # Подгрупповые предметы: проверяем каждый возможный (c,s,g,d,p)
+                        for g_id in G:
+                            for p in P:
+                                key = (c, s, g_id, d, p)
+                                if key not in z:
+                                    continue
+                                var = z[key]
+                                later = after_y[p]
+                                if later:
+                                    # var ⇒ OR(later)  эквивалентно (¬var ∨ y_{p+1} ∨ ... ∨ y_last)
+                                    model.AddBoolOr([var.Not()] + later)
+                                else:
+                                    # Нет слотов позже — запрещаем ставить этот предмет в последний период
+                                    model.Add(var == 0)
                     else:
-                        for d, p in itertools.product(D, P):
-                            var = x.get((c, s, d, p), false_var)
-                            model.AddImplication(var, day_is_last_lesson[d, p].Not())
+                        # Недельные (неподгрупповые) предметы
+                        for p in P:
+                            key = (c, s, d, p)
+                            if key not in x:
+                                continue
+                            var = x[key]
+                            later = after_y[p]
+                            if later:
+                                model.AddBoolOr([var.Not()] + later)
+                            else:
+                                model.Add(var == 0)
 
     # (6c) Правила для начальной школы (2-4 классы)
     for c in C:
