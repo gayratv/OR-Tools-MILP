@@ -173,7 +173,7 @@ def create_manual_data() -> InputData:
 
     # - grade_subject_max_consecutive_days: ограничения по макс. подряд идущим дням для предметов по параллелям
     # физкультура не более 2 дней подряд для 5 класса
-    grade_subject_max_consecutive_days = {5: {"PE": 2}}
+    grade_subject_max_consecutive_days = {5: {"PE": 2, "eng": 2}}
     class_slot_weight = {
         ("5A", "Fri", 7): 10.0,
         ("5A", "Fri", 6): 5.0,
@@ -235,4 +235,3 @@ def create_optimization_weights() -> OptimizationWeights:
 
 
 __all__ = ["create_manual_data", "create_optimization_weights"]
-

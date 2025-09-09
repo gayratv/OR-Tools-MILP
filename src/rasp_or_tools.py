@@ -112,7 +112,7 @@ def build_and_solve_with_or_tools(
     class_grades = {c.name: c.grade for c in data.classes}
 
     # grade_subject_max_consecutive_days = {5: {"PE": 2}}
-    grade_subject_limits = getattr(data, 'grade_subject_max_consecutive_days', {})
+    grade_subject_max_consecutive_days = getattr(data, 'grade_subject_max_consecutive_days', {})
     C, S, D, P = class_names, data.subjects, data.days, data.periods
 
     # split_subjects = {"eng", "cs", "labor"}
@@ -351,6 +351,7 @@ def build_and_solve_with_or_tools(
                     for d, p in itertools.product(D, P):
                         if p not in english_periods and (c, subj, d, p) in x:
                             model.Add(x[c, subj, d, p] == 0)
+
             # Запрет двух одинаковых предметов подряд
             for s in S:
                 for d in D:
@@ -366,40 +367,53 @@ def build_and_solve_with_or_tools(
                         model.Add(v1 + v2 <= 1)
 
     # (6d) Максимум подряд идущих дней с предметом по параллелям
-    for c in C:
-        g = class_grades.get(c)
-        limits = grade_subject_limits.get(g, {})
-        for subj, limit in limits.items():
-            day_flag = {}
-            for d in D:
-                v = model.NewBoolVar(f'{subj}_day_{c}_{d}')
-                day_flag[d] = v
-                lessons = []
-                if subj in splitS:
-                    for g_id in G:
-                        for p in P:
-                            if (c, subj, g_id, d, p) in z:
-                                lessons.append(z[c, subj, g_id, d, p])
-                else:
-                    for p in P:
-                        if (c, subj, d, p) in x:
-                            lessons.append(x[c, subj, d, p])
-                if lessons:
-                    model.AddMaxEquality(v, lessons)
-                else:
-                    model.Add(v == 0)
-            for i in range(len(D) - limit):
-                model.Add(sum(day_flag[D[j]] for j in range(i, i + limit + 1)) <= limit)
+    # grade_subject_max_consecutive_days = {5: {"PE": 2, "eng": 2}}
+    for grade, limits in grade_subject_max_consecutive_days.items():
+        for c in C:
+            if class_grades.get(c) == grade:
+                for subj, limit in limits.items():
+                    # limits.items = {"PE": 2, "eng": 2}
+                    # subj, limit = "PE": 2
+                    day_flag = {}
+                    for d in D:
+                        v = model.NewBoolVar(f'{subj}_day_{c}_{d}')
+                        day_flag[d] = v
+                        lessons = []
+                        if subj in splitS:
+                            for g_id in G:
+                                for p in P:
+                                    if (c, subj, g_id, d, p) in z:
+                                        lessons.append(z[c, subj, g_id, d, p])
+                        else:
+                            for p in P:
+                                if (c, subj, d, p) in x:
+                                    lessons.append(x[c, subj, d, p])
+                        if lessons:
+                            model.AddMaxEquality(v, lessons)
+                        else:
+                            model.Add(v == 0)
+                    # Ограничение на максимальное количество подряд идущих дней с предметом
+                    # Если limit = 2, то сумма day_flag для 3 подряд идущих дней не должна превышать 2.
+                    for i in range(len(D) - limit):
+                        model.Add(sum(day_flag[D[j]] for j in range(i, i + limit + 1)) <= limit)
 
     # ------------------------- 3.3) ДОПОЛНИТЕЛЬНЫЕ ОПЦИИ (НЕОБЯЗ.) -------------------------
 
     # (A) Синхронность подгрупп для некоторых сплит‑предметов
-    # must_sync_split_subjects = {"eng", "cs"}
-    must_sync = set(getattr(data, 'must_sync_split_subjects', [])) & set(splitS)
+    # Опциональный параметр `must_sync_split_subjects` в `InputData`
+    # позволяет указать предметы, подгруппы которых должны идти синхронно.
+    # Например, если `must_sync_split_subjects = {"eng", "cs"}`,
+    # то для английского и информатики все подгруппы класса должны
+    # либо иметь урок в данном слоте, либо не иметь его.
+    # Это полезно, когда, например, все подгруппы по английскому
+    # занимаются одновременно, но с разными учителями.
+    must_sync = set(getattr(data, 'must_sync_split_subjects', [])) & splitS
     if must_sync:
         for s in must_sync:
             for c, d, p in itertools.product(C, D, P):
-                # Все z для разных g в этом слоте должны быть равны (0/1 одновременно)
+                # Устанавливаем равенство переменных `z` для всех подгрупп `g1` и `g2`
+                # одного и того же сплит-предмета `s` в одном и том же слоте `(c, d, p)`.
+                # Это означает, что если одна подгруппа имеет урок, то и другая должна.
                 for g1, g2 in itertools.combinations(G, 2):
                     if (c, s, g1, d, p) in z and (c, s, g2, d, p) in z:
                         model.Add(z[c, s, g1, d, p] == z[c, s, g2, d, p])
