@@ -1011,6 +1011,57 @@ def build_and_solve_with_or_tools(
         # тем более компактно распределены уроки в течение дня.
         sum_inside_teacher = sum(inside_teacher.values())
 
+    sum_span_teacher=zero_var
+    if optimizationGoals.teacher_slot_optimization2:
+        # --- Учителя (ускоренная метрика «длины конверта» без prefix/suffix/inside) ---
+        teacher_has_any = {}
+        teacher_first = {}
+        teacher_last = {}
+        teacher_span = {}
+
+        minP, maxP = (min(P), max(P))
+
+        for t, d in itertools.product(data.teachers, D):
+            # Быстрый отбор: если день полностью недоступен (day off или все слоты запрещены),
+            # окна там не возникнут — пропускаем.
+            if d in getattr(data, 'days_off', {}).get(t, set()):
+                continue
+            forb_slots = {(dd, pp) for dd, pp in getattr(data, 'teacher_forbidden_slots', {}).get(t, [])}
+            if all((d, p) in forb_slots for p in P):
+                continue
+
+            # has_any[t,d] = OR_p teacher_busy[t,d,p]
+            has_any = model.NewBoolVar(f'has_any_{t}_{d}')
+            teacher_has_any[t, d] = has_any
+            busy_list = [teacher_busy[t, d, p] for p in P]
+            if busy_list:
+                model.AddMaxEquality(has_any, busy_list)
+            else:
+                model.Add(has_any == 0)
+
+            # first/last — индексы первого и последнего занятого слота (если есть занятия)
+            f = model.NewIntVar(minP, maxP, f'first_{t}_{d}')
+            l = model.NewIntVar(minP, maxP, f'last_{t}_{d}')
+            teacher_first[t, d] = f
+            teacher_last[t, d] = l
+
+            # Если в p есть урок, то first <= p и last >= p
+            for p in P:
+                model.Add(f <= p).OnlyEnforceIf(teacher_busy[t, d, p])
+                model.Add(l >= p).OnlyEnforceIf(teacher_busy[t, d, p])
+
+            # Полезно поджать домены, когда уроков нет
+            # (при has_any=0 span=0, а f/l свободны в домене; это ок)
+            model.Add(l >= f).OnlyEnforceIf(has_any)
+
+            # span == (l - f + 1) при наличии занятий; иначе 0
+            span = model.NewIntVar(0, (maxP - minP + 1) if P else 0, f'span_{t}_{d}')
+            teacher_span[t, d] = span
+            model.Add(span == (l - f + 1)).OnlyEnforceIf(has_any)
+            model.Add(span == 0).OnlyEnforceIf(has_any.Not())
+
+        # Суммарная «длина конвертов» учителей = сумма span
+        sum_span_teacher = sum(teacher_span.values())
 
     # (B) Предпочтение ранних слотов (минимизируем номер периода)
     beta_early = _get_weight(weights, 'beta_early', 0)
@@ -1078,6 +1129,7 @@ def build_and_solve_with_or_tools(
     # Лексикографическая оптимизация отключена.
     objective = (
         alpha_runs_teacher * sum_inside_teacher +  # Окна у учителей
+        alpha_runs_teacher * sum_span_teacher +
         alpha_runs * sum_inside_class +            # Окна у классов
         early_term +                               # Предпочтение ранних слотов
         balance_term +                             # Баланс нагрузки по дням
