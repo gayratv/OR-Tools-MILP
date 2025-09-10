@@ -1063,6 +1063,39 @@ def build_and_solve_with_or_tools(
         # Суммарная «длина конвертов» учителей = сумма span
         sum_span_teacher = sum(teacher_span.values())
 
+    sum_windows_teacher_runs = zero_var
+    if getattr(optimizationGoals, 'teacher_runs_optimization', False):
+        windows_terms = []
+
+        for t, d in itertools.product(data.teachers, D):
+            # Быстрый пропуск: выходной день или заведомо нет кандидатов
+            if d in getattr(data, 'days_off', {}).get(t, set()):
+                continue
+            if not any(teacher_lessons_in_slot[t, d, p] for p in P):
+                continue
+
+            # has_any[t,d] = OR_p teacher_busy[t,d,p]
+            has_any = model.NewBoolVar(f'has_any_{t}_{d}')
+            model.AddMaxEquality(has_any, [teacher_busy[t, d, p] for p in P])
+
+            # adj[p] = busy[p] ∧ busy[p+1]
+            adj_vars = []
+            for idx in range(len(P) - 1):
+                p, q = P[idx], P[idx + 1]
+                a = model.NewBoolVar(f'adj_{t}_{d}_{p}_{q}')
+                adj_vars.append(a)
+                model.Add(a <= teacher_busy[t, d, p])
+                model.Add(a <= teacher_busy[t, d, q])
+                model.Add(a >= teacher_busy[t, d, p] + teacher_busy[t, d, q] - 1)
+
+            # windows = (Σ busy) - (Σ adj) - has_any
+            expr_windows_td = (sum(teacher_busy[t, d, p] for p in P)
+                               - sum(adj_vars)
+                               - has_any)
+            windows_terms.append(expr_windows_td)
+
+        sum_windows_teacher_runs = sum(windows_terms)
+
     # (B) Предпочтение ранних слотов (минимизируем номер периода)
     beta_early = _get_weight(weights, 'beta_early', 0)
     # y[c,d,p] — в слоте у класса есть ЛЮБОЙ урок
@@ -1130,6 +1163,7 @@ def build_and_solve_with_or_tools(
     objective = (
         alpha_runs_teacher * sum_inside_teacher +  # Окна у учителей
         alpha_runs_teacher * sum_span_teacher +
+        alpha_runs_teacher * sum_windows_teacher_runs +
         alpha_runs * sum_inside_class +            # Окна у классов
         early_term +                               # Предпочтение ранних слотов
         balance_term +                             # Баланс нагрузки по дням
