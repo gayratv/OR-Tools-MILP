@@ -1,0 +1,106 @@
+Обзор Yandex Cloud SDK
+https://yandex.cloud/ru/docs/overview/sdk/quickstart
+https://yandex.cloud/ru/docs/overview/sdk/quickstart
+
+Интерфейс командной строки Yandex Cloud (CLI)
+https://yandex.cloud/ru/docs/storage/tools/yc-cli
+
+https://yandex.cloud/ru/docs/cli/quickstart
+
+
+ssh -i ~/.ssh/ya-cloud/priv yc-user@89.169.132.126
+
+# зарезервировать IP адрес:
+yc vpc address create --external-ipv4 zone=ru-central1-a
+yc vpc address list
+
+address: 46.21.247.86
+  zone_id: ru-central1-a
+
+# Удалить статический публичный IP-адрес
+yc vpc address list
+yc vpc address delete --help
+
+yc vpc address delete  e9bj3aldtjpr0hs2frbc
+
+# Привязать к виртуальной машине публичный IP-адрес
+yc compute instance list
+
+yc compute instance add-one-to-one-nat \
+  --id=<идентификатор_ВМ> \
+  --network-interface-index=0
+
+
+yc compute image list --folder-id standard-images
+fd80bm0rh4rkepi5ksdi | ubuntu-22-04-lts-v20230925                                 | ubuntu-2204-lts                                 | f2e3vsap4cmi4pqk05lg
+
+
+
+#  --nat-address=<IP-адрес>
+
+
+Создание ВМ с Container Optimized Image и несколькими Docker-контейнерами
+https://yandex.cloud/ru/docs/tutorials/container-infrastructure/docker-compose
+
+
+=============
+Ubuntu 24.04 LTS
+Идентификаторы продукта
+image_id:
+fd888dplf7gt1nguheht
+family_id:
+ubuntu-2404-lts-oslogin
+
+
+Передача логов с Container Optimized Image в Yandex Cloud Logging
+https://yandex.cloud/ru/docs/cos/tutorials/coi-fluent-bit-logging
+
+Спецификации Docker-контейнера
+https://yandex.cloud/ru/docs/cos/concepts/coi-specifications#coi-spec
+
+
+Создание ВМ с Container Optimized Image
+https://yandex.cloud/ru/docs/cos/tutorials/vm-create#spec-cli_1
+
+
+ya-cloud/create-docker.sh
+ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.36.167
+docker stop d39484251ccb
+
+docker run -dit --name SH gayrat/school_scheduler:latest bash
+
+docker run -dit \
+  --name SH \
+  -v /app1:/app2 \
+  gayrat/school_scheduler:latest \
+  bash
+
+/app1 — путь на хостовой машине (он должен существовать).
+
+docker exec -it SH bash
+
+остановить и удалить контейнер:
+docker stop SH && docker rm SH
+
+python rasp_or_tools.py
+
+docker rm -f $(docker ps -aq)
+
+
+# Удалить статический публичный IP-адрес
+yc vpc address list
+yc vpc address delete  e9buurn9ufuk4fp400oq
+
+ya-cloud/delete-used-ip.sh
+
+
+Время решения: 146.74s - 16 ядер standart
+91.25 - 16 ядер
+Время решения: 32.16s - 80 ядер
+
+
+sudo docker cp SH:/app/timetable_or_tools_solution.xlsx /app
+
+scp -i ~/.ssh/ya-cloud/priv yc-user@158.160.36.167:/app/timetable_or_tools_solution.xlsx ./timetable_or_tools_solution.xlsx
+
+

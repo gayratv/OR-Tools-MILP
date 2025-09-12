@@ -227,7 +227,7 @@ class OptimizationWeights:
 class OptimizationGoals:
     teacher_slot_optimization: bool = False
     teacher_slot_optimization2: bool = False
-    teacher_runs_optimization: bool = True
+    teacher_runs_optimization: bool = False
 
     # Предметы, запрещённые последними уроками по параллелям
     subjects_not_last_lesson_optimization: bool = True

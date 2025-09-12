@@ -8,3 +8,6 @@
 /src/timetable_or_tools_solution.xlsx
 /src/rasp_data_generated.py
 /src/timetable_or_tools_solution prep -164.xlsx
+*.env
+.env
+/docker/PY/
