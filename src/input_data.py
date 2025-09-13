@@ -185,6 +185,11 @@ class InputData:
 
     must_sync_split_subjects: Set[str] = field(default_factory=set)
 
+    # --- Словари для отображения (не используются в модели, только для вывода) ---
+    # 'техническое_имя' -> 'полное_имя_для_отчета'
+    display_subject_names: Dict[str, str] = field(default_factory=dict)
+    display_teacher_names: Dict[str, str] = field(default_factory=dict)
+
 
 @dataclass
 class OptimizationWeights:
@@ -216,7 +221,7 @@ class OptimizationWeights:
     last_ok_period: int = 6
 
     # --- Параметры решателя ---
-    num_search_workers: int = 16                 # число воркеров OR‑Tools
+    num_search_workers: int = 48                 # число воркеров OR‑Tools
     # random_seed: Optional[int] = None            # фиксируем сид для воспроизводимости (None = выключено)
     random_seed: Optional[int] = 1            # фиксируем сид для воспроизводимости (None = выключено)
     time_limit_s: Optional[float] = None         # лимит времени, сек (None = без лимита)

@@ -64,8 +64,8 @@ https://yandex.cloud/ru/docs/cos/tutorials/vm-create#spec-cli_1
 
 
 ya-cloud/create-docker.sh
-ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.36.167
-docker stop d39484251ccb
+ssh -i ~/.ssh/ya-cloud/priv yc-user@46.21.247.146
+docker stop 54012ad6e6a6
 
 docker run -dit --name SH gayrat/school_scheduler:latest bash
 
@@ -78,11 +78,11 @@ docker run -dit \
 /app1 — путь на хостовой машине (он должен существовать).
 
 docker exec -it SH bash
+python rasp_or_tools.py
 
 остановить и удалить контейнер:
 docker stop SH && docker rm SH
 
-python rasp_or_tools.py
 
 docker rm -f $(docker ps -aq)
 
@@ -93,14 +93,18 @@ yc vpc address delete  e9buurn9ufuk4fp400oq
 
 ya-cloud/delete-used-ip.sh
 
-
+======================================================
+локально 16 ядер - 82,49 цель 9690
 Время решения: 146.74s - 16 ядер standart
 91.25 - 16 ядер
-Время решения: 32.16s - 80 ядер
+Время решения: 41,22s - 80 ядер 138.7 руб/час
+48 ядер - 72,78 83,38 руб
 
 
-sudo docker cp SH:/app/timetable_or_tools_solution.xlsx /app
+cp /app/timetable_or_tools_solution.xlsx .
 
-scp -i ~/.ssh/ya-cloud/priv yc-user@158.160.36.167:/app/timetable_or_tools_solution.xlsx ./timetable_or_tools_solution.xlsx
+sudo mkdir /app8
+sudo docker cp SH:/app/timetable_or_tools_solution.xlsx /app8
+scp -i ~/.ssh/ya-cloud/priv yc-user@89.169.136.70:/app8/timetable_or_tools_solution.xlsx ./timetable_or_tools_solution.xlsx
 
 

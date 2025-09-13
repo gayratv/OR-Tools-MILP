@@ -31,6 +31,8 @@ def generate_function_string(data: InputData) -> str:
     elementary_english_periods_str = pprint.pformat(data.elementary_english_periods, indent=4, width=120)
     grade_subject_max_consecutive_days_str = pprint.pformat(data.grade_subject_max_consecutive_days, indent=4, width=120)
     must_sync_split_subjects_str = pprint.pformat(data.must_sync_split_subjects, indent=4, width=120)
+    display_subject_names_str = pprint.pformat(data.display_subject_names, indent=4, width=120)
+    display_teacher_names_str = pprint.pformat(data.display_teacher_names, indent=4, width=120)
 
     # Собираем итоговый код функции в виде многострочной f-строки
     function_code = f"""
@@ -86,6 +88,10 @@ def create_timetable_data() -> InputData:
     grade_subject_max_consecutive_days = {grade_subject_max_consecutive_days_str}
     must_sync_split_subjects = {must_sync_split_subjects_str}
 
+    # --- Словари для отображения ---
+    display_subject_names = {display_subject_names_str}
+    display_teacher_names = {display_teacher_names_str}
+
     return InputData(
         days=days,
         periods=periods,
@@ -111,7 +117,9 @@ def create_timetable_data() -> InputData:
         subjects_not_last_lesson=subjects_not_last_lesson,
         elementary_english_periods=elementary_english_periods,
         grade_subject_max_consecutive_days=grade_subject_max_consecutive_days,
-        must_sync_split_subjects=must_sync_split_subjects
+        must_sync_split_subjects=must_sync_split_subjects,
+        display_subject_names=display_subject_names,
+        display_teacher_names=display_teacher_names
     )
 """
     return function_code

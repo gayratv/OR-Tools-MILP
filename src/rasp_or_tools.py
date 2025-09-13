@@ -530,7 +530,6 @@ def build_and_solve_with_or_tools(
     data: InputData,
     log: bool = True,
     PRINT_TIMETABLE_TO_CONSOLE: bool = False,
-    display_maps: Optional[Dict[str, Dict[str, str]]] = None,
 
 ) -> None:
     """
@@ -1221,6 +1220,12 @@ def build_and_solve_with_or_tools(
         # Экспорт в Excel
         output_filename = "timetable_or_tools_solution.xlsx"
         final_maps = {"solver": solver, "x": x, "z": z}
+
+        # display_maps теперь часть объекта data
+        display_maps = {
+            "subject_names": data.display_subject_names,
+            "teacher_names": data.display_teacher_names,
+        }
         solution_maps = get_solution_maps(data, final_maps, is_pulp=False)
         export_full_schedule_to_excel(output_filename, data, solution_maps, display_maps, solution_stats, weights)
         
@@ -1256,13 +1261,9 @@ if __name__ == '__main__':
         print(f"Ошибка: не удалось загрузить данные из источника '{data_source}'. Проверьте настройки.")
         raise SystemExit(1)
 
-    # Карты для красивого отображения в Excel (если есть)
-    display_maps = load_display_maps(db_path_str)
-
     # Запуск
     build_and_solve_with_or_tools(
         data,
         PRINT_TIMETABLE_TO_CONSOLE=OptimizationGoals().print_timetable_to_console, # <--- Установите True для вывода в консоль
-        display_maps=display_maps
 
     )

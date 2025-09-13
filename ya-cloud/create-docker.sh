@@ -23,8 +23,8 @@ yc compute instance create-with-container \
   --zone ru-central1-a \
   --platform highfreq-v4a \
   --preemptible \
-  --memory 80 \
-  --cores 80 \
+  --memory 48 \
+  --cores 48 \
   --create-boot-disk size=30 \
   --ssh-key ~/.ssh/ya-cloud/priv.pub \
   --public-ip \

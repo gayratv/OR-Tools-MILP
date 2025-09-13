@@ -284,6 +284,20 @@ def load_data_from_access(db_path: str) -> InputData:
     # pprint(must_sync_split_subjects)
     # return
 
+    # --- Словари для красивого отображения в отчетах ---
+    display_subject_names: Dict[str, str] = {}
+    display_teacher_names: Dict[str, str] = {}
+    try:
+        subject_map_df = pd.read_sql('SELECT "предмет_eng", "предмет" FROM "з_excel_предметы"', engine)
+        display_subject_names = subject_map_df.set_index('предмет_eng')['предмет'].to_dict()
+
+        teacher_map_df = pd.read_sql('SELECT "teacher", "FAMIO" FROM "з_excel_учителя"', engine)
+        display_teacher_names = teacher_map_df.set_index('teacher')['FAMIO'].to_dict()
+
+    except Exception as e:
+        print(f"ВНИМАНИЕ: Не удалось загрузить словари для отображения (display maps). Ошибка: {e}")
+
+
     # --- Сборка и возврат объекта InputData ---
     return InputData(
         days=days,
@@ -305,7 +319,9 @@ def load_data_from_access(db_path: str) -> InputData:
         subjects_not_last_lesson=subjects_not_last_lesson,
         elementary_english_periods=elementary_english_periods,
         grade_subject_max_consecutive_days=grade_subject_max_consecutive_days,
-        must_sync_split_subjects=must_sync_split_subjects
+        must_sync_split_subjects=must_sync_split_subjects,
+        display_subject_names=display_subject_names,
+        display_teacher_names=display_teacher_names
     )
 
 
@@ -314,25 +330,12 @@ def load_display_maps(db_path: str) -> Dict[str, Dict[str, str]]:
     Загружает из базы данных словари для сопоставления
     технических (английских) названий с полными (русскими) для отчетов.
     """
+    # Эта функция больше не нужна, так как ее логика перенесена в load_data_from_access
+    # и данные теперь являются частью объекта InputData.
+    # Оставлена для обратной совместимости, если где-то вызывается.
     if not db_path:
         return {}
-
-    print("--- Загрузка словарей для отображения результатов ---")
-    engine = _create_db_engine(db_path)
-
-    try:
-
-        subject_map = pd.read_sql('SELECT "предмет_eng", "предмет" FROM "з_excel_предметы"', engine)
-
-        teacher_map = pd.read_sql('SELECT "teacher", "FAMIO" FROM "з_excel_учителя"', engine)
-
-        return {
-            "subject_names": subject_map.set_index('предмет_eng')['предмет'].to_dict(),
-            "teacher_names": teacher_map.set_index('teacher')['FAMIO'].to_dict()
-        }
-    except Exception as e:
-        print(f"ОШИБКА при загрузке словарей для отображения: {e}")
-        return {}
+    return {} # Возвращаем пустой словарь, чтобы не сломать старые вызовы
 
 
 if __name__ == '__main__':
