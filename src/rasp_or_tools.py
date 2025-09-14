@@ -889,6 +889,17 @@ def build_and_solve_with_or_tools(
                     if (c, s, g1, d, p) in z and (c, s, g2, d, p) in z:
                         model.Add(z[c, s, g1, d, p] == z[c, s, g2, d, p])
 
+    # (A.1) Принудительная синхронность для всех сплит-предметов в начальной школе (2-4 классы)
+    # Это гарантирует, что у обеих подгрупп уроки будут идти одновременно.
+    for c in C:
+        grade = class_grades.get(c)
+        if grade in {2, 3, 4}:
+            for s in splitS: # для всех сплит-предметов
+                for d, p in itertools.product(D, P):
+                    for g1, g2 in itertools.combinations(G, 2):
+                        if (c, s, g1, d, p) in z and (c, s, g2, d, p) in z:
+                            model.Add(z[c, s, g1, d, p] == z[c, s, g2, d, p])
+
     # ------------------------- 3.4) ЦЕЛЕВАЯ ФУНКЦИЯ / МЯГКИЕ ЦЕЛИ -------------------------
 
     # (A) «Окна» у классов и учителей через префикс/суффикс/inside
