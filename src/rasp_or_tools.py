@@ -31,6 +31,7 @@ from rasp_data import create_manual_data
 from access_loader import load_data_from_access, load_display_maps
 from rasp_data_generated import create_timetable_data
 from print_schedule import get_solution_maps, export_full_schedule_to_excel, print_schedule_to_console
+from teacher_windows_opus import add_teacher_window_optimization_span
 
 
 # ---------------------------- 1) ВСПОМОГАТЕЛЬНЫЕ ХЕЛПЕРЫ ----------------------------
@@ -1095,6 +1096,17 @@ def build_and_solve_with_or_tools(
 
         sum_windows_teacher_runs = sum(windows_terms)
 
+    # --- Учителя (ускоренная метрика «длины конверта») ---
+    sum_windows_teacher_opus = zero_var
+    if getattr(optimizationGoals, 'teacher_slot_optimization3', False):
+        sum_windows_teacher_opus = add_teacher_window_optimization_span(
+            model,
+            data.teachers,
+            D,
+            P,
+            teacher_busy
+        )
+
     # (B) Предпочтение ранних слотов (минимизируем номер периода)
     beta_early = _get_weight(weights, 'beta_early', 0)
     # y[c,d,p] — в слоте у класса есть ЛЮБОЙ урок
@@ -1163,6 +1175,7 @@ def build_and_solve_with_or_tools(
         alpha_runs_teacher * sum_inside_teacher +  # Окна у учителей
         alpha_runs_teacher * sum_span_teacher +
         alpha_runs_teacher * sum_windows_teacher_runs +
+        alpha_runs_teacher * sum_windows_teacher_opus +
         alpha_runs * sum_inside_class +            # Окна у классов
         early_term +                               # Предпочтение ранних слотов
         balance_term +                             # Баланс нагрузки по дням

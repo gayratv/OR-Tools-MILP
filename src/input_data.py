@@ -221,7 +221,7 @@ class OptimizationWeights:
     last_ok_period: int = 6
 
     # --- Параметры решателя ---
-    num_search_workers: int = 48                 # число воркеров OR‑Tools
+    num_search_workers: int = 20                 # число воркеров OR‑Tools
     # random_seed: Optional[int] = None            # фиксируем сид для воспроизводимости (None = выключено)
     random_seed: Optional[int] = 1            # фиксируем сид для воспроизводимости (None = выключено)
     time_limit_s: Optional[float] = None         # лимит времени, сек (None = без лимита)
@@ -232,8 +232,9 @@ class OptimizationWeights:
 class OptimizationGoals:
     teacher_slot_optimization: bool = False
     teacher_slot_optimization2: bool = False
+    teacher_slot_optimization3: bool = False    # Opus ver
     teacher_runs_optimization: bool = False
 
     # Предметы, запрещённые последними уроками по параллелям
     subjects_not_last_lesson_optimization: bool = True
-    print_timetable_to_console: bool = False
+    print_timetable_to_console: bool = True
