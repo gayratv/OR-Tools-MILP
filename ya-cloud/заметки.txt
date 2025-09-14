@@ -108,3 +108,6 @@ sudo docker cp SH:/app/timetable_or_tools_solution.xlsx /app8
 scp -i ~/.ssh/ya-cloud/priv yc-user@89.169.136.70:/app8/timetable_or_tools_solution.xlsx ./timetable_or_tools_solution.xlsx
 
 
+yc compute instance create-with-container \
+  --cores 80 \
+  --format json

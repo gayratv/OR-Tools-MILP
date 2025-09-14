@@ -19,15 +19,16 @@
 
 
 yc compute instance create-with-container \
-  --name gayrat-docker-python1 \
+  --name gayrat-docker-python4 \
   --zone ru-central1-a \
   --platform highfreq-v4a \
   --preemptible \
-  --memory 48 \
-  --cores 48 \
+  --memory 80 \
+  --cores 80 \
   --create-boot-disk size=30 \
   --ssh-key ~/.ssh/ya-cloud/priv.pub \
   --public-ip \
   --container-name=python312 \
   --container-image=gayrat/school_scheduler:latest \
-  --container-command=sleep
+  --container-command=sleep \
+  --format json
