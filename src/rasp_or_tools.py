@@ -823,19 +823,19 @@ def build_and_solve_with_or_tools(
                         if p not in english_periods and (c, subj, d, p) in x:
                             model.Add(x[c, subj, d, p] == 0)
 
-            # Запрет двух одинаковых предметов подряд
-            for s in set(S) - paired: # Исключаем paired_subjects из этого правила
+            # Запрет более одного урока одного и того же предмета в день (кроме спаренных)
+            for s in set(S) - paired:  # Исключаем paired_subjects из этого правила
                 for d in D:
-                    for idx in range(len(P) - 1):
-                        p1 = P[idx]
-                        p2 = P[idx + 1]
-                        if s in splitS:
-                            v1 = is_subj_taught.get((c, s, d, p1), false_var)
-                            v2 = is_subj_taught.get((c, s, d, p2), false_var)
-                        else:
-                            v1 = x.get((c, s, d, p1), false_var)
-                            v2 = x.get((c, s, d, p2), false_var)
-                        model.Add(v1 + v2 <= 1)
+                    lessons_of_subject_s_in_day = []
+                    if s in splitS:
+                        # Для сплит-предметов считаем, что если хотя бы одна подгруппа имеет урок, это считается одним уроком предмета
+                        for p in P:
+                            lessons_of_subject_s_in_day.append(is_subj_taught.get((c, s, d, p), false_var))
+                    else:
+                        # Для неделимых предметов
+                        for p in P:
+                            lessons_of_subject_s_in_day.append(x.get((c, s, d, p), false_var))
+                    model.Add(sum(lessons_of_subject_s_in_day) <= 1)
 
     # (6d) Максимум подряд идущих дней с предметом по параллелям
     # grade_subject_max_consecutive_days = {5: {"PE": 2, "eng": 2}}
