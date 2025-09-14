@@ -12,3 +12,4 @@
 .env
 /docker/PY/
 /timetable_or_tools_solution.xlsx
+/backend/node_modules/

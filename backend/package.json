@@ -1,0 +1,21 @@
+{
+  "name": "yc-runner",
+  "version": "1.0.0",
+  "description": "A script to run Yandex.Cloud CLI commands and parse output.",
+  "main": "run-yc.js",
+  "scripts": {
+    "start": "ts-node src/run-yc.ts",
+    "lint": "eslint . --ext .ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@typescript-eslint/eslint-plugin": "^7.9.0",
+    "@typescript-eslint/parser": "^7.9.0",
+    "eslint": "^8.57.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
