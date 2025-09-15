@@ -1,11 +1,14 @@
-import { execFile, ExecFileException } from 'child_process';
-import * as path from 'path';
+import { execFile, ExecFileException } from 'node:child_process';
+import * as path from 'node:path';
 
 // Определяем путь к директории со скриптом, находящейся на два уровня выше и в 'ya-cloud'
 const scriptDir: string = path.join(__dirname, '..', '..', 'ya-cloud');
 const scriptPath: string = path.join(scriptDir, 'create-docker.sh');
 
 console.log(`Запускаем скрипт: ${scriptPath}`);
+
+// Имя ВМ, которое мы хотим передать в скрипт
+const vmName = 'gayrat-docker-python1';
 
 const callback = (error: ExecFileException | null, stdout: string, stderr: string): void => {
     // 1. Проверяем ошибку выполнения самого процесса
@@ -33,11 +36,24 @@ const callback = (error: ExecFileException | null, stdout: string, stderr: strin
     }
 
     // 3. Если ошибок нет, выводим результат
-    console.log('Скрипт успешно выполнен. Вывод yc:');
-    console.log(stdout);
+    console.log('Скрипт успешно выполнен.');
+
+    // Пытаемся распарсить stdout как JSON
+    try {
+        const result = JSON.parse(stdout);
+        if (result && result.id) {
+            console.log(`Создана ВМ с ID: ${result.id}`);
+        } else {
+            console.warn('Вывод не содержит `id` или имеет неожиданную структуру.');
+            console.log('Полный вывод stdout:', stdout);
+        }
+    } catch (parseError) {
+        console.warn('Не удалось распарсить stdout как JSON. Возможно, формат вывода не JSON.');
+        console.log('Полный вывод stdout:', stdout);
+    }
 };
 
-execFile(scriptPath, {
+execFile(scriptPath, [vmName], {
     // Указываем рабочую директорию, где находится скрипт.
     // Это хорошая практика, если скрипт зависит от относительных путей.
     cwd: scriptDir
