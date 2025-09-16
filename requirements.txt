@@ -7,3 +7,5 @@ openpyxl
 sqlalchemy
 sqlalchemy-access
 tabulate
+mysql-connector-python
+python-dotenv
