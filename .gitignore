@@ -13,3 +13,5 @@
 /docker/PY/
 /timetable_or_tools_solution.xlsx
 /backend/node_modules/
+/docker-compose-full/mysql/certs/
+/docker-compose-full/beget.txt

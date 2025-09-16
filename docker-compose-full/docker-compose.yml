@@ -1,0 +1,102 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.4
+    container_name: mysql8
+    restart: unless-stopped
+    env_file: [.env]
+    ports:
+      - "${MYSQL_EXTERNAL_PORT:-45321}:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./mysql/conf.d:/etc/mysql/conf.d
+      - ./mysql/init:/docker-entrypoint-initdb.d
+      - ./mysql/certs:/certs
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+
+  nodejs:
+    build: ./nodejs-app
+    container_name: nodejs-app
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      - NODE_PORT=3000
+    expose:
+      - "3000"
+    depends_on:
+      - db
+    # Для продакшена том не нужен; раскомментируйте для локальной разработки
+    # volumes:
+    #   - ./nodejs-app:/usr/src/app
+
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx
+    restart: unless-stopped
+    depends_on:
+      - nodejs
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/html:/var/www/certbot:ro
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+    command: >
+      sh -c '
+        rm -f /etc/nginx/conf.d/*.conf ;
+        # ВКЛЮЧИТЕ РОВНО ТЕ ФАЙЛЫ, КОТОРЫЕ НУЖНЫ:
+        # HTTP-режим:
+        if [ -f /etc/nginx/templates/app.http.conf.template ]; then
+          envsubst "$$DOMAIN" < /etc/nginx/templates/app.http.conf.template > /etc/nginx/conf.d/app.http.conf ;
+        fi ;
+        # HTTPS-режим:
+        if [ -f /etc/nginx/templates/app.https.conf.template ] && [ -f "/etc/letsencrypt/live/$$DOMAIN/fullchain.pem" ]; then
+          envsubst "$$DOMAIN" < /etc/nginx/templates/app.https.conf.template > /etc/nginx/conf.d/app.https.conf ;
+        fi ;
+        nginx -t && exec nginx -g "daemon off;"
+      '
+
+# Логика простая:
+#
+# всегда пытаемся срендерить HTTP-шаблон (он не требует сертификата);
+#
+# HTTPS-шаблон рендерим только если уже существуют сертификаты в /etc/letsencrypt/live/$DOMAIN/….
+#→ значит вы можете держать оба шаблона в каталоге: сначала будет работать HTTP, после выпуска сертификата — перезапустите nginx, и он автоматически включит HTTPS.
+#
+# Сертификаты лежат в volume certbot-etc, смонтированном в nginx; после успешного certbot certonly файлы появятся в нужном месте.
+
+      # опционально логи:
+      # - ./nginx/log:/var/log/nginx
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    # будет крутиться в фоне и продлевать каждые ~12 часов
+    entrypoint: sh
+    command: -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h; done"
+    volumes:
+      - ./nginx/html:/var/www/certbot
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+
+volumes:
+  dbdata:
+    driver: local
+  certbot-etc:
+  certbot-var:
