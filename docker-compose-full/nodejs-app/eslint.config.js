@@ -1,31 +1,28 @@
 // @ts-check
+
 import js from "@eslint/js";
-import tseslint from "@typescript-eslint/eslint-plugin";
-import tsparser from "@typescript-eslint/parser";
+import tseslint from "typescript-eslint";
+import globals from "globals";
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
   {
     ignores: ["dist/**", "node_modules/**"]
   },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    files: ["**/*.ts"],
+    files: ["**/*.ts", "**/*.js"],
     languageOptions: {
-      parser: tsparser,
-      parserOptions: {
-        project: false, // поставьте true и добавьте tsconfigRootDir при необходимости строгого type-aware linting
-        ecmaVersion: 2022,
-        sourceType: "module"
+      globals: {
+        ...globals.node
       }
     },
-    plugins: {
-      "@typescript-eslint": tseslint
-    },
     rules: {
-      ...js.configs.recommended.rules,
-      ...tseslint.configs.recommended.rules,
-      // "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }
+      ],
       "no-console": "off"
     }
   }

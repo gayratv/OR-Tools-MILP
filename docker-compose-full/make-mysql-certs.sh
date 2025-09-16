@@ -3,8 +3,12 @@ set -euo pipefail
 
 # chmod +x make-mysql-certs.sh, затем запустите.
 
+export DOMAIN="uroktime.store"
+export IP_ADDR="217.12.38.229"
+export OUTDIR="mysql/certs"
+
 # ==== Настройки (правьте под себя) ====
-DOMAIN="${DOMAIN:-example.com}"            # ваш домен
+DOMAIN="${DOMAIN:-uroktime.store}"            # ваш домен
 IP_ADDR="${IP_ADDR:-203.0.113.10}"         # публичный IP (можно оставить пустым)
 DAYS="${DAYS:-825}"                        # срок действия
 OUTDIR="${OUTDIR:-mysql/certs}"            # куда класть файлы
@@ -31,9 +35,7 @@ echo ">> Подписываю серверный сертификат нашим
 openssl x509 -req -in server.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial \
   -out server-cert.pem -days "$DAYS" -extfile "$SAN_FILE"
 
-# Права
-chmod 600 server-key.pem ca-key.pem
-chmod 644 ca.pem server-cert.pem
+
 
 # Итог
 echo
@@ -59,3 +61,8 @@ echo "  docker exec -it mysql8 mysql --ssl-mode=REQUIRED -uroot -p\"\$MYSQL_ROOT
 echo
 echo "Подключение с клиента (проверка CA):"
 echo "  mysql --ssl-mode=VERIFY_IDENTITY --ssl-ca=$(pwd)/ca.pem -h ${DOMAIN} -P <порт> -u appuser -p"
+
+cd /docker-compose-full/
+chmod 644 mysql/conf.d/my.cnf
+# (опционально) владельца под рут:
+sudo chown root:root mysql/conf.d/my.cnf

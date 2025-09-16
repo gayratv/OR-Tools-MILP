@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     env_file: [.env]
     ports:
-      - "${MYSQL_EXTERNAL_PORT:-45321}:3306"
+      - "45321:3306"
     volumes:
       - dbdata:/var/lib/mysql
       - ./mysql/conf.d:/etc/mysql/conf.d
