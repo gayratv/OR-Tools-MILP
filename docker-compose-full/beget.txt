@@ -1,3 +1,4 @@
+ssh-keygen -R uroktime.store
 ssh -i ~/.ssh/beget/id_ed25519 root@uroktime.store
 sudo apt update
 sudo apt upgrade -y
