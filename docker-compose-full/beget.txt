@@ -114,3 +114,12 @@ mysql_config_editor print --all
 mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "SELECT 1;"
 mysql --login-path=root  school_sheduller -e "SELECT 1;"
 
+
+### не дает подключиться потому что другая сеть
+mysql \
+  -h uroktime.store \
+  -P 45321 \
+  -u appuser_rw \
+  -ppass1 \
+  school_sheduller \
+  -e "SELECT 1;"
