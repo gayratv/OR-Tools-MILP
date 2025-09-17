@@ -1,0 +1,115 @@
+ssh -i ~/.ssh/beget/id_ed25519 root@uroktime.store
+sudo apt update
+sudo apt upgrade -y
+sudo apt install mc -y
+
+cd /mnt/f/_prg/python/OR-Tools-MILP
+
+rsync -avz \
+  -e "ssh -i ~/.ssh/beget/id_ed25519" \
+  --exclude 'nodejs-app/dist' \
+  --exclude 'nodejs-app/node_modules' \
+  /mnt/f/_prg/python/OR-Tools-MILP/docker-compose-full/ \
+  root@217.12.38.229:/docker-compose-full/
+
+
+
+cd /docker-compose-full/
+set -a
+source .env
+set +a
+
+echo $MYSQL_USER
+echo $MYSQL_PASSWORD
+
+================= СЕРТФИКАТЫ MySQL
+./make-mysql-certs.sh
+./make-mysql-client-certs.sh
+
+=================
+Скопируйте ca.pem на клиентскую машину (например, в ~/.mysql/ca.pem) и подключайтесь:
+rm -r ~/.mysql
+mkdir -p ~/.mysql
+
+scp -i ~/.ssh/beget/id_ed25519 \
+    root@217.12.38.229:/docker-compose-full/mysql/certs/{client-key.pem,client-cert.pem,ca.pem} \
+    ~/.mysql/
+
+chmod 600 ~/.mysql/client-key.pem
+chmod 644 ~/.mysql/{client-cert.pem,ca.pem}
+=================
+
+
+cd /docker-compose-full/
+docker compose up -d --build
+docker compose down
+docker compose down && docker compose up -d
+docker compose restart mysql
+
+
+MYSQL установка ==========
+sudo apt update
+sudo apt upgrade
+
+sudo apt install mysql-client
+
+========================
+
+
+-------
+
+# Создаем файл ~/.my.cnf
+# ВАЖНО: Если у вас уже есть этот файл, сделайте его резервную копию!
+
+cat > ~/.my.cnf <<'EOF'
+[clientappuser]
+host=uroktime.store
+port=45321
+user=appuser
+database=school_sheduller
+ssl-ca=/root/.mysql/ca.pem
+ssl-cert=/root/.mysql/client-cert.pem
+ssl-key=/root/.mysql/client-key.pem
+
+[clientroot]
+host=uroktime.store
+port=45321
+user=root
+database=school_sheduller
+
+EOF
+
+chmod 600 ~/.my.cnf
+
+# Попытка подключения
+
+
+mysql --login-path=root  \
+      -e "SELECT user, host, ssl_type, ssl_cipher, x509_issuer, x509_subject FROM mysql.user WHERE user IN ('appuser', 'root');"
+
+mysql --login-path=root  \
+    -e "ALTER USER 'appuser'@'%' REQUIRE X509;"
+
+
+
+-+-+- ЗАШИФРОВАТЬ пароль
+mysql_config_editor remove --login-path=appuser
+
+mysql_config_editor set --login-path=appuser \
+  --host=uroktime.store \
+  --port=45321 \
+  --user=appuser \
+  --password
+
+mysql_config_editor set --login-path=root \
+  --host=uroktime.store \
+  --port=45321 \
+  --user=root \
+  --password
+
+mysql_config_editor print --all
+
+
+mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "SELECT 1;"
+mysql --login-path=root  school_sheduller -e "SELECT 1;"
+

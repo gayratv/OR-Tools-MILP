@@ -14,7 +14,7 @@
 /timetable_or_tools_solution.xlsx
 /backend/node_modules/
 /docker-compose-full/mysql/certs/
-/docker-compose-full/beget.txt
+
 /docker-python3.12/PY/
 /docker-compose-full/nodejs-app/dist/
 /docker-compose-full/nodejs-app/node_modules/
