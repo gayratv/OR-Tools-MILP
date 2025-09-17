@@ -18,9 +18,9 @@ COPY PY/ .
 COPY scripts/*.sh /usr/local/bin/
 
 # Обновляем pip и ставим зависимости
-RUN --mount=type=cache,target=/root/pip-cache \
 #    pip install --upgrade pip  \
-    && pip install --cache-dir=/root/pip-cache -r requirements.txt \
+RUN --mount=type=cache,target=/root/pip-cache \
+    pip install --cache-dir=/root/pip-cache -r requirements.txt \
     && rm -rf /root/.cache/pip
 
 

@@ -9,18 +9,20 @@ set -euo pipefail
 # Используйте переменные для путей, чтобы их было легко изменить.
 readonly IMAGE_NAME="school_scheduler" # Исправлена опечатка в имени
 readonly VERSION="latest"
-readonly BUILD_CONTEXT_DIR="./docker"
+readonly BUILD_CONTEXT_DIR="./docker-python3.12"
 readonly DOCKERFILE_PATH="${BUILD_CONTEXT_DIR}/Dockerfile"
 readonly SOURCE_DIR="./src"
 readonly SCRIPT_DIR="./ya-cloud"
 readonly REQUIREMENTS_FILE="./requirements.txt"
 readonly DEST_DIR="${BUILD_CONTEXT_DIR}/PY"
+readonly DOCKER_COMPOSE_DIR="./docker-compose-full/nodejs-app"
 
 # --- Подготовка к сборке ---
 # Создаем каталог для исходников, если он не существует.
 mkdir -p "${DEST_DIR}"
 mkdir -p "${DEST_DIR}/db"
 mkdir -p "${BUILD_CONTEXT_DIR}/scripts"
+mkdir -p "${DOCKER_COMPOSE_DIR}/scripts"
 
 # Копируем исходный код и зависимости в контекст сборки.
 # Кавычки вокруг переменных предотвращают проблемы с пробелами в именах файлов.
@@ -30,6 +32,8 @@ cp "${REQUIREMENTS_FILE}" "${DEST_DIR}/"
 
 # Копируем необходимые скрипты
 cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh} "${BUILD_CONTEXT_DIR}/scripts/"
+# для сервера node в docker-compose
+cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh} "${DOCKER_COMPOSE_DIR}/scripts/"
 
 echo "Подготовка файлов для сборки завершена."
 
