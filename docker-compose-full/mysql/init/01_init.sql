@@ -7,7 +7,7 @@ CREATE DATABASE IF NOT EXISTS `${MYSQL_DATABASE}`
   /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */;
 
 -- Основной пользователь (полные права на БД)
-CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}' REQUIRE X509;
 GRANT ALL PRIVILEGES ON `${MYSQL_DATABASE}`.* TO '${MYSQL_USER}'@'%';
 
 -- Обычный пользователь (только CRUD-операции), доступен только из внутренней сети Docker
