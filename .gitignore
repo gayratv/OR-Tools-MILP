@@ -21,3 +21,5 @@
 /docker-python3.12/scripts/
 /docker-compose-full/scripts/create-docker.sh
 /docker-compose-full/scripts/delete-docker.sh
+/docker-compose-full/nodejs-app/scripts/create-docker.sh
+/docker-compose-full/nodejs-app/scripts/delete-docker.sh
