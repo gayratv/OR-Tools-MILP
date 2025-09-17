@@ -14,6 +14,9 @@ WORKDIR /app
 # Копируем файл зависимостей
 COPY PY/ .
 
+# Копируем скрипты в /usr/local/bin, чтобы они были доступны в PATH
+COPY scripts/*.sh /usr/local/bin/
+
 # Обновляем pip и ставим зависимости
 RUN --mount=type=cache,target=/root/pip-cache \
 #    pip install --upgrade pip  \

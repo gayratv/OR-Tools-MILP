@@ -12,19 +12,24 @@ readonly VERSION="latest"
 readonly BUILD_CONTEXT_DIR="./docker"
 readonly DOCKERFILE_PATH="${BUILD_CONTEXT_DIR}/Dockerfile"
 readonly SOURCE_DIR="./src"
+readonly SCRIPT_DIR="./ya-cloud"
 readonly REQUIREMENTS_FILE="./requirements.txt"
 readonly DEST_DIR="${BUILD_CONTEXT_DIR}/PY"
 
 # --- Подготовка к сборке ---
 # Создаем каталог для исходников, если он не существует.
 mkdir -p "${DEST_DIR}"
-mkdir -p "${BUILD_CONTEXT_DIR}/PY/db"
+mkdir -p "${DEST_DIR}/db"
+mkdir -p "${BUILD_CONTEXT_DIR}/scripts"
 
 # Копируем исходный код и зависимости в контекст сборки.
 # Кавычки вокруг переменных предотвращают проблемы с пробелами в именах файлов.
 cp "${SOURCE_DIR}"/*.py "${DEST_DIR}/"
 cp "${SOURCE_DIR}"/db/rasp3-new-calculation.accdb "${DEST_DIR}/db/"
 cp "${REQUIREMENTS_FILE}" "${DEST_DIR}/"
+
+# Копируем необходимые скрипты
+cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh} "${BUILD_CONTEXT_DIR}/scripts/"
 
 echo "Подготовка файлов для сборки завершена."
 
