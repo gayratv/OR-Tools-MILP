@@ -13,6 +13,7 @@ services:
       - ./mysql/conf.d:/etc/mysql/conf.d
       - ./mysql/init:/docker-entrypoint-initdb.d
       - ./mysql/certs:/certs
+    networks: [app-network]
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" || exit 1"]
       interval: 10s
@@ -34,6 +35,7 @@ services:
       - NODE_PORT=3000
     expose:
       - "3000"
+    networks: [app-network]
     depends_on:
       - db
     # Для продакшена том не нужен; раскомментируйте для локальной разработки
@@ -47,6 +49,7 @@ services:
     restart: unless-stopped
     depends_on:
       - nodejs
+    networks: [app-network, default]
     ports:
       - "80:80"
       - "443:443"
@@ -100,3 +103,12 @@ volumes:
     driver: local
   certbot-etc:
   certbot-var:
+
+networks:
+  default:
+    driver: bridge
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

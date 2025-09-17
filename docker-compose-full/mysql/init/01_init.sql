@@ -10,9 +10,10 @@ CREATE DATABASE IF NOT EXISTS `${MYSQL_DATABASE}`
 CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
 GRANT ALL PRIVILEGES ON `${MYSQL_DATABASE}`.* TO '${MYSQL_USER}'@'%';
 
--- Обычный пользователь (только CRUD-операции)
-CREATE USER IF NOT EXISTS '${MYSQL_RW_USER}'@'%' IDENTIFIED BY '${MYSQL_RW_PASSWORD}';
+-- Обычный пользователь (только CRUD-операции), доступен только из внутренней сети Docker
+-- Диапазон 172.20.%.% соответствует подсети, заданной в docker-compose.yml
+CREATE USER IF NOT EXISTS '${MYSQL_RW_USER}'@'172.20.%.%' IDENTIFIED BY '${MYSQL_RW_PASSWORD}';
 GRANT SELECT, INSERT, UPDATE, DELETE
-  ON `${MYSQL_DATABASE}`.* TO '${MYSQL_RW_USER}'@'%';
+  ON `${MYSQL_DATABASE}`.* TO '${MYSQL_RW_USER}'@'172.20.%.%';
 
 FLUSH PRIVILEGES;

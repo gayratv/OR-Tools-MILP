@@ -47,7 +47,7 @@ const callback = (error: ExecFileException | null, stdout: string, stderr: strin
             console.warn('Вывод не содержит `id` или имеет неожиданную структуру.');
             console.log('Полный вывод stdout:', stdout);
         }
-    } catch (parseError) {
+    } catch (_) {
         console.warn('Не удалось распарсить stdout как JSON. Возможно, формат вывода не JSON.');
         console.log('Полный вывод stdout:', stdout);
     }
