@@ -1,40 +1,85 @@
-#!/bin/bash
-#Создайте ВМ Linux:
+#!/usr/bin/env bash
+set -euo pipefail
 
-# зарезервировать IP адрес:
-# yc vpc address create --external-ipv4 zone=ru-central1-a
-# ya-cloud/create-docker.sh
+# -------------------------------------------------------------------
+# create-docker.sh
+# Создаёт ВМ в Yandex Cloud и экспортирует внешний IP в VM_EXTERNAL_IP.
+#
+# Упрощённый ввод платформы:
+#   std  → standard-v3   (по умолчанию)
+#   hf   → highfreq-v4a
+#
+# Примеры:
+#   ./create-docker.sh myvm std
+#   ./create-docker.sh myvm hf 4 16 50
+# -------------------------------------------------------------------
 
-# 16 ГБ RAM, 4 ядра, 50 ГБ диск
-# ./ya-cloud/create-docker.sh gayrat-docker1 16 4 50 standard-v3
-# ./ya-cloud/create-docker.sh gayrat-docker2 2 2 20 standard-v3
-# ./ya-cloud/create-docker.sh gayrat-docker1 80 80 30 highfreq-v4a
-    
+# ./ya-cloud/create-docker.sh gayrat-docker1 16 4 50 std
+# ./ya-cloud/create-docker.sh gayrat-docker3 std 2 2 20
+# ./ya-cloud/create-docker.sh gayrat-docker1 hf 80 80 30
 
-# Используем первый аргумент как имя ВМ, или 'default-docker-vm' если аргумент не передан.
+
+# -------- Параметры с дефолтами --------------------------------------
 VM_NAME=${1:-"gayrat-docker1"}
-# Используем второй аргумент для памяти (в ГБ), по умолчанию 80.
-MEMORY=${2:-2}
-# Используем третий аргумент для количества ядер, по умолчанию 80.
+
+# Платформа: std / hf
+PLATFORM_KEY=${2:-"std"}
+
+# Остальные параметры
 CORES=${3:-2}
-# Используем четвертый аргумент для размера диска (в ГБ), по умолчанию 30.
-DISK_SIZE=${4:-20}
+MEMORY=${4:-2}     # ГБ
+DISK_SIZE=${5:-20} # ГБ
 
-PLATFORM=${5:-"standard-v3"}
+# -------- Маппинг платформы ------------------------------------------
+case "$PLATFORM_KEY" in
+  std|s|standard) PLATFORM="standard-v3" ;;
+  hf|h|highfreq)  PLATFORM="highfreq-v4a" ;;
+  *)
+    echo "Неизвестная платформа: $PLATFORM_KEY" >&2
+    echo "Допустимые: std (standard-v3), hf (highfreq-v4a)" >&2
+    exit 1
+    ;;
+esac
 
-echo "Создание ВМ с именем: $VM_NAME, Память: ${MEMORY}GB, Ядра: $CORES, Диск: ${DISK_SIZE}GB" >&2
+# -------- Проверки окружения -----------------------------------------
+need() { command -v "$1" >/dev/null 2>&1 || { echo "Требуется '$1'." >&2; exit 1; }; }
+need yc
+need jq
 
-yc compute instance create-with-container \
-  --name "$VM_NAME" \
-  --zone ru-central1-a \
-  --platform "$PLATFORM" \
-  --preemptible \
-  --memory "$MEMORY" \
-  --cores "$CORES" \
-  --create-boot-disk size=$DISK_SIZE \
-  --ssh-key ~/.ssh/ya-cloud/priv.pub \
-  --public-ip \
-  --container-name=python312 \
-  --container-image=gayrat/school_scheduler:latest \
-  --container-command=sleep \
-  --format json
+echo "Создание ВМ: name=${VM_NAME}, platform=${PLATFORM}, cores=${CORES}, mem=${MEMORY}GB, disk=${DISK_SIZE}GB" >&2
+
+# -------- Создание ВМ ------------------------------------------------
+RESP=$(
+  yc compute instance create-with-container \
+    --name "$VM_NAME" \
+    --zone ru-central1-a \
+    --platform "$PLATFORM" \
+    --preemptible \
+    --memory "$MEMORY" \
+    --cores "$CORES" \
+    --create-boot-disk size="$DISK_SIZE" \
+    --ssh-key ~/.ssh/ya-cloud/priv.pub \
+    --public-ip \
+    --container-name=python312 \
+    --container-image=gayrat/school_scheduler:latest \
+    --container-command=sleep \
+    --format json \
+    --container-env VM_NAME="$VM_NAME" \
+    --service-account-name sc-scheduller-srv-acc
+)
+
+# -------- Парсинг JSON ------------------------------------------------
+VM_EXTERNAL_IP=$(jq -r 'first(.network_interfaces[].primary_v4_address.one_to_one_nat.address // empty)' <<< "$RESP")
+
+export VM_EXTERNAL_IP
+
+echo "----------------------------------------"
+echo "VM создана:"
+jq -r '.id as $id
+       | "  ID:        \($id)\n  Name:      " + .name
+       + "\n  Status:    " + .status
+       + "\n  FQDN:      " + (.fqdn // "")
+       + "\n  Internal:  " + (first(.network_interfaces[].primary_v4_address.address // empty) // "")
+       + "\n  External:  " + (first(.network_interfaces[].primary_v4_address.one_to_one_nat.address // empty) // "")' <<< "$RESP"
+echo "----------------------------------------"
+echo "Экспортировано: VM_EXTERNAL_IP=${VM_EXTERNAL_IP}"

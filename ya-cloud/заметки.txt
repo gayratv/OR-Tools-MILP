@@ -64,18 +64,10 @@ https://yandex.cloud/ru/docs/cos/tutorials/vm-create#spec-cli_1
 
 
 ya-cloud/create-docker.sh
-ssh -i ~/.ssh/ya-cloud/priv yc-user@46.21.247.146
-docker stop 54012ad6e6a6
+ssh -i ~/.ssh/ya-cloud/priv yc-user@84.252.131.5
+docker stop 7235cfe98682
 
 docker run -dit --name SH gayrat/school_scheduler:latest bash
-
-docker run -dit \
-  --name SH \
-  -v /app1:/app2 \
-  gayrat/school_scheduler:latest \
-  bash
-
-/app1 — путь на хостовой машине (он должен существовать).
 
 docker exec -it SH bash
 python rasp_or_tools.py
@@ -86,6 +78,14 @@ docker stop SH && docker rm SH
 
 docker rm -f $(docker ps -aq)
 
+
+docker run -dit \
+  --name SH \
+  -v /app1:/app2 \
+  gayrat/school_scheduler:latest \
+  bash
+
+/app1 — путь на хостовой машине (он должен существовать).
 
 # Удалить статический публичный IP-адрес
 yc vpc address list
@@ -111,3 +111,14 @@ scp -i ~/.ssh/ya-cloud/priv yc-user@89.169.136.70:/app8/timetable_or_tools_solut
 yc compute instance create-with-container \
   --cores 80 \
   --format json
+
+
+  yc compute instance create-with-container \
+  --name "$VM_NAME" \
+  --container-env VM_NAME="$VM_NAME"
+
+Настройка вывода информации из Docker-контейнера в серийный порт
+  https://yandex.cloud/ru/docs/cos/tutorials/serial-port
+
+  мета
+https://yandex.cloud/ru/docs/compute/operations/vm-metadata/get-vm-metadata#request-examples

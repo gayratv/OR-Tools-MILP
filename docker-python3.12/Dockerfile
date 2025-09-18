@@ -1,6 +1,22 @@
 # Базовый образ
 FROM python:3.12
 
+# Аргументы для сборки, чтобы не хранить ID в Dockerfile
+# Можно передать при сборке: --build-arg CLOUD_ID=... --build-arg FOLDER_ID=...
+ARG CLOUD_ID=b1gib03pgvqrrfvhl3kb
+ARG FOLDER_ID=b1gbgjv35qvro3lmgaci
+
+# Установка Yandex Cloud CLI
+RUN curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
+
+# Добавляем yc в PATH
+ENV PATH="/root/yandex-cloud/bin:${PATH}"
+
+# Настройка профиля yc
+RUN yc config profile create my-robot-profile && \
+    yc config set cloud-id ${CLOUD_ID} && \
+    yc config set folder-id ${FOLDER_ID}
+
 # Устанавливаем системные зависимости для pyodbc (unixODBC)
 #RUN apt-get update && apt-get install -y \
 #     unixodbc \

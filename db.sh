@@ -31,9 +31,9 @@ cp "${SOURCE_DIR}"/db/rasp3-new-calculation.accdb "${DEST_DIR}/db/"
 cp "${REQUIREMENTS_FILE}" "${DEST_DIR}/"
 
 # Копируем необходимые скрипты
-cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh} "${BUILD_CONTEXT_DIR}/scripts/"
+cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh,delete-docker-curl.sh} "${BUILD_CONTEXT_DIR}/scripts/"
 # для сервера node в docker-compose
-cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh} "${DOCKER_COMPOSE_DIR}/scripts/"
+cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh,delete-docker-curl.sh} "${DOCKER_COMPOSE_DIR}/scripts/"
 
 echo "Подготовка файлов для сборки завершена."
 

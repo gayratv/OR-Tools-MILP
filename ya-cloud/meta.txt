@@ -1,0 +1,57 @@
+мета
+https://yandex.cloud/ru/docs/compute/operations/vm-metadata/get-vm-metadata#request-examples
+
+curl --header Metadata-Flavor:Google \
+    169.254.169.254/computeMetadata/v1/instance/?recursive=true | \
+    jq -r '.'
+
+ "attributes": {
+    "docker-container-declaration"
+ - name: VM_NAME\n      value: gayrat-docker1\n",
+
+ "name": "gayrat-docker1",
+
+
+
+curl --header Metadata-Flavor:Google \
+    169.254.169.254/computeMetadata/v1/instance/?recursive=true
+
+curl --header Metadata-Flavor:Google \
+    169.254.169.254/computeMetadata/v1/instance/?recursive=true | \
+    jq -r '.'
+
+"name": "gayrat-docker1",
+
+curl -H "Metadata-Flavor: Google" "http://169.254.169.254/computeMetadata/v1/instance/name"
+
+yc установка
+curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+
+Работа с Yandex Cloud изнутри виртуальной машины
+https://yandex.cloud/ru/docs/compute/operations/vm-connect/auth-inside-vm#link-sa-with-instance
+
+delete-docker.sh gayrat-docker2
+
+
+================================
+source ./ya-cloud/create-docker.sh gayrat-docker3 std 2 2 20
+echo $VM_EXTERNAL_IP
+
+ssh -i ~/.ssh/ya-cloud/priv yc-user@"$VM_EXTERNAL_IP"
+docker ps
+docker stop $(docker ps -q)
+docker rm $(docker ps -aq)
+
+
+docker run -dit --name SH gayrat/school_scheduler:latest bash
+docker exec -it SH bash
+
+
+
+#  curl -H "Metadata-Flavor: Google" "http://169.254.169.254/computeMetadata/v1/instance/name"
+#  delete-docker.sh gayrat-docker3
+#
+#  delete-docker.sh $(curl -s -H "Metadata-Flavor: Google" \
+#    "http://169.254.169.254/computeMetadata/v1/instance/name")
+
+delete-docker-curl.sh
