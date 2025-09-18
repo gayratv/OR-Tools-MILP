@@ -1,0 +1,38 @@
+#cloud-config
+# Этот файл используется cloud-init для настройки ВМ после первого запуска.
+
+users:
+  - name: yc-user
+    groups: [ 'sudo', 'docker' ]
+    shell: /bin/bash
+    sudo: [ 'ALL=(ALL) NOPASSWD:ALL' ]
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMsT2ARMza/hqHGe2QqSAPTlUhh3yUimuVAXXjqsuLlm root@SOLIDWORKS2022
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io         # Устанавливаем сам Docker Engine
+  - docker-compose-v2 # Устанавливаем Docker Compose V2 (как плагин)
+
+# Добавляем ожидание полной готовности сети перед выполнением runcmd
+# Это критически важно, чтобы curl мог скачать файлы из интернета.
+bootcmd:
+  - [ cloud-init-per, instance, wait-for-networking ]
+
+
+
+runcmd:
+   # Добавляем логгирование для отладки. Ищем эту строку в /var/log/cloud-init-output.log
+   - echo "--- cloud-init: runcmd started ---"
+   # 1. Скачиваем скрипт установки в /tmp, чтобы его можно было проверить
+   - curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh -o /tmp/install.sh
+   # 2. Делаем скрипт исполняемым
+   - chmod +x /tmp/install.sh
+   # 3. Запускаем установку в системную директорию /usr/local
+   - /tmp/install.sh -i /usr/local
+   # 4. Инициализируем yc от имени yc-user, чтобы конфиг создался в /home/yc-user/.config
+   #    Используем полный путь /usr/local/bin/yc, чтобы избежать проблем с PATH в cloud-init
+   - su - yc-user -c "/usr/local/bin/yc config set cloud-id $(curl -s -H 'Metadata-Flavor: Google' http://169.254.169.254/computeMetadata/v1/project/project-id)"
+   - su - yc-user -c "/usr/local/bin/yc config set folder-id $(curl -s -H 'Metadata-Flavor: Google' http://169.254.169.254/computeMetadata/v1/instance/folder-id)"

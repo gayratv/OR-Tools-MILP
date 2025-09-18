@@ -34,10 +34,17 @@ delete-docker.sh gayrat-docker2
 
 
 ================================
-source ./ya-cloud/create-docker.sh gayrat-docker3 std 2 2 20
+cd /mnt/f/_prg/python/OR-Tools-MILP
+source ./ya-cloud/create-docker.sh gayrat-docker7 std 2 2 20
 echo $VM_EXTERNAL_IP
 
 ssh -i ~/.ssh/ya-cloud/priv yc-user@"$VM_EXTERNAL_IP"
+ssh -i ~/.ssh/ya-cloud/priv yc-user@89.169.141.76
+ls /tmp/install.sh
+clear
+sudo cat /var/log/cloud-init-output.log
+
+
 docker ps
 docker stop $(docker ps -q)
 docker rm $(docker ps -aq)

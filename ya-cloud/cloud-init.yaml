@@ -6,20 +6,53 @@ users:
     groups: [ 'sudo', 'docker' ]
     shell: /bin/bash
     sudo: [ 'ALL=(ALL) NOPASSWD:ALL' ]
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMsT2ARMza/hqHGe2QqSAPTlUhh3yUimuVAXXjqsuLlm root@SOLIDWORKS2022
 
-package_update: true
-package_upgrade: true
+write_files:
+  - path: "/usr/local/etc/yc-install.sh"
+    permissions: "755"
+    content: |
+      #!/bin/bash
 
-packages:
-  - docker.io         # Устанавливаем сам Docker Engine
-  - docker-compose-v2 # Устанавливаем Docker Compose V2 (как плагин)
+      # CLI
+      echo "Installing Yandex Cloud CLI"
+      curl \
+        --silent \
+        --show-error \
+        --location \
+        https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+      VM_ID=$(curl --silent http://169.254.169.254/latest/meta-data/instance-id)
 
+      # Save YC params
+      echo "Saving YC params to the ~/.bashrc"
+      cat << EOF >> $HOME/.bashrc
+    defer: true
+
+  - path: "/usr/local/etc/docker-start.sh"
+    permissions: "755"
+    content: |
+      #!/bin/bash
+
+      # Docker
+      echo "Installing Docker"
+      sudo apt update -y && sudo apt install docker.io docker-compose-v2 -y
+      echo "Grant user access to Docker"
+      sudo usermod -aG docker ${USER}
+      newgrp docker
+
+    defer: true
+  - path: "/usr/local/etc/docker-main.sh"
+    permissions: "755"
+    content: |
+      #!/bin/bash
+
+      # Docker run container
+      docker pull hello-world:latest
+      docker run hello-world
+
+    defer: true
 runcmd:
-  # Устанавливаем YC CLI
-  - curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a -n
-  # Инициализируем yc, чтобы он создал конфиг из метаданных сервисного аккаунта
-  - /home/yc-user/yandex-cloud/bin/yc config set cloud-id $(curl -s -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/project/project-id)
-  - /home/yc-user/yandex-cloud/bin/yc config set folder-id $(curl -s -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/instance/folder-id)
-  # Тут можно добавить команды для клонирования вашего репозитория и запуска docker-compose
-  # - su - yc-user -c "git clone <your-repo-url> /home/yc-user/app"
-  # - su - yc-user -c "cd /home/yc-user/app/docker-python3.12 && docker-compose up -d"
+  - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
+  - [su, yc-user, -c, "/usr/local/etc/docker-start.sh" ]
+  - [su, yc-user, -c, "/usr/local/etc/docker-main.sh" ]
