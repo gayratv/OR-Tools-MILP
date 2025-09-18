@@ -1,44 +1,62 @@
-# Базовый образ
-FROM python:3.12
+# --- Этап 1: Сборщик с YC CLI ---
+FROM python:3.12 as builder
 
-# Аргументы для сборки, чтобы не хранить ID в Dockerfile
-# Можно передать при сборке: --build-arg CLOUD_ID=... --build-arg FOLDER_ID=...
-ARG CLOUD_ID=b1gib03pgvqrrfvhl3kb
-ARG FOLDER_ID=b1gbgjv35qvro3lmgaci
+# Устанавливаем системные зависимости, необходимые для сборки python-пакетов (например, pyodbc)
+# В базовом образе python:3.12 уже есть build-essential, нужно доставить только unixodbc-dev
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends unixodbc-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Установка Yandex Cloud CLI
+# Устанавливаем Yandex Cloud CLI
 RUN curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
-
-# Добавляем yc в PATH
-ENV PATH="/root/yandex-cloud/bin:${PATH}"
-
-# Настройка профиля yc
-RUN yc config profile create my-robot-profile && \
-    yc config set cloud-id ${CLOUD_ID} && \
-    yc config set folder-id ${FOLDER_ID}
-
-# Устанавливаем системные зависимости для pyodbc (unixODBC)
-#RUN apt-get update && apt-get install -y \
-#     unixodbc \
-#     unixodbc-dev \
-#     && rm -rf /var/lib/apt/lists/*
-
 
 # Устанавливаем рабочую директорию внутри контейнера
 WORKDIR /app
 
 # Копируем файл зависимостей
-COPY PY/ .
+COPY PY/requirements.txt .
 
 # Копируем скрипты в /usr/local/bin, чтобы они были доступны в PATH
 COPY scripts/*.sh /usr/local/bin/
 
-# Обновляем pip и ставим зависимости
-#    pip install --upgrade pip  \
-RUN --mount=type=cache,target=/root/pip-cache \
-    pip install --cache-dir=/root/pip-cache -r requirements.txt \
-    && rm -rf /root/.cache/pip
+# Устанавливаем зависимости в отдельный каталог /wheels
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip wheel setuptools && \
+    pip wheel --wheel-dir=/wheels -r requirements.txt
 
 
-# Команда по умолчанию (можно поменять на запуск вашего приложения)
-CMD ["bash"]
+# --- Этап 2: Финальный образ ---
+FROM python:3.12-slim
+
+# Создаем пользователя без root-прав
+RUN useradd -m appuser
+USER appuser
+
+# Устанавливаем только runtime-зависимости для pyodbc
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unixodbc \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+
+WORKDIR /home/appuser/app
+
+# Копируем YC CLI из сборщика
+COPY --from=builder /root/yandex-cloud /home/appuser/yandex-cloud
+
+# Копируем "колеса" зависимостей и устанавливаем их
+COPY --from=builder /wheels /wheels
+RUN pip install --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
+
+# Копируем код приложения
+COPY PY/ .
+
+# Копируем скрипты и делаем их исполняемыми
+COPY --chown=appuser:appuser scripts/ /home/appuser/scripts/
+RUN chmod +x /home/appuser/scripts/*.sh
+
+# Добавляем yc и скрипты в PATH
+ENV PATH="/home/appuser/yandex-cloud/bin:/home/appuser/scripts:${PATH}"
+
+# Команда по умолчанию для контейнера-калькулятора (пример)
+CMD ["python", "main.py"]

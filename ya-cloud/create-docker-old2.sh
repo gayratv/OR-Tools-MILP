@@ -50,19 +50,22 @@ echo "Создание ВМ: name=${VM_NAME}, platform=${PLATFORM}, cores=${CORE
 
 # -------- Создание ВМ ------------------------------------------------
 RESP=$(
-  yc compute instance create \
+  yc compute instance create-with-container \
     --name "$VM_NAME" \
     --zone ru-central1-a \
     --platform "$PLATFORM" \
     --preemptible \
     --memory "$MEMORY" \
     --cores "$CORES" \
-    --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-2204-lts,size="$DISK_SIZE" \
+    --create-boot-disk size="$DISK_SIZE" \
+    --ssh-key ~/.ssh/ya-cloud/priv.pub \
     --public-ip \
-    --service-account-name sc-scheduller-srv-acc \
-    --metadata "ssh-keys=$(cat ~/.ssh/ya-cloud/priv.pub)" \
-    --metadata-from-file user-data=./ya-cloud/cloud-init.yaml \
-    --format json
+    --container-name=python312 \
+    --container-image=gayrat/school_scheduler:latest \
+    --container-command=sleep \
+    --format json \
+    --container-env VM_NAME="$VM_NAME" \
+    --service-account-name sc-scheduller-srv-acc
 )
 
 # -------- Парсинг JSON ------------------------------------------------
