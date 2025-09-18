@@ -1,6 +1,9 @@
 #cloud-config
 # Этот файл используется cloud-init для настройки ВМ после первого запуска.
-
+datasource:
+  Ec2:
+    strict_id: false
+ssh_pwauth: no
 users:
   - name: yc-user
     groups: [ 'sudo', 'docker' ]
@@ -11,7 +14,8 @@ users:
 
 write_files:
   - path: "/usr/local/etc/yc-install.sh"
-    permissions: "755"
+    owner: yc-user:yc-user
+    permissions: "0755"
     content: |
       #!/bin/bash
 
@@ -27,32 +31,10 @@ write_files:
       # Save YC params
       echo "Saving YC params to the ~/.bashrc"
       cat << EOF >> $HOME/.bashrc
-    defer: true
-
-  - path: "/usr/local/etc/docker-start.sh"
-    permissions: "755"
-    content: |
-      #!/bin/bash
-
-      # Docker
-      echo "Installing Docker"
-      sudo apt update -y && sudo apt install docker.io docker-compose-v2 -y
-      echo "Grant user access to Docker"
-      sudo usermod -aG docker ${USER}
-      newgrp docker
-
-    defer: true
-  - path: "/usr/local/etc/docker-main.sh"
-    permissions: "755"
-    content: |
-      #!/bin/bash
-
-      # Docker run container
-      docker pull hello-world:latest
-      docker run hello-world
-
+        # Настройки YC CLI
+        export YC_CLI_VM_ID="${VM_ID:-unknown}"
+        # … другие нужные строки …
+      EOF
     defer: true
 runcmd:
   - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
-  - [su, yc-user, -c, "/usr/local/etc/docker-start.sh" ]
-  - [su, yc-user, -c, "/usr/local/etc/docker-main.sh" ]
