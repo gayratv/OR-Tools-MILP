@@ -23,3 +23,4 @@
 /docker-compose-full/scripts/delete-docker.sh
 /docker-compose-full/nodejs-app/scripts/create-docker.sh
 /docker-compose-full/nodejs-app/scripts/delete-docker.sh
+/ya-cloud/.env.json
