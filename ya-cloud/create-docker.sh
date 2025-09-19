@@ -48,10 +48,16 @@ need jq
 
 echo "Создание ВМ: name=${VM_NAME}, platform=${PLATFORM}, cores=${CORES}, mem=${MEMORY}GB, disk=${DISK_SIZE}GB" >&2
 
-# -------- Создание ВМ ------------------------------------------------
-# Передаем user-data и подставляем в него переменную ssh_key из файла --metadata-from-file
-# --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-2204-lts,size="$DISK_SIZE" \
-# yc compute instance create \
+# -------- Чтение SSH ключа -------------------------------------------
+SSH_PUBLIC_KEY_PATH="$HOME/.ssh/ya-cloud/priv.pub"
+if [[ ! -f "$SSH_PUBLIC_KEY_PATH" ]]; then
+    echo "Ошибка: Публичный SSH ключ не найден по пути: $SSH_PUBLIC_KEY_PATH" >&2
+    exit 1
+fi
+export SSH_PUBLIC_KEY=$(cat "$SSH_PUBLIC_KEY_PATH")
+echo $SSH_PUBLIC_KEY
+
+
 
 RESP=$(
   yc compute instance create-with-container \
@@ -65,6 +71,7 @@ RESP=$(
     --public-ip \
     --service-account-name sc-scheduller-srv-acc \
     --metadata-from-file user-data=./ya-cloud/cloud-init.yaml \
+    --metadata ssh-public-key="${SSH_PUBLIC_KEY}" \
     --format json \
     --container-name=python312 \
     --container-image=gayrat/school_scheduler:latest \
@@ -87,7 +94,7 @@ jq -r '.id as $id
 echo "----------------------------------------"
 echo "Экспортировано: VM_EXTERNAL_IP=${VM_EXTERNAL_IP}"
 
-echo "Ожидание доступности SSH на ${VM_EXTERNAL_IP}:22..."
+#echo "Ожидание доступности SSH на ${VM_EXTERNAL_IP}:22..."
 
 #ATTEMPTS=0
 #MAX_ATTEMPTS=30 # ~1 минута

@@ -35,11 +35,13 @@ delete-docker.sh gayrat-docker2
 
 ================================
 cd /mnt/f/_prg/python/OR-Tools-MILP
-source ./ya-cloud/create-docker.sh gayrat-docker1 std 2 2 20
-echo $VM_EXTERNAL_IP
+source ./ya-cloud/create-docker.sh gayrat-docker6 std 2 2 20
 
 ssh -i ~/.ssh/ya-cloud/priv yc-user@"$VM_EXTERNAL_IP"
-ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.112.251
+ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.44.79
+
+ls /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh
+ls /root/.ssh/ya-cloud/priv.pub
 
 clear
 sudo cat /var/log/cloud-init-output.log
@@ -70,3 +72,7 @@ https://cloudinit.readthedocs.io/en/latest/index.html
 https://yandex.cloud/ru/docs/compute/operations/vm-create/create-with-cloud-init-scripts
 
 https://yandex.cloud/ru/docs/compute/operations/vm-create/create-with-cloud-init-scripts
+
+
+Создать виртуальную машину с метаданными из переменных окружения
+https://yandex.cloud/ru/docs/compute/operations/vm-create/create-with-env-variables

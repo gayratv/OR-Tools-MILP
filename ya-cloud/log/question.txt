@@ -1,0 +1,30 @@
+Подскажите пожалуйста как передать метаданные в VM
+
+в документации ответа на вопрос не нашел
+https://yandex.cloud/ru/docs/compute/concepts/metadata/sending-metadata
+
+фрагмент cloud-init.yaml
+
+users:
+  - name: yc-user
+    ssh_authorized_keys: $ssh-public-key
+
+При создании VM через yc читаю public key:
+
+SSH_PUBLIC_KEY="$(cat "$SSH_PUBLIC_KEY_PATH")"
+
+SSH_PUBLIC_KEY выглядит так:
+ssh-ed25519 AAAAC
+
+фрагмент
+yc compute instance create-with-container \
+    --metadata-from-file user-data=./ya-cloud/cloud-init.yaml \
+    --metadata ssh-public-key="${SSH_PUBLIC_KEY}" \
+
+
+Проблема в том что машина создается, но подключиться к ней я не могу потому что public key передается неправильно
+
+Если в cloud-init.yaml записать ключ текстом то все работает:
+users:
+  - name: yc-user
+    ssh_authorized_keys: ssh-ed25519 AAAAC
