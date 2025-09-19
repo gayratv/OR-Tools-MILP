@@ -39,7 +39,7 @@ source ./ya-cloud/create-docker.sh gayrat-docker1 std 2 2 20
 echo $VM_EXTERNAL_IP
 
 ssh -i ~/.ssh/ya-cloud/priv yc-user@"$VM_EXTERNAL_IP"
-ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.49.67
+ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.112.251
 
 clear
 sudo cat /var/log/cloud-init-output.log
@@ -67,4 +67,6 @@ delete-docker-curl.sh
 https://cloudinit.readthedocs.io/en/latest/index.html
 
 Создать виртуальную машину с пользовательским скриптом конфигурации
+https://yandex.cloud/ru/docs/compute/operations/vm-create/create-with-cloud-init-scripts
+
 https://yandex.cloud/ru/docs/compute/operations/vm-create/create-with-cloud-init-scripts
