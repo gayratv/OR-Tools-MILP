@@ -5,6 +5,12 @@
 # В противном случае, используем ".env" по умолчанию.
 OUTPUT_FILE="${1:-./responce/.env}"
 
+# Извлекаем путь к директории из имени файла.
+OUTPUT_DIR=$(dirname "$OUTPUT_FILE")
+
+# Создаем директорию, если она не существует.
+mkdir -p "$OUTPUT_DIR"
+
 #yc lockbox secret get school-scheduler-app-secrets
 #yc lockbox payload get school-scheduler-app-secrets
 

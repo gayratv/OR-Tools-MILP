@@ -30,10 +30,10 @@ cp "${SOURCE_DIR}"/*.py "${DEST_DIR}/"
 cp "${SOURCE_DIR}"/db/rasp3-new-calculation.accdb "${DEST_DIR}/db/"
 cp "${REQUIREMENTS_FILE}" "${DEST_DIR}/"
 
-# Копируем необходимые скрипты
-cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh,delete-docker-curl.sh} "${BUILD_CONTEXT_DIR}/scripts/"
+# Копируем необходимые скрипты ./docker-python3.12
+cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh,delete-docker-curl.sh,yc-secrets-get.sh} "${BUILD_CONTEXT_DIR}/scripts/"
 # для сервера node в docker-compose
-cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh,delete-docker-curl.sh} "${DOCKER_COMPOSE_DIR}/scripts/"
+cp "${SCRIPT_DIR}"/{create-docker.sh,delete-docker.sh,delete-docker-curl.sh,yc-secrets-get.sh} "${DOCKER_COMPOSE_DIR}/scripts/"
 
 echo "Подготовка файлов для сборки завершена."
 
