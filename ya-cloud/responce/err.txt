@@ -1,8 +1,0 @@
-ERROR: rpc error: code = ResourceExhausted desc = Quota exceeded
-
-
-client-request-id: 32346a40-3e91-4aeb-b292-e61d424aceb0
-client-trace-id: 6cf48e12-7fea-436c-ac4d-35f76bd5f8dc
-
-Use client-request-id, client-trace-id for investigation of issues in cloud support
-If you are going to ask for help of cloud support, please send the following trace file: /root/.config/yandex-cloud/logs/2025-09-14T06-53-42.139-yc_compute_instance_create-with-container.txt

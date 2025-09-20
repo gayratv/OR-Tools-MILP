@@ -76,3 +76,7 @@ https://yandex.cloud/ru/docs/compute/operations/vm-create/create-with-cloud-init
 
 Создать виртуальную машину с метаданными из переменных окружения
 https://yandex.cloud/ru/docs/compute/operations/vm-create/create-with-env-variables
+
+
+секрет
+https://yandex.cloud/ru/docs/lockbox/operations/secret-get-info
