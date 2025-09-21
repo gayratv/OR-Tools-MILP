@@ -16,9 +16,18 @@ services:
     container_name: nodejs
     ports:
       - "3000:3000"
+    environment:
+      # Переменная для yc CLI, указывающая на ключ сервисного аккаунта
+      - YC_SERVICE_ACCOUNT_KEY_FILE=/run/secrets/sa_key
+    secrets:
+      - sa_key
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
+
+secrets:
+  sa_key:
+    file: ./sa-key.json # Укажите путь к вашему файлу с ключом

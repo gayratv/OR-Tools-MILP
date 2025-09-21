@@ -14,10 +14,10 @@ RUN curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -
 WORKDIR /app
 
 # Копируем файл зависимостей
-COPY PY/requirements.txt .
+COPY requirements.txt .
 
 # Копируем скрипты в /usr/local/bin, чтобы они были доступны в PATH
-#COPY scripts/*.sh /usr/local/bin/
+COPY scripts/*.sh /usr/local/bin/
 
 # Устанавливаем зависимости в отдельный каталог /wheels
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -26,11 +26,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 
 # --- Этап 2: Финальный образ ---
-FROM python:3.12-slim
-
-# Создаем пользователя без root-прав
-RUN useradd -m appuser
-USER appuser
+FROM python:3.12
 
 # Устанавливаем только runtime-зависимости для pyodbc
 RUN apt-get update \
@@ -38,6 +34,9 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+
+# Создаем пользователя без root-прав
+RUN useradd -m appuser
 
 WORKDIR /home/appuser/app
 
@@ -49,14 +48,20 @@ COPY --from=builder /wheels /wheels
 RUN pip install --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
 
 # Копируем код приложения
-COPY PY/ .
+COPY . .
 
 # Копируем скрипты и делаем их исполняемыми
-COPY --chown=appuser:appuser scripts/ /home/appuser/scripts/
-RUN chmod +x /home/appuser/scripts/*.sh
+COPY scripts/ /home/appuser/scripts/
 
 # Добавляем yc и скрипты в PATH
 ENV PATH="/home/appuser/yandex-cloud/bin:/home/appuser/scripts:${PATH}"
 
+# Меняем владельца всех файлов и делаем скрипты исполняемыми
+RUN chown -R appuser:appuser /home/appuser && \
+    chmod +x /home/appuser/scripts/*.sh
+
+# Переключаемся на пользователя
+USER appuser
+
 # Команда по умолчанию для контейнера-калькулятора (пример)
-CMD ["python", "main.py"]
+CMD ["python", "rasp_or_tools.py"]

@@ -27,3 +27,4 @@
 /ya-cloud/aws/
 /docker-python3.12/nodejs-app/node_modules/
 /docker-python3.12/nodejs-app/dist/
+/docker-python3.12/nodejs-app/sa-key.json
