@@ -10,6 +10,8 @@ services:
     # Монтируем конфигурацию YC CLI из VM в контейнер
     volumes:
       - ~/.config/yandex-cloud:/home/appuser/.config/yandex-cloud:ro
+    networks:
+      - app-network
 
   supervisor:
     build: .
@@ -23,3 +25,35 @@ services:
       - ~/.config/yandex-cloud:/home/appuser/.config/yandex-cloud:ro
     depends_on:
       - calculator
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+
+  nodejs:
+    build:
+      context: ./nodejs-app
+      dockerfile: Dockerfile
+    container_name: nodejs
+    ports:
+      - "3000:3000"
+    depends_on:
+      - rabbitmq
+    networks:
+      - app-network
+
+volumes:
+  rabbitmq_data:
+
+networks:
+  app-network:
+    driver: bridge
