@@ -28,3 +28,7 @@
 /docker-python3.12/nodejs-app/node_modules/
 /docker-python3.12/nodejs-app/dist/
 /docker-python3.12/nodejs-app/sa-key.json
+/docker-python3.12/python-app/timetable_or_tools_solution.xlsx
+/docker-python3.12/output_data/timetable_or_tools_solution.xlsx
+/docker-python3.12/sa-key.json
+/docker-python3.12/yandex-cloud-key.json

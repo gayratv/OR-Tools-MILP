@@ -1242,7 +1242,8 @@ def build_and_solve_with_or_tools(
         print(f'Окна у преподавателей (суммарная длина): {solution_stats["total_teacher_windows"]}')
 
         # Экспорт в Excel
-        output_filename = "timetable_or_tools_solution.xlsx"
+        # output_filename = "timetable_or_tools_solution.xlsx"
+        output_filename = "/home/appuser/app/output/timetable_or_tools_solution.xlsx"
         final_maps = {"solver": solver, "x": x, "z": z}
 
         # display_maps теперь часть объекта data

@@ -5,6 +5,11 @@ services:
       context: ./python-app
       dockerfile: Dockerfile
     container_name: python-solver
+    volumes:
+      # Bind mount для разработки: связывает локальный код с кодом в контейнере
+      - ./python-app:/home/appuser/app
+      # Папка для сохранения результатов. Файлы будут доступны на VPS в ./output_data
+      - ./output_data:/home/appuser/app/output
     
     networks:
       - app-network
@@ -18,16 +23,20 @@ services:
       - "3000:3000"
     environment:
       # Переменная для yc CLI, указывающая на ключ сервисного аккаунта
-      - YC_SERVICE_ACCOUNT_KEY_FILE=/run/secrets/sa_key
-    secrets:
-      - sa_key
+      - YC_SERVICE_ACCOUNT_KEY_FILE=/etc/yc/sa_key.json
+    volumes:
+      # Монтируем ключ SA как файл только для чтения
+      - ./yandex-cloud-key.json:/etc/yc/sa_key.json:ro
+    command: |
+      sh -c "
+        yc config set service-account-key /etc/yc/sa_key.json &&
+        yc config set folder-id b1gbgjv35qvro3lmgaci &&
+        yc config set cloud-id b1gib03pgvqrrfvhl3kb &&
+        node dist/server.js
+      "
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
-
-secrets:
-  sa_key:
-    file: ./sa-key.json # Укажите путь к вашему файлу с ключом
