@@ -17,7 +17,7 @@ WORKDIR /app
 COPY PY/requirements.txt .
 
 # Копируем скрипты в /usr/local/bin, чтобы они были доступны в PATH
-COPY scripts/*.sh /usr/local/bin/
+#COPY scripts/*.sh /usr/local/bin/
 
 # Устанавливаем зависимости в отдельный каталог /wheels
 RUN --mount=type=cache,target=/root/.cache/pip \

@@ -1,0 +1,11 @@
+ortools
+pyodbc
+pandas
+pulp
+highspy
+openpyxl
+sqlalchemy
+sqlalchemy-access
+tabulate
+mysql-connector-python
+python-dotenv

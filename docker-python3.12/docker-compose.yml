@@ -1,41 +1,11 @@
-# F:/_prg/python/OR-Tools-MILP/docker-python3.12/docker-compose.yml
-version: '3.8'
 
 services:
   calculator:
-    build: .
-    container_name: calculator
-    # Пример команды для запуска вашего расчета
-    # command: ["python", "run_calculation.py", "--param1", "value1"]
-    # Монтируем конфигурацию YC CLI из VM в контейнер
-    volumes:
-      - ~/.config/yandex-cloud:/home/appuser/.config/yandex-cloud:ro
-    networks:
-      - app-network
-
-  supervisor:
-    build: .
-    container_name: supervisor
-    command: ["watch-and-destroy.sh", "calculator", "4h"] # Наблюдать за 'calculator' с таймаутом 4 часа
-    restart: "no" # Не перезапускать супервизора
-    volumes:
-      # Доступ к Docker socket для мониторинга контейнеров
-      - /var/run/docker.sock:/var/run/docker.sock
-      # Монтируем конфигурацию YC CLI
-      - ~/.config/yandex-cloud:/home/appuser/.config/yandex-cloud:ro
-    depends_on:
-      - calculator
-    networks:
-      - app-network
-
-  rabbitmq:
-    image: "rabbitmq:3-management"
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+    build:
+      context: ./python-app
+      dockerfile: Dockerfile
+    container_name: python-solver
+    
     networks:
       - app-network
 
@@ -46,13 +16,8 @@ services:
     container_name: nodejs
     ports:
       - "3000:3000"
-    depends_on:
-      - rabbitmq
     networks:
       - app-network
-
-volumes:
-  rabbitmq_data:
 
 networks:
   app-network:
