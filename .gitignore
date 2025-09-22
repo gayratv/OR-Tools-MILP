@@ -32,3 +32,6 @@
 /docker-python3.12/output_data/timetable_or_tools_solution.xlsx
 /docker-python3.12/sa-key.json
 /docker-python3.12/yandex-cloud-key.json
+/docker-python3.12/.mysql/
+/ya-cloud/yandex-cloud-key.json
+/ya-cloud/.mysql/
