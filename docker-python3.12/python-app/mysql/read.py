@@ -3,7 +3,8 @@ import mysql.connector
 from dotenv import load_dotenv
 
 # Путь к .env
-ENV_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "docker-compose-full", ".env")
+# ENV_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "docker-compose-full", ".env")
+ENV_PATH = r"F:\_prg\python\OR-Tools-MILP\docker-compose-full\.env"
 
 # Загружаем переменные окружения
 load_dotenv(ENV_PATH)
