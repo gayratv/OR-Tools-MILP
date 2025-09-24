@@ -122,3 +122,11 @@ yc compute instance create-with-container \
 
   мета
 https://yandex.cloud/ru/docs/compute/operations/vm-metadata/get-vm-metadata#request-examples
+
+
+
+Tips for getting started
+X
+Add rules to tell Gemini your preferences
+Save frequently-used prompts in the prompt library and access them via @
+Select code in the editor and press Ctrl+ \ to prompt Gemini inline
