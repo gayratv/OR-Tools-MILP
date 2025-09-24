@@ -4,13 +4,13 @@ from dotenv import load_dotenv
 
 # Путь к .env
 # ENV_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "docker-compose-full", ".env")
-ENV_PATH = r"F:\_prg\python\OR-Tools-MILP\docker-compose-full\.env"
+ENV_PATH = r"../responce/.env"
 
 # Загружаем переменные окружения
 load_dotenv(ENV_PATH)
 
 # Базовый путь для .mysql (по умолчанию Windows)
-MYSQL_DIR = os.environ.get("MYSQL_DIR", r"C:\Users\gena6\.mysql")
+MYSQL_DIR = r"../responce/.mysql-out"
 
 config = {
     "host": "uroktime.store",

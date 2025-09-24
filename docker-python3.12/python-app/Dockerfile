@@ -29,8 +29,14 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 FROM python:3.12
 
 # Устанавливаем только runtime-зависимости для pyodbc
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends unixodbc bash curl mc mysql-client \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        unixodbc \
+        bash \
+        curl \
+        mc \
+        default-mysql-client \
+        jq \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
