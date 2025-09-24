@@ -8,11 +8,10 @@ VM_NAME=$(curl -s -H "Metadata-Flavor: Google" \
 
 # Проверяем успешность запроса
 if [[ -z "$VM_NAME" ]]; then
-  echo "Ошибка: не удалось получить имя инстанса из GCP metadata server" >&2
+  echo "Ошибка: не удалось получить имя инстанса через YC CLI." >&2
   exit 1
 fi
 
-echo "Удаление ВМ с именем: $VM_NAME" >&2
+echo "Запрос на удаление текущей ВМ с ID: $VM_NAME" >&2
 
-yc compute instance delete \
-  --name "$VM_NAME"
+yc compute instance delete --name "$VM_NAME"
