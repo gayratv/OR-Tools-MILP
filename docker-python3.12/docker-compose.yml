@@ -10,10 +10,11 @@ services:
       - ./python-app:/home/appuser/app
       # Папка для сохранения результатов. Файлы будут доступны на VPS в ./output_data
       - ./output_data:/home/appuser/app/output
-    
+      # Монтируем ключ SA как файл только для чтения
+      - ./yandex-cloud-key.json:/etc/yc/sa_key.json:ro
+
     networks:
       - app-network
-
   nodejs:
     build:
       context: ./nodejs-app

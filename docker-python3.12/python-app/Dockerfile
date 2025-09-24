@@ -58,10 +58,10 @@ ENV PATH="/home/appuser/yandex-cloud/bin:/home/appuser/scripts:${PATH}"
 
 # Меняем владельца всех файлов и делаем скрипты исполняемыми
 RUN chown -R appuser:appuser /home/appuser && \
-    chmod +x /home/appuser/scripts/*.sh
+    chmod +x /home/appuser/scripts/*.sh && \
+    chmod +x /home/appuser/app/entrypoint.sh
 
 # Переключаемся на пользователя
 USER appuser
 
-# Команда по умолчанию для контейнера-калькулятора (пример)
-CMD ["python", "rasp_or_tools.py"]
+ENTRYPOINT ["/home/appuser/app/entrypoint.sh"]

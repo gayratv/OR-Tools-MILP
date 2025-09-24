@@ -43,3 +43,4 @@ yc lockbox secret create \
 
 #yc lockbox secret list
 #yc lockbox secret delete --name mysql-certs
+#yc lockbox secret delete --name school-scheduler-app-secrets
