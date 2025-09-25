@@ -22,9 +22,7 @@
 
 import itertools
 from typing import Dict, Iterable, Hashable, Tuple, List, Optional, Union
-import os
 from pathlib import Path
-import boto3
 from dotenv import load_dotenv
 
 
