@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# cd /mnt/f/_prg/python/OR-Tools-MILP/ya-cloud
+# ./yc-secrets-common.sh
 
 # -----------------------------------------------------------
 # yc-secrets-common.sh (fixed)
