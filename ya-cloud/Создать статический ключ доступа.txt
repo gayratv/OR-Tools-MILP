@@ -1,0 +1,8 @@
+https://yandex.cloud/ru/docs/iam/operations/authentication/manage-access-keys#create-access-key
+
+yc iam access-key create --help
+
+yc iam service-account list
+ajetgl24iaclk5ui1qq1
+
+yc iam access-key create --service-account-name  sc-scheduller-backet

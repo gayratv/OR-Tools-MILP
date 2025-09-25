@@ -1,0 +1,30 @@
+yc config list
+
+yc storage bucket create --help
+
+yc storage bucket create \
+    --name user25262 \
+    --public-read
+
+yc storage bucket delete --name user25262
+
+
+yc storage s3api put-object --help
+yc storage bucket list
+
+cd /mnt/f/_prg/python/OR-Tools-MILP/ya-cloud/backet
+
+yc storage s3 cp \
+  заметки.txt \
+  "s3://scool-sheduller/user1/2025-09-25-9:20:31/Вася Петров.txt"
+
+https://storage.yandexcloud.net/scool-sheduller/user1/zam.txt
+
+
+https://yandex.cloud/ru/docs/storage/s3/s3-api-quickstart
+Начало работы с AWS S3 API в Yandex Object Storage
+
+https://yandex.cloud/ru/docs/storage/tools/boto
+boto3
+https://github.com/boto/boto3/blob/develop/README.rst#quick-start
+$ python -m pip install boto3
