@@ -22,6 +22,11 @@
 
 import itertools
 from typing import Dict, Iterable, Hashable, Tuple, List, Optional, Union
+import os
+from pathlib import Path
+import boto3
+from dotenv import load_dotenv
+
 
 from ortools.sat.python import cp_model
 
@@ -32,6 +37,7 @@ from access_loader import load_data_from_access, load_display_maps
 from rasp_data_generated import create_timetable_data
 from print_schedule import get_solution_maps, export_full_schedule_to_excel, print_schedule_to_console
 from teacher_windows_opus import add_teacher_window_optimization_span
+
 
 
 # ---------------------------- 1) ВСПОМОГАТЕЛЬНЫЕ ХЕЛПЕРЫ ----------------------------
@@ -1265,6 +1271,11 @@ def build_and_solve_with_or_tools(
 # ------------------------------ 4) ТОЧКА ВХОДА ------------------------------
 
 if __name__ == '__main__':
+    # Загружаем переменные окружения из файла .env в дочерней директории 'responce'
+    dotenv_path = Path(__file__).parent / 'responce/.env'
+    load_dotenv(dotenv_path=dotenv_path)
+
+
     # Источник данных: 'db' | 'generated' | 'manual'
     data_source = 'generated'
     data = None

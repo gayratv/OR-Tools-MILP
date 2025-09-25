@@ -89,6 +89,9 @@ COMBINED_PAYLOAD=$(jq -s '.[0] + .[1]' <(echo "$ENV_JSON") <(echo "$CERTS_JSON")
 
 # ---------- создаём секрет ровно один раз ----------
 echo "Создаю секрет '$SECRET_NAME'..."
+
+yc lockbox secret delete --name "$SECRET_NAME"
+
 yc lockbox secret create \
   --name "$SECRET_NAME" \
   --description "Секреты приложения (.env + PEM)" \
