@@ -21,7 +21,7 @@
 # -----------------------------------------------------------------------------
 
 import itertools
-from typing import Dict, Iterable, Hashable, Tuple, List, Optional, Union
+from typing import Dict,  Hashable, Tuple, List,  Union
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -31,10 +31,11 @@ from ortools.sat.python import cp_model
 # Ваша инфраструктура данных/вывода
 from input_data import InputData, OptimizationWeights, OptimizationGoals
 from rasp_data import create_manual_data
-from access_loader import load_data_from_access, load_display_maps
+from access_loader import load_data_from_access
 from rasp_data_generated import create_timetable_data
 from print_schedule import get_solution_maps, export_full_schedule_to_excel, print_schedule_to_console
 from teacher_windows_opus import add_teacher_window_optimization_span
+from put_to_bucket import upload_file_to_s3
 
 
 
@@ -533,6 +534,8 @@ def _validate_input_data(data: InputData) -> None:
 
 def build_and_solve_with_or_tools(
     data: InputData,
+    userid: int,
+    jobid: int,
     log: bool = True,
     PRINT_TIMETABLE_TO_CONSOLE: bool = False,
 
@@ -1246,8 +1249,7 @@ def build_and_solve_with_or_tools(
         print(f'Окна у преподавателей (суммарная длина): {solution_stats["total_teacher_windows"]}')
 
         # Экспорт в Excel
-        # output_filename = "timetable_or_tools_solution.xlsx"
-        output_filename = "/home/appuser/app/output/timetable_or_tools_solution.xlsx"
+        output_filename = f"/home/appuser/app/output/user_{userid}_job_{jobid}_solution.xlsx"
         final_maps = {"solver": solver, "x": x, "z": z}
 
         # display_maps теперь часть объекта data
@@ -1257,6 +1259,7 @@ def build_and_solve_with_or_tools(
         }
         solution_maps = get_solution_maps(data, final_maps, is_pulp=False)
         export_full_schedule_to_excel(output_filename, data, solution_maps, display_maps, solution_stats, weights)
+        upload_file_to_s3(Path(output_filename), f"user_{userid}/job_{jobid}_solution.xlsx")
         
         if PRINT_TIMETABLE_TO_CONSOLE:
             print("\n--- Расписание в консоли ---")
@@ -1298,6 +1301,7 @@ if __name__ == '__main__':
     # Запуск
     build_and_solve_with_or_tools(
         data,
+        userid=0,  # Пример ID пользователя
+        jobid=0,   # Пример ID задачи
         PRINT_TIMETABLE_TO_CONSOLE=OptimizationGoals().print_timetable_to_console, # <--- Установите True для вывода в консоль
-
     )
