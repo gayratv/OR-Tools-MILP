@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+yc init
+yc config profile create default
+yc config profile activate default
+
 yc config set <имя_параметра> <значение_параметра>
 
 yc config set folder-id b1gbgjv35qvro3lmgaci

@@ -113,3 +113,7 @@ echo "Экспортировано: VM_EXTERNAL_IP=${VM_EXTERNAL_IP}"
 #fi
 #
 #echo "SSH-сервер готов. Можно подключаться."
+
+
+
+# https://yandex.cloud/ru/docs/cos/concepts/coi-specifications#compose-spec

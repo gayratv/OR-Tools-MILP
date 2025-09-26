@@ -1,5 +1,5 @@
 # --- Этап 1: Сборщик с YC CLI ---
-FROM python:3.12 as builder
+FROM python:3.12 AS builder
 
 # Устанавливаем системные зависимости, необходимые для сборки python-пакетов (например, pyodbc)
 # В базовом образе python:3.12 уже есть build-essential, нужно доставить только unixodbc-dev
@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 
 # --- Этап 2: Финальный образ ---
-FROM python:3.12 as final
+FROM python:3.12
 
 # Устанавливаем только runtime-зависимости для pyodbc
 RUN apt-get update \
@@ -70,9 +70,4 @@ RUN chown -R appuser:appuser /home/appuser && \
 # Переключаемся на пользователя
 USER appuser
 
-# ========== 3) dev/prod: только разный ENTRYPOINT ==========
-FROM final AS dev
-ENTRYPOINT ["/home/appuser/app/entrypoint-dev.sh"]
-
-FROM final AS prod
 ENTRYPOINT ["/home/appuser/app/entrypoint-prod.sh"]

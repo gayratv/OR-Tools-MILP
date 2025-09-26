@@ -1,13 +1,24 @@
 
 services:
-  calculator:
+  calculator-prod:
+    profiles: ["prod"]
     build:
       context: ./python-app
       dockerfile: Dockerfile
+      target: prod
     container_name: python-solver
+  calculator-dev:
+    profiles: ["dev"]
+    build:
+      context: ./python-app
+      dockerfile: Dockerfile
+      target: dev
+
+#    extends:
+#      service: calculator
     volumes:
       # Bind mount для разработки: связывает локальный код с кодом в контейнере
-      - ./python-app:/home/appuser/app
+#      - ./python-app:/home/appuser/app
       # Папка для сохранения результатов. Файлы будут доступны на VPS в ./output_data
       - ./output_data:/home/appuser/app/output
       # Монтируем ключ SA как файл только для чтения

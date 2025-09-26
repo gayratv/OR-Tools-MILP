@@ -13,3 +13,10 @@ yc lockbox payload get school-scheduler-app-secrets --format json
 yc config set service-account-key yandex-cloud-key.json
 
 yc config list
+
+
+==========
+docker compose --profile dev up -d --build
+docker compose --profile dev down
+
+docker compose --profile prod up -d --build
