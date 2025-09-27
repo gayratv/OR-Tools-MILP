@@ -50,15 +50,17 @@ write_files:
       
       echo "SETTING YC +++++++++++++++++++++"
       source /home/yc-user/.bashrc
-      yc iam key create \
+      
+      
+      /home/yc-user/yandex-cloud/bin/yc iam key create \
         --service-account-name sc-scheduller-srv-acc \
         --output key.json \
         --folder-id b1gbgjv35qvro3lmgaci
       
-      yc config profile create default
-      yc config set service-account-key key.json
-      yc config set cloud-id b1gib03pgvqrrfvhl3kb
-      yc config set folder-id b1gbgjv35qvro3lmgaci
+      /home/yc-user/yandex-cloud/bin/yc config profile create default
+      /home/yc-user/yandex-cloud/bin/yc config set service-account-key key.json
+      /home/yc-user/yandex-cloud/bin/yc config set cloud-id b1gib03pgvqrrfvhl3kb
+      /home/yc-user/yandex-cloud/bin/yc config set folder-id b1gbgjv35qvro3lmgaci
 
 
     defer: true
