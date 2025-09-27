@@ -1,6 +1,20 @@
+cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
+source ./create-yandex-docker-compose.sh gayrat-docker2
+
+ssh -i ~/.ssh/ya-cloud/priv yc-user@89.169.137.15
+
+ls /home/yc-user/yandex-cloud/bin/wait_for_files.sh
+
+nano /home/yc-user/yandex-cloud/bin/wait_for_files.sh
+chmod +x /home/yc-user/yandex-cloud/bin/wait_for_files.sh
+./scripts/wait_for_files.sh
+
+
+
 yc compute instance stop <имя_или_id_вм>
 
 ssh -i ~/.ssh/ya-cloud/priv yc-user@62.84.113.83
+
 
 ls /home/yc-user/yandex-cloud/bin
 delete-docker-curl.sh

@@ -99,5 +99,7 @@ runcmd:
   # 3. Скачиваем скрипт самоудаления сразу в /usr/local/bin
 #  - 'curl -L -o /usr/local/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'
 #  - 'curl -L -o /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'
+  - 'curl -L -o /home/yc-user/yandex-cloud/bin/wait_for_files.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/docker-python3.12/scripts/wait_for_files.sh'
   # 4. Делаем скрипт исполняемым для всех пользователей
   - 'chmod +x /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh'
+  - 'chmod +x /home/yc-user/yandex-cloud/bin/wait_for_files.sh'
