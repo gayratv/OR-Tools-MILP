@@ -1,0 +1,80 @@
+#cloud-config
+# Этот файл используется cloud-init для настройки ВМ после первого запуска.
+datasource:
+  Ec2:
+    strict_id: false
+ssh_pwauth: no
+users:
+  - name: yc-user
+    groups: [ 'sudo', 'docker' ]
+    shell: /bin/bash
+    sudo: [ 'ALL=(ALL) NOPASSWD:ALL' ]
+    ssh_authorized_keys:
+      - $SSH_PUBLIC_KEY
+
+
+#    ssh_authorized_keys: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMsT2ARMza/hqHGe2QqSAPTlUhh3yUimuVAXXjqsuLlm root@SOLIDWORKS2022
+
+
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - git
+  - mc
+  - curl
+
+write_files:
+  - path: "/usr/local/etc/yc-install.sh"
+    owner: yc-user:yc-user
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+
+      # CLI
+      echo "Installing Yandex Cloud CLI"
+      curl \
+        --silent \
+        --show-error \
+        --location \
+        https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+      VM_ID=$(curl --silent http://169.254.169.254/latest/meta-data/instance-id)
+
+      # Save YC params
+      echo "Saving YC params to the ~/.bashrc"
+      cat << EOF >> $HOME/.bashrc
+        export PATH="$HOME/yandex-cloud/bin:$PATH"
+        export YC_CLI_VM_ID="${VM_ID:-unknown}"
+      EOF
+    defer: true
+
+#  - path: "/usr/bin/delete-docker-curl.sh"
+#    owner: root:root
+#    permissions: "0755"
+#    content: |
+#      #!/bin/bash
+#        # Скрипт для удаления ВМ в Yandex Cloud
+#        # Имя ВМ берём из метаданных GCP
+#
+#        # Получаем имя инстанса
+#        VM_NAME=$(curl -s -H "Metadata-Flavor: Google" \
+#          "http://169.254.169.254/computeMetadata/v1/instance/name")
+#
+#        # Проверяем успешность запроса
+#        if [[ -z "$VM_NAME" ]]; then
+#          echo "Ошибка: не удалось получить имя инстанса через YC CLI." >&2
+#          exit 1
+#        fi
+#
+#        echo "Запрос на удаление текущей ВМ с ID: $VM_NAME" >&2
+#
+#        yc compute instance delete --name "$VM_NAME"
+#    defer: true
+runcmd:
+  - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
+  # 3. Скачиваем скрипт самоудаления сразу в /usr/local/bin
+  - 'curl -L -o /usr/local/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'
+  - 'curl -L -o /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'
+  # 4. Делаем скрипт исполняемым для всех пользователей
+  - 'chmod +x /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh'
