@@ -18,11 +18,7 @@
 /docker-python3.12/PY/
 /docker-compose-full/nodejs-app/dist/
 /docker-compose-full/nodejs-app/node_modules/
-/docker-python3.12/scripts/
-/docker-compose-full/scripts/create-docker.sh
-/docker-compose-full/scripts/delete-docker.sh
-/docker-compose-full/nodejs-app/scripts/create-docker.sh
-/docker-compose-full/nodejs-app/scripts/delete-docker.sh
+
 /ya-cloud/.env.json
 /ya-cloud/aws/
 /docker-python3.12/nodejs-app/node_modules/

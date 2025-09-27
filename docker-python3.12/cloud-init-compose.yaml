@@ -97,7 +97,7 @@ write_files:
 runcmd:
   - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
   # 3. Скачиваем скрипт самоудаления сразу в /usr/local/bin
-  - 'curl -L -o /usr/local/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'
-  - 'curl -L -o /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'
+#  - 'curl -L -o /usr/local/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'
+#  - 'curl -L -o /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'
   # 4. Делаем скрипт исполняемым для всех пользователей
   - 'chmod +x /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh'

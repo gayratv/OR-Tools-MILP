@@ -1,0 +1,8 @@
+yc compute instance stop <имя_или_id_вм>
+
+ssh -i ~/.ssh/ya-cloud/priv yc-user@62.84.113.83
+
+ls /home/yc-user/yandex-cloud/bin
+delete-docker-curl.sh
+
+./scripts/stop-curl.sh

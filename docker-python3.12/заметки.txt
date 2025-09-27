@@ -27,9 +27,10 @@ cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
 source ./create-yandex-docker-compose.sh gayrat-docker1
 
 ssh -i ~/.ssh/ya-cloud/priv yc-user@"$VM_EXTERNAL_IP"
-ssh -i ~/.ssh/ya-cloud/priv yc-user@89.169.146.98
+ssh -i ~/.ssh/ya-cloud/priv yc-user@62.84.113.83
 
 date && ls ~
+date && ls /home/yc-user/yandex-cloud/bin
 export PATH="/home/yc-user/yandex-cloud/bin:$PATH"
 
 clear
