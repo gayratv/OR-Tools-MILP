@@ -50,14 +50,16 @@ write_files:
       # Экранируем $HOME, чтобы он раскрылся во время выполнения скрипта от имени yc-user,
       # а не во время создания файла от имени root.
       cat << EOF >> /home/yc-user/.bashrc
-        export PATH="\$HOME/yandex-cloud/bin:\$PATH"
+        export PATH="/home/yc-user/yandex-cloud/bin:\$PATH"
         export YC_CLI_VM_ID="${VM_ID:-unknown}"
       EOF
       
+      # Явно обновляем PATH для текущей сессии скрипта.
+      # Это надежнее, чем `source` в cloud-init.
+      export PATH="/home/yc-user/yandex-cloud/bin:$PATH"
+
       echo "SETTING YC +++++++++++++++++++++"
-      source /home/yc-user/.bashrc
-      
-      # Теперь можно использовать просто 'yc', так как PATH обновлен
+
       yc iam key create \
         --service-account-name sc-scheduller-srv-acc \
         --output key.json \

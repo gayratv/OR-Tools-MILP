@@ -24,13 +24,13 @@ docker compose --profile prod up -d --build
 
 ==========
 cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
-source ./create-yandex-docker-compose.sh gayrat-docker2
+source ./create-yandex-docker-compose.sh gayrat-docker1
 
 ssh -i ~/.ssh/ya-cloud/priv yc-user@"$VM_EXTERNAL_IP"
-ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.44.33
+ssh -i ~/.ssh/ya-cloud/priv yc-user@89.169.146.98
 
 date && ls ~
-source ~/.bashrc
+export PATH="/home/yc-user/yandex-cloud/bin:$PATH"
 
 clear
 sudo cat /var/log/cloud-init-output.log
@@ -38,6 +38,8 @@ sudo cat /var/log/cloud-init-output.log
 date && docker image ls
 docker ps
 
+
+yc compute instance delete --name gayrat-docker1
 ---
 Sat Sep 27 10:15:14 UTC 2025
 REPOSITORY   TAG       IMAGE ID   CREATED   SIZE
@@ -106,7 +108,7 @@ yc config set cloud-id b1gib03pgvqrrfvhl3kb
 yc config set folder-id b1gbgjv35qvro3lmgaci
 yc config list
 
-yc compute instance delete --name gayrat-docker2
+yc compute instance delete --name gayrat-docker1
 ====
 clear
 sudo cat /var/log/cloud-init-output.log
