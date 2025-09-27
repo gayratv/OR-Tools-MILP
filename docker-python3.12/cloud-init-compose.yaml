@@ -40,28 +40,33 @@ write_files:
         --location \
         https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
       VM_ID=$(curl --silent http://169.254.169.254/latest/meta-data/instance-id)
-
+      
+      # Переходим в домашнюю директорию пользователя, чтобы все последующие команды
+      # выполнялись в ней и имели права на запись файлов (например, key.json).
+      cd /home/yc-user
+      
       # Save YC params
       echo "Saving YC params to the ~/.bashrc"
-      cat << EOF >> $HOME/.bashrc
-        export PATH="$HOME/yandex-cloud/bin:$PATH"
+      # Экранируем $HOME, чтобы он раскрылся во время выполнения скрипта от имени yc-user,
+      # а не во время создания файла от имени root.
+      cat << EOF >> /home/yc-user/.bashrc
+        export PATH="\$HOME/yandex-cloud/bin:\$PATH"
         export YC_CLI_VM_ID="${VM_ID:-unknown}"
       EOF
       
       echo "SETTING YC +++++++++++++++++++++"
       source /home/yc-user/.bashrc
       
-      
-      /home/yc-user/yandex-cloud/bin/yc iam key create \
+      # Теперь можно использовать просто 'yc', так как PATH обновлен
+      yc iam key create \
         --service-account-name sc-scheduller-srv-acc \
         --output key.json \
         --folder-id b1gbgjv35qvro3lmgaci
       
-      /home/yc-user/yandex-cloud/bin/yc config profile create default
-      /home/yc-user/yandex-cloud/bin/yc config set service-account-key key.json
-      /home/yc-user/yandex-cloud/bin/yc config set cloud-id b1gib03pgvqrrfvhl3kb
-      /home/yc-user/yandex-cloud/bin/yc config set folder-id b1gbgjv35qvro3lmgaci
-
+      yc config profile create default
+      yc config set service-account-key key.json
+      yc config set cloud-id b1gib03pgvqrrfvhl3kb
+      yc config set folder-id b1gbgjv35qvro3lmgaci
 
     defer: true
 
