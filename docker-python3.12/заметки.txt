@@ -23,7 +23,87 @@ docker compose --profile prod up -d --build
 
 
 ==========
-source ./ya-cloud/create-yandex-docker-compose.sh
+cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
+source ./create-yandex-docker-compose.sh gayrat-docker3
 
 ssh -i ~/.ssh/ya-cloud/priv yc-user@"$VM_EXTERNAL_IP"
-ssh -i ~/.ssh/ya-cloud/priv yc-user@89.169.129.123
+ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.118.174
+
+date && ls ~
+source ~/.bashrc
+
+date && docker image ls
+docker ps
+
+---
+Sat Sep 27 10:15:14 UTC 2025
+REPOSITORY   TAG       IMAGE ID   CREATED   SIZE
+
+35 сек
+Sat Sep 27 10:15:49 UTC 2025
+REPOSITORY                 TAG       IMAGE ID       CREATED       SIZE
+gayrat/python-app-yandex   latest    ef72ebe479bc   7 hours ago   1.88GB
+gayrat/nodejs-app-yandex   latest    642499f4d540   2 days ago    507MB
+
+docker stop $(docker ps -q)
+docker rm $(docker ps -aq)
+
+docker exec -it python-solver bash
+docker exec -u root -it python-solver bash
+
+yc config list
+
+yc config list
+ERROR: profile 'default' not found
+
+
+==========
+Чтобы получить IAM-токен из каталога computeMetadata, подключитесь к ВМ и выполните запрос:
+
+curl \
+  --silent \
+  --fail \
+  --header Metadata-Flavor:Google \
+  169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token | \
+  jq -r .a
+
+Привяжите сервисный аккаунт
+--service-account-name my-robot
+
+
+
+yc iam create-token
+yc iam service-accounts list
+yc config list
+
+yc init
+
+
+yc config profile create default
+yc config set folder-id b1gbgjv35qvro3lmgaci
+yc config set cloud-id b1gib03pgvqrrfvhl3kb
+
+yc compute instance delete --name gayrat-docker2
+
+===========
+Получение IAM-токена для сервисного аккаунта
+https://yandex.cloud/ru/docs/iam/operations/iam-token/create-for-sa
+
+Аутентифицируйтесь от имени сервисного аккаунта с помощью авторизованного ключа
+https://yandex.cloud/ru/docs/cli/operations/authentication/service-account
+
+yc iam key create \
+  --service-account-name sc-scheduller-srv-acc \
+  --output key.json \
+  --folder-id b1gbgjv35qvro3lmgaci
+
+yc config profile create default
+yc config set service-account-key key.json
+yc config set cloud-id b1gib03pgvqrrfvhl3kb
+yc config set folder-id b1gbgjv35qvro3lmgaci
+yc config list
+
+yc compute instance delete --name gayrat-docker2
+====
+clear
+sudo cat /var/log/cloud-init-output.log

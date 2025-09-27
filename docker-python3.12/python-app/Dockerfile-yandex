@@ -7,9 +7,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends unixodbc-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем Yandex Cloud CLI
-RUN curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
-
 # Устанавливаем рабочую директорию внутри контейнера
 WORKDIR /app
 
@@ -46,8 +43,6 @@ RUN useradd -m appuser
 
 WORKDIR /home/appuser/app
 
-# Копируем YC CLI из сборщика
-COPY --from=builder /root/yandex-cloud /home/appuser/yandex-cloud
 
 # Копируем "колеса" зависимостей и устанавливаем их
 COPY --from=builder /wheels /wheels
@@ -69,5 +64,9 @@ RUN chown -R appuser:appuser /home/appuser && \
 
 # Переключаемся на пользователя
 USER appuser
+# Устанавливаем Yandex Cloud CLI
+# надо чтобы установилось в /home/appuser
+RUN curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
+
 
 ENTRYPOINT ["/home/appuser/app/entrypoint-prod.sh"]

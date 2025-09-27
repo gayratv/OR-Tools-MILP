@@ -31,3 +31,5 @@ yc config set cloud-id b1gib03pgvqrrfvhl3kb
 
 yc config unset folder-id &&
 yc config unset cloud-id
+
+

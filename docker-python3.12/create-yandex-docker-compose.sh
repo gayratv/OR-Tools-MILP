@@ -71,6 +71,7 @@ RESP=$(
     --public-ip \
     --service-account-name sc-scheduller-srv-acc \
     --docker-compose-file docker-compose-yandex.yml \
+    --metadata-from-file user-data=cloud-init-compose.yaml \
     --metadata ssh-public-key="${SSH_PUBLIC_KEY}" \
     --format json \
 )
