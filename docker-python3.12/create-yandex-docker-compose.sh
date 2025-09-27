@@ -70,12 +70,9 @@ RESP=$(
     --create-boot-disk size=$DISK_SIZE \
     --public-ip \
     --service-account-name sc-scheduller-srv-acc \
-    --docker-compose-file docker-compose.yaml \
+    --docker-compose-file docker-compose-yandex.yml \
     --metadata ssh-public-key="${SSH_PUBLIC_KEY}" \
     --format json \
-    --container-name=python312 \
-    --container-image=gayrat/school_scheduler:latest \
-    --container-command=sleep \
 )
 
 # -------- Парсинг JSON ------------------------------------------------
@@ -93,27 +90,3 @@ jq -r '.id as $id
        + "\n  External:  " + (first(.network_interfaces[].primary_v4_address.one_to_one_nat.address // empty) // "")' <<< "$RESP"
 echo "----------------------------------------"
 echo "Экспортировано: VM_EXTERNAL_IP=${VM_EXTERNAL_IP}"
-
-#echo "Ожидание доступности SSH на ${VM_EXTERNAL_IP}:22..."
-
-#ATTEMPTS=0
-#MAX_ATTEMPTS=30 # ~1 минута
-#
-#while ! nc -z -w 2 "$VM_EXTERNAL_IP" 22 && [[ $ATTEMPTS -lt $MAX_ATTEMPTS ]]; do
-#  sleep 2
-#  ATTEMPTS=$((ATTEMPTS + 1))
-#  printf "."
-#done
-#
-#echo "" # Новая строка после точек
-#
-#if [[ $ATTEMPTS -eq $MAX_ATTEMPTS ]]; then
-#  echo "Ошибка: не удалось дождаться запуска SSH-сервера на ВМ." >&2
-#  exit 1
-#fi
-#
-#echo "SSH-сервер готов. Можно подключаться."
-
-
-
-# https://yandex.cloud/ru/docs/cos/concepts/coi-specifications#compose-spec

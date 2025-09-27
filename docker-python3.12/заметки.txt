@@ -20,3 +20,10 @@ docker compose --profile dev up -d --build
 docker compose --profile dev down
 
 docker compose --profile prod up -d --build
+
+
+==========
+source ./ya-cloud/create-yandex-docker-compose.sh
+
+ssh -i ~/.ssh/ya-cloud/priv yc-user@"$VM_EXTERNAL_IP"
+ssh -i ~/.ssh/ya-cloud/priv yc-user@89.169.129.123

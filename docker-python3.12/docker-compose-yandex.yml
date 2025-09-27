@@ -1,0 +1,22 @@
+
+services:
+  calculator-prod:
+    container_name: python-solver
+    image: gayrat/python-app-yandex:latest
+    networks:
+      - app-network
+  nodejs:
+    container_name: nodejs
+    image: gayrat/nodejs-app-yandex:latest
+    ports:
+      - "3000:3000"
+    command: |
+      sh -c "
+        node dist/server.js
+      "
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
