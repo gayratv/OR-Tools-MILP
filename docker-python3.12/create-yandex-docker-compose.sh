@@ -91,3 +91,22 @@ jq -r '.id as $id
        + "\n  External:  " + (first(.network_interfaces[].primary_v4_address.one_to_one_nat.address // empty) // "")' <<< "$RESP"
 echo "----------------------------------------"
 echo "Экспортировано: VM_EXTERNAL_IP=${VM_EXTERNAL_IP}"
+
+
+# Общее время в секундах
+TOTAL_SECONDS=100
+
+echo "Запускаю таймер на $TOTAL_SECONDS секунд..."
+# Цикл для обратного отсчета
+for (( i=$TOTAL_SECONDS; i>0; i-- )); do
+    # Выводим оставшееся время в ту же строку
+    # Используем printf для надежной обработки \r (возврат каретки)
+    printf "Осталось: %s секунд...  \r" "$i"
+    sleep 1
+done
+
+# Очищаем строку с таймером и переходим на новую
+echo "                                \r"
+
+# Выводим финальное сообщение
+echo "Прошло $TOTAL_SECONDS секунд!"

@@ -1,0 +1,21 @@
+Проверка локально (через Nginx):
+
+# последние 10 строк и дальше в live-режиме
+curl -N -H "Accept: text/event-stream" "http://localhost/logs?container=pyapp&tail=10"
+
+
+Или напрямую к Node (если открыли порт 8000):
+
+curl -N -H "Accept: text/event-stream" "http://localhost:8000/logs/pyapp?tail=10"
+
+В браузере:
+
+<script>
+  const es = new EventSource("/logs?container=pyapp&tail=50");
+  es.addEventListener("log", (ev) => {
+    console.log(ev.data);
+  });
+  es.addEventListener("error", (ev) => {
+    console.warn("SSE error", ev);
+  });
+</script>

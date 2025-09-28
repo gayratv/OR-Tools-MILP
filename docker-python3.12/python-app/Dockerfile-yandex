@@ -69,4 +69,6 @@ USER appuser
 RUN curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
 
 
+
+
 ENTRYPOINT ["/home/appuser/app/entrypoint-prod.sh"]

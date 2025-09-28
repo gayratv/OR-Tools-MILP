@@ -1,14 +1,24 @@
 cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
-source ./create-yandex-docker-compose.sh gayrat-docker2
+source ./create-yandex-docker-compose.sh gayrat-1
 
-ssh -i ~/.ssh/ya-cloud/priv yc-user@89.169.137.15
+ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.46.70
 
-ls /home/yc-user/yandex-cloud/bin/wait_for_files.sh
+docker ps
+docker exec -it python-solver bash
 
-nano /home/yc-user/yandex-cloud/bin/wait_for_files.sh
-chmod +x /home/yc-user/yandex-cloud/bin/wait_for_files.sh
-./scripts/wait_for_files.sh
 
+export PATH="/home/yc-user/yandex-cloud/bin:$PATH"
+
+
+docker logs -f python-solver
+docker logs python-solver
+
+
+
+
+
+
+stop-curl.sh
 
 
 yc compute instance stop <имя_или_id_вм>
