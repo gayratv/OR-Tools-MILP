@@ -94,7 +94,7 @@ echo "Экспортировано: VM_EXTERNAL_IP=${VM_EXTERNAL_IP}"
 
 
 # Общее время в секундах
-TOTAL_SECONDS=100
+TOTAL_SECONDS=90
 
 echo "Запускаю таймер на $TOTAL_SECONDS секунд..."
 # Цикл для обратного отсчета

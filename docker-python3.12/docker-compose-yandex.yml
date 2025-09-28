@@ -8,13 +8,14 @@ services:
   nodejs:
     container_name: nodejs
     image: gayrat/nodejs-app-yandex:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "3000:3000"
       - "8000:8000"
-    command: |
-      sh -c "
-        node dist/server.js
-      "
+    depends_on:
+      - calculator-prod
+
     networks:
       - app-network
 

@@ -18,23 +18,17 @@ RUN npm run build
 # --- Этап 2: Финальный образ ---
 FROM node:20-alpine
 
-# Устанавливаем curl и bash
+# Устанавливаем curl и bash для отладки
 RUN apk add --no-cache curl bash
 
 # Устанавливаем Yandex Cloud CLI
 RUN curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
 
-# Создаем пользователя без root-прав
-RUN addgroup -S appgroup && adduser -S -h /home/appuser -G appgroup appuser
-
 # Устанавливаем рабочую директорию
-WORKDIR /home/appuser/app
+WORKDIR /app
 
-# Копируем YC CLI в домашнюю директорию нового пользователя
-RUN cp -r /root/yandex-cloud /home/appuser/yandex-cloud
-
-# Копируем скрипты
-COPY scripts/ /home/appuser/scripts/
+# Копируем скрипты (если они нужны)
+COPY scripts/ /app/scripts/
 
 # Копируем только необходимые для запуска файлы из этапа сборки
 COPY --from=builder /app/package*.json ./
@@ -43,18 +37,11 @@ COPY --from=builder /app/dist ./dist
 # Устанавливаем production-зависимости
 RUN npm install --omit=dev
 
-# Добавляем yc и скрипты в PATH
-ENV PATH="/home/appuser/yandex-cloud/bin:/home/appuser/scripts:${PATH}"
-
-# Меняем владельца всех файлов
-RUN chown -R appuser:appgroup /home/appuser
-
-# Переключаемся на пользователя
-USER appuser
+# Добавляем yc и скрипты в PATH (пути для пользователя root)
+ENV PATH="/root/yandex-cloud/bin:/app/scripts:${PATH}"
 
 # Делаем скрипты исполняемыми
-RUN chmod +x /home/appuser/scripts/*.sh
+RUN chmod +x /app/scripts/*.sh
 
 EXPOSE 3000 8000
-#CMD ["node", "dist/server.js"]
 CMD ["node", "dist/logs-server.js"]

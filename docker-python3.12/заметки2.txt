@@ -1,7 +1,10 @@
 cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
+./db-node.sh
+
+cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
 source ./create-yandex-docker-compose.sh gayrat-1
 
-ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.46.70
+ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.51.17
 
 docker ps
 docker exec -it python-solver bash
@@ -21,12 +24,15 @@ docker logs python-solver
 stop-curl.sh
 
 
-yc compute instance stop <имя_или_id_вм>
-
-ssh -i ~/.ssh/ya-cloud/priv yc-user@62.84.113.83
-
-
 ls /home/yc-user/yandex-cloud/bin
 delete-docker-curl.sh
 
 ./scripts/stop-curl.sh
+
+curl -N -H "Accept: text/event-stream" "http://localhost:8000/logs/python-solver?tail=10"
+curl "http://localhost:8000/healthz"
+
+docker exec -it nodejs bash
+curl "http://localhost:8000/healthz"
+
+ps aux
