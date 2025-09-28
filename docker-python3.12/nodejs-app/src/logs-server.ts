@@ -1,4 +1,5 @@
 import express, {Request, Response} from "express";
+import type { Readable } from "stream";
 import Docker from "dockerode";
 
 const PORT = Number(process.env.PORT ?? 8000);
@@ -37,28 +38,13 @@ app.get("/healthz", (_req: Request, res: Response) => {
     res.status(200).send("ok");
 });
 
-// Алиас /logs → /logs/:container
-app.get("/logs", (req: Request, res: Response) => {
-    const name = (req.query.container as string) || DEFAULT_CONTAINER;
-    req.url = `/logs/${encodeURIComponent(name)}${
-        req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : ""
-    }`;
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore: Используем внутренний роутер
-    app._router.handle(req, res);
-});
-
-// SSE endpoint
-app.get("/logs/:container", async (req: Request, res: Response) => {
-    const name = req.params.container;
+async function handleLogStream(req: Request, res: Response, containerName: string): Promise<void> {
     const tail = (req.query.tail as string) ?? "100";
     const timestamps = ((req.query.ts as string) ?? "true") === "true";
-
     sseHead(res);
 
     try {
-        const container = docker.getContainer(name);
+        const container = docker.getContainer(containerName);
         await container.inspect(); // проверка, что контейнер существует
 
         const logStream = await container.logs({
@@ -92,13 +78,25 @@ app.get("/logs/:container", async (req: Request, res: Response) => {
 
         req.on("close", () => {
             // Клиент отключился, уничтожаем поток, чтобы не было утечек ресурсов.
-            logStream.destroy();
+            (logStream as Readable).destroy();
         });
     } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
         sseSend(res, {data: `error: ${message}`, event: "error"});
         res.end();
     }
+}
+
+// Алиас /logs → /logs/:container
+app.get("/logs", (req: Request, res: Response) => {
+    const name = (req.query.container as string) || DEFAULT_CONTAINER;
+    // Не нужно вызывать await, т.к. Express обработает промис
+    void handleLogStream(req, res, name);
+});
+
+// SSE endpoint
+app.get("/logs/:container", (req: Request, res: Response) => {
+    void handleLogStream(req, res, req.params.container);
 });
 
 app.listen(PORT, () => {
