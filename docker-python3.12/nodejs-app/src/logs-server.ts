@@ -91,11 +91,8 @@ app.get("/logs/:container", async (req: Request, res: Response) => {
         });
 
         req.on("close", () => {
-            try {
-                (logStream as any).destroy();
-            } catch {
-                /* ignore */
-            }
+            // Клиент отключился, уничтожаем поток, чтобы не было утечек ресурсов.
+            logStream.destroy();
         });
     } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
