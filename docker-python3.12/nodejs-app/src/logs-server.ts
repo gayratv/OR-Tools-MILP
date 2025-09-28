@@ -1,5 +1,5 @@
 import express, {Request, Response} from "express";
-import type { Readable } from "stream";
+import {PassThrough, type Readable, type Writable} from "stream";
 import Docker from "dockerode";
 
 const PORT = 8000;
@@ -7,6 +7,15 @@ const DEFAULT_CONTAINER = "python-solver";
 
 const app = express();
 const docker = new Docker(); // подключение к unix:///var/run/docker.sock
+
+// Типизация для docker.modem, так как в @types/dockerode он 'any'
+interface DockerModem {
+    demuxStream(
+        stream: Readable,
+        stdout: Writable,
+        stderr: Writable
+    ): void;
+}
 
 // Заголовки для SSE
 function sseHead(res: Response): void {
@@ -25,10 +34,11 @@ function sseSend(
     opts: { data: string; event?: string; id?: number | string }
 ): void {
     const {data, event = "log", id} = opts;
-    if (event) res.write(`event: ${event}\n`);
-    if (id) res.write(`id: ${id}\n`);
+    // if (event) res.write(`event: ${event}\n`);
+    // if (id) res.write(`id: ${id}\n`);
     for (const line of data.split(/\r?\n/)) {
-        if (line.length) res.write(`data: ${line}\n`);
+        // if (line.length) res.write(`data: ${line}\n`);
+        if (line.length) res.write(`${line}\n`);
     }
     res.write("\n");
 }
@@ -40,7 +50,9 @@ app.get("/healthz", (_req: Request, res: Response) => {
 
 async function handleLogStream(req: Request, res: Response, containerName: string): Promise<void> {
     const tail = (req.query.tail as string) ?? "100";
-    const timestamps = ((req.query.ts as string) ?? "true") === "true";
+    // const timestamps = ((req.query.ts as string) ?? "true") === "true";
+    // не запрашивать временные метки
+    const timestamps = ((req.query.ts as string) ?? "false") === "true";
     sseHead(res);
 
     try {
@@ -57,22 +69,28 @@ async function handleLogStream(req: Request, res: Response, containerName: strin
 
         let id = 0;
 
-        logStream.on("data", (chunk: Buffer) => {
+        // Функция для отправки данных в SSE-поток
+        const sendLog = (chunk: Buffer) => {
             id += 1;
             sseSend(res, {
                 data: chunk.toString("utf8"),
                 event: "log",
                 id,
             });
-        });
+        };
+
+        // Docker мультиплексирует stdout и stderr. Нам нужно их разделить.
+        // stdout и stderr будут пустыми потоками, в которые demuxStream будет писать данные.
+        const stdout = new PassThrough();
+        const stderr = new PassThrough();
+
+        stdout.on("data", sendLog);
+        stderr.on("data", sendLog);
+
+        (docker.modem as DockerModem).demuxStream(logStream as Readable, stdout, stderr);
 
         logStream.on("end", () => {
             sseSend(res, {data: "stream ended", event: "end"});
-            res.end();
-        });
-
-        logStream.on("error", (e: Error) => {
-            sseSend(res, {data: `stream error: ${e.message}`, event: "error"});
             res.end();
         });
 

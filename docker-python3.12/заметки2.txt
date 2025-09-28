@@ -2,9 +2,11 @@ cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
 ./db-node.sh
 
 cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
-source ./create-yandex-docker-compose.sh gayrat-1
+source ./create-yandex-docker-compose.sh gayrat-2
 
-ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.51.17
+ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.103.184
+
+curl -N -H "Accept: text/event-stream" "http://localhost:8000/logs/python-solver?tail=10"
 
 docker ps
 docker exec -it python-solver bash
