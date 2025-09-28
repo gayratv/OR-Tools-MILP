@@ -2,8 +2,8 @@ import express, {Request, Response} from "express";
 import type { Readable } from "stream";
 import Docker from "dockerode";
 
-const PORT = Number(process.env.PORT ?? 8000);
-const DEFAULT_CONTAINER = process.env.DEFAULT_CONTAINER ?? "pyapp";
+const PORT = 8000;
+const DEFAULT_CONTAINER = "python-solver";
 
 const app = express();
 const docker = new Docker(); // подключение к unix:///var/run/docker.sock

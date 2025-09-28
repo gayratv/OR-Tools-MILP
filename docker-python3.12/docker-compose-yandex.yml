@@ -10,6 +10,7 @@ services:
     image: gayrat/nodejs-app-yandex:latest
     ports:
       - "3000:3000"
+      - "8000:8000"
     command: |
       sh -c "
         node dist/server.js

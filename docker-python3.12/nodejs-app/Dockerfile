@@ -55,5 +55,6 @@ USER appuser
 # Делаем скрипты исполняемыми
 RUN chmod +x /home/appuser/scripts/*.sh
 
-EXPOSE 3000
-CMD ["node", "dist/server.js"]
+EXPOSE 3000 8000
+#CMD ["node", "dist/server.js"]
+CMD ["node", "dist/logs-server.js"]
