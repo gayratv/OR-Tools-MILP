@@ -25,7 +25,11 @@ export function createSSE(res: Response) {
     // const id = (opts?.id ?? ++lastId);
     // if (opts?.event) res.write(`event: ${opts.event}\n`);
     // res.write(`id: ${id}\n`);
-    res.write(data);
+    // data может быть многострочной
+    for (const line of data.split(/\r?\n/)) {
+      res.write(`${line}`);
+    }
+    res.write("\n");
   }
 
   function close() {

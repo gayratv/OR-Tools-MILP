@@ -6,7 +6,7 @@ source ./create-yandex-docker-compose.sh gayrat-3
 
 ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.110.172
 
-echo VM_EXTERNAL_IP=158.160.110.172
+export VM_EXTERNAL_IP=158.160.115.46
 curl -N -H "Accept: text/event-stream" "http://$VM_EXTERNAL_IP:8000/logs/python-solver?tail=10"
 curl -N -H "Accept: text/event-stream" "http://localhost:8000/logs/python-solver?tail=10"
 curl -N -H "Accept: text/event-stream" "http://localhost:8000/logsf"
