@@ -4,7 +4,7 @@ services:
     build:
       context: ./python-app
       dockerfile: Dockerfile
-
+    container_name: python-solver
 
     volumes:
       # Bind mount для разработки: связывает локальный код с кодом в контейнере
@@ -23,12 +23,15 @@ services:
     container_name: nodejs
     ports:
       - "3000:3000"
+      - "8000:8000"
     environment:
       # Переменная для yc CLI, указывающая на ключ сервисного аккаунта
       - YC_SERVICE_ACCOUNT_KEY_FILE=/etc/yc/sa_key.json
     volumes:
       # Монтируем ключ SA как файл только для чтения
       - ./yandex-cloud-key.json:/etc/yc/sa_key.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
     networks:
       - app-network
 
