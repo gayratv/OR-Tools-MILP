@@ -43,5 +43,13 @@ ENV PATH="/root/yandex-cloud/bin:/app/scripts:${PATH}"
 # Делаем скрипты исполняемыми
 RUN chmod +x /app/scripts/*.sh
 
+# Копируем и делаем исполняемым entrypoint скрипт
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 3000 8000
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Команда по умолчанию для запуска приложения
 CMD ["node", "dist/index.js"]

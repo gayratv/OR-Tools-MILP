@@ -29,13 +29,6 @@ services:
     volumes:
       # Монтируем ключ SA как файл только для чтения
       - ./yandex-cloud-key.json:/etc/yc/sa_key.json:ro
-    command: |
-      sh -c "
-        yc config set service-account-key /etc/yc/sa_key.json &&
-        yc config set folder-id b1gbgjv35qvro3lmgaci &&
-        yc config set cloud-id b1gib03pgvqrrfvhl3kb &&
-        node dist/logs-server.js
-      "
     networks:
       - app-network
 
