@@ -5,6 +5,8 @@ services:
     image: gayrat/python-app-yandex:latest
     networks:
       - app-network
+    depends_on:
+      - nodejs
   nodejs:
     container_name: nodejs
     image: gayrat/nodejs-app-yandex:latest
@@ -13,8 +15,6 @@ services:
     ports:
       - "3000:3000"
       - "8000:8000"
-    depends_on:
-      - calculator-prod
 
     networks:
       - app-network

@@ -117,6 +117,10 @@ app.get("/logs/:container", (req: Request, res: Response) => {
     void handleLogStream(req, res, req.params.container);
 });
 
+app.get("/logsf", (req: Request, res: Response) => {
+    void handleLogStream(req, res, DEFAULT_CONTAINER);
+});
+
 app.listen(PORT, () => {
     console.log(`SSE logs API listening on :${PORT}`);
 });
