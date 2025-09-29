@@ -44,4 +44,4 @@ ENV PATH="/root/yandex-cloud/bin:/app/scripts:${PATH}"
 RUN chmod +x /app/scripts/*.sh
 
 EXPOSE 3000 8000
-CMD ["node", "dist/logs-server.js"]
+CMD ["node", "dist/index.js"]

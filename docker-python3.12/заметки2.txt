@@ -2,11 +2,14 @@ cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
 ./db-node.sh
 
 cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
-source ./create-yandex-docker-compose.sh gayrat-1
+source ./create-yandex-docker-compose.sh gayrat-3
 
-ssh -i ~/.ssh/ya-cloud/priv yc-user@62.84.125.209
+ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.110.172
 
+echo VM_EXTERNAL_IP=158.160.110.172
+curl -N -H "Accept: text/event-stream" "http://$VM_EXTERNAL_IP:8000/logs/python-solver?tail=10"
 curl -N -H "Accept: text/event-stream" "http://localhost:8000/logs/python-solver?tail=10"
+curl -N -H "Accept: text/event-stream" "http://localhost:8000/logsf"
 
 docker ps
 docker exec -it python-solver bash

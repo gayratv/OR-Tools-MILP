@@ -17,19 +17,15 @@ export function createSSE(res: Response) {
 
   const heartbeat = setInterval(() => {
     res.write(`: ping ${Date.now()}\n\n`);
-  }, 15000);
+  }, 20000);
 
-  let lastId = 0;
+  // let lastId = 0;
 
   function send(data: string, opts?: { event?: string; id?: number }) {
-    const id = (opts?.id ?? ++lastId);
-    if (opts?.event) res.write(`event: ${opts.event}\n`);
-    res.write(`id: ${id}\n`);
-    // data может быть многострочной
-    for (const line of data.split(/\r?\n/)) {
-      res.write(`data: ${line}\n`);
-    }
-    res.write("\n");
+    // const id = (opts?.id ?? ++lastId);
+    // if (opts?.event) res.write(`event: ${opts.event}\n`);
+    // res.write(`id: ${id}\n`);
+    res.write(data);
   }
 
   function close() {
