@@ -35,3 +35,5 @@
 /docker-python3.12/python-app/responce/
 /docker-python3.12/python-app/output/
 /docker-python3.12/output_data/
+/OR-MILP-PY/rasp_data_generated.py
+/OR-MILP-PY/timetable_or_tools_solution.xlsx
