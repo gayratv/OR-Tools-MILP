@@ -8,17 +8,20 @@ from .db_connector import get_db_connection
 
 # --- JSON serialization helper ---
 
-class GenericEncoder(json.JSONEncoder):
+def to_serializable(obj: Any) -> Any:
     """
-    A universal JSON encoder that handles dataclasses,
-    other objects (via __dict__), and sets.
+    Recursively converts an object to a JSON-serializable format.
+    - Converts dict keys to strings.
+    - Converts objects with __dict__ to dicts.
+    - Converts sets and tuples to lists.
     """
-    def default(self, o):
-        if hasattr(o, '__dict__'):
-            return o.__dict__
-        if isinstance(o, set):
-            return list(o)
-        return super().default(o)
+    if isinstance(obj, dict):
+        return {str(k): to_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, set, tuple)):
+        return [to_serializable(elem) for elem in obj]
+    if hasattr(obj, "__dict__"):
+        return to_serializable(obj.__dict__)
+    return obj
 
 # --- Main save function ---
 
@@ -47,16 +50,12 @@ def save_calculation_results(
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 1. Serialize complex objects to JSON
-        # Tuple keys in solution_maps need to be converted to strings
-        s_maps_serializable = {
-            'x': {str(k): v for k, v in solution_maps.get('x', {}).items()},
-            'z': {str(k): v for k, v in solution_maps.get('z', {}).items()}
-        }
+        print(f"======== Save to MYSQL ==============")
 
-        weights_json = json.dumps(weights, cls=GenericEncoder, ensure_ascii=False, indent=4)
-        input_data_json = json.dumps(data, cls=GenericEncoder, ensure_ascii=False, indent=4)
-        solution_maps_json = json.dumps(s_maps_serializable, indent=4)
+        # 1. Serialize complex objects to JSON
+        weights_json = json.dumps(to_serializable(weights), ensure_ascii=False, indent=4)
+        input_data_json = json.dumps(to_serializable(data), ensure_ascii=False, indent=4)
+        solution_maps_json = json.dumps(to_serializable(solution_maps), indent=4)
         display_maps_json = json.dumps(display_maps, ensure_ascii=False, indent=4)
 
         # 2. Insert into calculation_results table

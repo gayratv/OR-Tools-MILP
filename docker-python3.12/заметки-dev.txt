@@ -8,6 +8,9 @@ rm -r ./python-app/responce
 docker compose build calculator-dev
 docker compose up -d
 
+python schedule_calculator.py
+
+
 docker compose down
 
 curl -N -H "Accept: text/event-stream" "http://localhost:8000/logs/python-solver?tail=10"

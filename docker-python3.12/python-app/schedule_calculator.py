@@ -36,6 +36,7 @@ from rasp_data_generated import create_timetable_data
 from print_schedule import get_solution_maps, export_full_schedule_to_excel, print_schedule_to_console
 from teacher_windows_opus import add_teacher_window_optimization_span
 from put_to_bucket import upload_file_to_s3
+from mysql_io.save_results_to_mysql import save_calculation_results
 
 
 
@@ -1258,6 +1259,16 @@ def build_and_solve_with_or_tools(
             "teacher_names": data.display_teacher_names,
         }
         solution_maps = get_solution_maps(data, final_maps, is_pulp=False)
+
+        # def save_calculation_results(
+        #         job_id: int,
+        #         data: Any,  # InputData
+        #         solution_maps: Dict[str, Dict[Tuple, float]],
+        #         display_maps: Dict[str, Dict[str, str]],
+        #         solution_stats: Dict[str, Any],
+        #         weights: Any  # OptimizationWeights
+        # ):
+        save_calculation_results(1,data,solution_maps,display_maps,solution_stats,weights)
         export_full_schedule_to_excel(output_filename, data, solution_maps, display_maps, solution_stats, weights)
         upload_file_to_s3(Path(output_filename), f"user_{userid}/job_{jobid}_solution.xlsx")
         
