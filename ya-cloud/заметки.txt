@@ -31,10 +31,6 @@ yc compute instance add-one-to-one-nat \
   --network-interface-index=0
 
 
-yc compute image list --folder-id standard-images
-fd80bm0rh4rkepi5ksdi | ubuntu-22-04-lts-v20230925                                 | ubuntu-2204-lts                                 | f2e3vsap4cmi4pqk05lg
-
-
 
 #  --nat-address=<IP-адрес>
 
@@ -70,7 +66,7 @@ docker stop 7235cfe98682
 docker run -dit --name SH gayrat/school_scheduler:latest bash
 
 docker exec -it SH bash
-python rasp_or_tools.py
+python schedule_calculator.py
 
 остановить и удалить контейнер:
 docker stop SH && docker rm SH

@@ -11,7 +11,7 @@ echo "Контейнер успешно стартовал и ожидает к�
 
 yc-secrets-get.sh
 
-#python rasp_or_tools.py
+#python schedule_calculator.py
 
 # Эта команда будет удерживать контейнер в рабочем состоянии
 tail -f /dev/null

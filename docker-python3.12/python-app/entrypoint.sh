@@ -6,7 +6,7 @@ yc config set folder-id b1gbgjv35qvro3lmgaci
 yc config set cloud-id b1gib03pgvqrrfvhl3kb
 
 mkdir -p /home/appuser/app/output
-python rasp_or_tools.py
+python schedule_calculator.py
 
 # Эта команда будет удерживать контейнер в рабочем состоянии
 tail -f /dev/null
