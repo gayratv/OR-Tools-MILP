@@ -1,10 +1,16 @@
 cd /mnt/f/_prg/python/OR-Tools-MILP/docker-python3.12
 docker compose up -d --build
-docker-compose up -d --force-recreate --build
 docker compose up -d
+
+docker-compose up -d --force-recreate --build
+
+rm -r ./python-app/responce
+docker compose build calculator-dev
+docker compose up -d
+
+docker compose down
 
 curl -N -H "Accept: text/event-stream" "http://localhost:8000/logs/python-solver?tail=10"
 yc-secrets-get.sh
 
-docker compose down
 
