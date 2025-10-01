@@ -463,3 +463,245 @@ CREATE TABLE `subjects` (
 LOCK TABLES `subjects` WRITE;
 /*!40000 ALTER TABLE `subjects` DISABLE KEYS */;
 INSERT INTO `subjects` VALUES (1,'Русский язык/Родной язык','RUSSKIY YaZYK/RODNOY YaZYK','Rus',_binary '\0'),(2,'Литература','LITERATURA','Lit',_binary '\0'),(3,'Математика','MATEMATIKA','Math',_binary '\0'),(4,'Физика','FIZIKA','Phys',_binary '\0'),(5,'Биология','BIOLOGIYa','Bio',_binary '\0'),(6,'Химия','KhIMIYa','Chem',_binary '\0'),(7,'География','GEOGRAFIYa','Geog',_binary '\0'),(8,'Окружающий мир','OKRUZhAYuShchIY MIR','Env',_binary '\0'),(9,'Алгебра','ALGEBRA','Alg',_binary '\0'),(10,'Технология','TEKhNOLOGIYa','Trud',_binary ''),(11,'Искусство (МХК)','ISKUSSTVO (MKhK)','Art',_binary '\0'),(12,'История','ISTORIYa','Hist',_binary '\0'),(13,'Иностранный язык','INOSTRANNYY YaZYK','Eng',_binary ''),(14,'Физическая культура','FIZIChESKAYa KULTURA','PE',_binary '\0'),(15,'Изобразительное искусство','IZOBRAZITELNOE ISKUSSTVO','VisArt',_binary '\0'),(16,'Музыка','MUZYKA','Mus',_binary '\0'),(17,'Черчение','ChERChENIE','Draw',_binary '\0'),(18,'Обществознание','OBShchESTVOZNANIE','Soc',_binary '\0'),(19,'Основы безопасности жизнедеятельности','OSNOVY BEZOPASNOSTI ZhIZNEDEYaTELNOSTI','Safe',_binary '\0'),(20,'Природоведение','PRIRODOVEDENIE','NatSci',_binary '\0'),(21,'Информатика и ИКТ','INFORMATIKA I IKT','CS',_binary ''),(22,'Геометрия','GEOMETRIYa','Geom',_binary '\0'),(23,'Вероятность и статистика','Probability and Statistics','Stat',_binary '\0'),(24,'Школьный компонент','School Component','SchComp',_binary '\0'),(25,'Духовное краеведение Подмосковь','Spiritual Local History of the Moscow Region','Relig',_binary '\0'),(26,'электив параметры','Elective: Parameters','ElParms',_binary '\0'),(27,'Индивидуальный проект','Individual Project','Proj',_binary '\0'),(28,'Избранные вопросы математики','Selected Topics in Mathematics','MathAdv',_binary '\0'),(29,'Финансовая грамотность цифровой мир','Financial Literacy in the Digital World','Fin',_binary '\0'),(30,'Политология','Political Science','Pol',_binary '\0'),(31,'Электив русский язык','Elective: Russian Language','ElRu',_binary '\0'),(32,'электив','Elective','El',_binary '\0');
+/*!40000 ALTER TABLE `subjects` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `subjects_not_last_lesson`
+--
+
+DROP TABLE IF EXISTS `subjects_not_last_lesson`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `subjects_not_last_lesson` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `grade` int DEFAULT NULL,
+  `subject_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `subjects_not_last_lesson`
+--
+
+LOCK TABLES `subjects_not_last_lesson` WRITE;
+/*!40000 ALTER TABLE `subjects_not_last_lesson` DISABLE KEYS */;
+INSERT INTO `subjects_not_last_lesson` VALUES (1,5,3),(2,5,4),(3,6,3),(4,6,4),(5,7,3),(6,7,4);
+/*!40000 ALTER TABLE `subjects_not_last_lesson` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `synchronized_split_subjects`
+--
+
+DROP TABLE IF EXISTS `synchronized_split_subjects`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `synchronized_split_subjects` (
+  `subject_id` int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `synchronized_split_subjects`
+--
+
+LOCK TABLES `synchronized_split_subjects` WRITE;
+/*!40000 ALTER TABLE `synchronized_split_subjects` DISABLE KEYS */;
+INSERT INTO `synchronized_split_subjects` VALUES (10);
+/*!40000 ALTER TABLE `synchronized_split_subjects` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `teacher_assignments`
+--
+
+DROP TABLE IF EXISTS `teacher_assignments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `teacher_assignments` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `teacher_id` int DEFAULT NULL,
+  `class_id` int DEFAULT NULL,
+  `subject_id` int DEFAULT NULL,
+  `subgroup_id` int DEFAULT NULL,
+  `weekly_hours` int DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1551 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `teacher_assignments`
+--
+
+LOCK TABLES `teacher_assignments` WRITE;
+/*!40000 ALTER TABLE `teacher_assignments` DISABLE KEYS */;
+INSERT INTO `teacher_assignments` VALUES (1178,1,1,16,0,1),(1179,1,2,16,0,1),(1180,1,3,16,0,1),(1181,1,4,16,0,1),(1182,1,14,16,0,1),(1183,1,15,16,0,1),(1184,1,16,16,0,1),(1185,1,5,16,0,1),(1186,1,6,16,0,1),(1187,1,7,16,0,1),(1188,1,17,16,0,1),(1189,1,18,16,0,1),(1190,1,19,16,0,1),(1191,2,2,1,0,6),(1192,2,2,2,0,3),(1193,2,15,1,0,6),(1194,2,15,2,0,3),(1195,3,5,4,0,2),(1196,3,17,4,0,2),(1197,3,18,4,0,2),(1198,3,8,4,0,3),(1199,3,9,4,0,3),(1200,3,20,4,0,3),(1201,3,10,4,0,5),(1202,3,12,4,0,5),(1203,4,14,13,2,3),(1204,4,5,13,1,4),(1205,4,8,13,1,3),(1206,4,10,13,1,3),(1207,4,15,13,1,3),(1208,4,20,13,1,3),(1209,4,11,13,1,5),(1210,4,13,13,1,5),(1211,5,1,1,0,6),(1212,5,1,2,0,3),(1213,5,3,1,0,6),(1214,5,20,1,0,3),(1215,5,20,2,0,3),(1216,5,12,1,0,2),(1217,5,12,2,0,3),(1218,6,6,9,0,4),(1219,6,6,22,0,2),(1220,6,6,23,0,1),(1221,6,10,9,0,4),(1222,6,12,9,0,4),(1223,6,10,22,0,3),(1224,6,12,22,0,3),(1225,6,10,23,0,1),(1226,6,12,23,0,1),(1227,6,10,32,0,1),(1228,6,12,32,0,1),(1229,8,4,3,0,6),(1230,8,16,3,0,6),(1231,8,18,9,0,4),(1232,8,18,22,0,2),(1233,8,18,23,0,1),(1234,8,9,9,0,4),(1235,8,19,9,0,4),(1236,8,9,22,0,2),(1237,8,19,22,0,2),(1238,8,9,23,0,1),(1239,8,19,23,0,1),(1240,10,14,1,0,6),(1241,10,14,2,0,3),(1242,10,4,1,0,6),(1243,10,4,2,0,3),(1244,10,17,1,0,4),(1245,10,17,2,0,2),(1246,12,7,13,2,3),(1247,12,9,13,2,3),(1248,12,11,13,2,5),(1249,12,19,13,2,3),(1250,12,24,13,2,2),(1251,12,29,13,2,2),(1252,12,28,13,2,2),(1253,12,23,13,1,2),(1254,12,27,13,2,2),(1255,13,14,13,1,3),(1256,13,2,13,2,3),(1257,13,15,13,2,3),(1258,13,21,13,1,2),(1259,13,22,13,1,2),(1260,20,31,13,1,2),(1261,13,26,13,2,2),(1262,13,27,13,1,2),(1263,13,23,13,2,2),(1264,34,30,13,2,2),(1265,13,25,13,2,2),(1266,14,4,13,2,3),(1267,14,17,13,2,3),(1268,14,8,13,2,3),(1269,14,10,13,2,3),(1270,14,12,13,2,3),(1271,14,13,13,2,5),(1272,14,16,13,2,3),(1273,14,29,13,1,2),(1274,14,31,13,2,2),(1275,15,1,12,0,3),(1276,15,2,12,0,3),(1277,15,17,12,0,3),(1278,15,8,18,0,1),(1279,15,13,18,0,2),(1280,15,20,18,0,1),(1281,15,8,12,0,2),(1282,15,20,12,0,2),(1283,15,13,32,0,1),(1284,16,1,10,1,2),(1285,16,2,10,1,2),(1286,16,3,10,1,2),(1287,16,4,10,1,2),(1288,16,14,10,1,2),(1289,16,15,10,1,2),(1290,16,16,10,1,2),(1291,16,5,10,1,2),(1292,16,17,10,1,2),(1293,16,18,10,1,2),(1294,16,6,10,1,1),(1295,16,7,10,1,1),(1296,16,8,10,1,1),(1297,16,9,10,1,1),(1298,16,19,10,1,1),(1299,16,20,10,1,1),(1300,16,15,3,0,6),(1301,18,6,12,0,2),(1302,18,7,12,0,2),(1303,18,9,12,0,2),(1304,18,16,12,0,3),(1305,18,11,12,0,4),(1306,18,13,12,0,4),(1307,18,6,18,0,1),(1308,18,7,18,0,1),(1309,18,9,18,0,1),(1310,19,6,6,0,2),(1311,19,7,6,0,2),(1312,19,8,6,0,2),(1313,19,9,6,0,2),(1314,19,19,6,0,2),(1315,19,20,6,0,2),(1316,19,10,6,0,1),(1317,19,11,6,0,1),(1318,19,12,6,0,1),(1319,19,13,6,0,1),(1320,20,5,13,2,4),(1321,20,9,13,1,3),(1322,20,18,13,2,4),(1323,21,1,5,0,1),(1324,21,2,5,0,1),(1325,21,3,5,0,1),(1326,21,4,5,0,1),(1327,21,5,5,0,1),(1328,21,10,5,0,1),(1329,21,11,5,0,1),(1330,21,12,5,0,1),(1331,21,13,5,0,1),(1332,21,14,5,0,1),(1333,21,15,5,0,1),(1334,21,16,5,0,1),(1335,21,17,5,0,1),(1336,21,18,5,0,1),(1337,21,6,5,0,2),(1338,21,7,5,0,2),(1339,21,8,5,0,2),(1340,21,9,5,0,2),(1341,21,19,5,0,2),(1342,21,20,5,0,2),(1343,21,10,27,0,1),(1344,24,17,13,1,3),(1345,24,6,13,1,3),(1346,24,7,13,1,3),(1347,24,18,13,1,4),(1348,24,19,13,1,3),(1349,24,21,13,2,2),(1350,24,22,13,2,2),(1351,24,30,13,1,2),(1352,25,1,13,1,3),(1353,25,2,13,1,3),(1354,25,3,13,1,3),(1355,25,4,13,1,3),(1356,25,6,13,2,3),(1357,25,12,13,1,3),(1358,25,16,13,1,3),(1359,25,24,13,1,2),(1360,25,25,13,1,2),(1361,25,26,13,1,2),(1362,25,28,13,1,2),(1363,26,1,7,0,1),(1364,26,2,7,0,1),(1365,26,3,7,0,1),(1366,26,4,7,0,1),(1367,26,10,7,0,1),(1368,26,11,7,0,1),(1369,26,12,7,0,1),(1370,26,13,7,0,1),(1371,26,14,7,0,1),(1372,26,15,7,0,1),(1373,26,16,7,0,1),(1374,26,5,7,0,2),(1375,26,6,7,0,2),(1376,26,7,7,0,2),(1377,26,8,7,0,2),(1378,26,9,7,0,2),(1379,26,17,7,0,2),(1380,26,18,7,0,2),(1381,26,19,7,0,2),(1382,26,20,7,0,2),(1383,27,6,1,0,3),(1384,27,6,2,0,2),(1385,27,7,1,0,3),(1386,27,7,2,0,2),(1387,27,9,1,0,3),(1388,27,9,2,0,3),(1389,27,10,1,0,2),(1390,27,11,1,0,2),(1391,27,10,2,0,3),(1392,27,11,2,0,3),(1393,28,3,2,0,3),(1394,28,5,1,0,4),(1395,28,5,2,0,2),(1396,28,8,1,0,3),(1397,28,8,2,0,3),(1398,28,13,1,0,2),(1399,28,13,2,0,3),(1400,28,13,31,0,1),(1401,29,16,1,0,6),(1402,29,16,2,0,3),(1403,29,18,1,0,4),(1404,29,18,2,0,2),(1405,29,19,2,0,2),(1406,29,19,1,0,3),(1407,30,3,3,0,6),(1408,30,17,9,0,4),(1409,30,17,22,0,3),(1410,30,17,23,0,1),(1411,30,5,9,0,4),(1412,30,5,22,0,2),(1413,30,5,23,0,1),(1414,31,1,3,0,6),(1415,31,8,9,0,4),(1416,31,8,22,0,2),(1417,31,8,23,0,1),(1418,31,11,22,0,2),(1419,31,11,23,0,1),(1420,31,13,9,0,3),(1421,31,13,22,0,1),(1422,31,13,23,0,1),(1423,31,11,28,0,1),(1424,31,13,28,0,1),(1425,31,11,9,0,2),(1426,32,14,12,0,3),(1427,32,3,12,0,3),(1428,32,4,12,0,3),(1429,32,15,12,0,3),(1430,32,18,12,0,3),(1431,32,6,25,0,1),(1432,32,7,25,0,1),(1433,32,19,25,0,1),(1434,32,3,24,0,1),(1435,32,4,24,0,1),(1436,32,16,24,0,1),(1437,33,5,12,0,3),(1438,33,19,12,0,2),(1439,33,10,12,0,2),(1440,33,12,12,0,2),(1441,33,10,18,0,2),(1442,33,11,18,0,2),(1443,33,12,18,0,2),(1444,33,19,18,0,1),(1445,33,11,27,0,1),(1446,33,11,32,0,2),(1447,33,13,32,0,1),(1448,34,1,13,2,3),(1449,34,3,13,2,3),(1450,34,20,13,2,3),(1451,35,1,10,2,2),(1452,35,2,10,2,2),(1453,35,14,10,2,2),(1454,35,15,10,2,2),(1455,35,3,10,2,2),(1456,35,4,10,2,2),(1457,35,16,10,2,2),(1458,35,5,21,1,1),(1459,35,17,21,1,1),(1460,35,18,21,1,1),(1461,35,5,21,2,1),(1462,35,17,21,2,1),(1463,35,18,21,2,1),(1464,35,6,21,1,1),(1465,35,6,21,2,1),(1466,35,7,21,1,1),(1467,35,19,21,1,1),(1468,35,19,21,2,1),(1469,35,7,21,2,1),(1470,36,7,9,0,4),(1471,36,7,22,0,2),(1472,36,7,23,0,1),(1473,36,8,21,1,1),(1474,36,9,21,1,1),(1475,36,20,21,1,1),(1476,36,10,21,1,1),(1477,36,11,21,1,1),(1478,36,12,21,1,1),(1479,36,13,21,1,1),(1480,36,13,21,2,1),(1481,36,10,21,2,1),(1482,36,11,21,2,1),(1483,36,12,21,2,1),(1484,36,8,21,2,1),(1485,36,9,21,2,1),(1486,36,20,21,2,1),(1487,36,20,9,0,4),(1488,36,20,22,0,2),(1489,36,20,23,0,1),(1490,37,1,15,0,1),(1491,37,2,15,0,1),(1492,37,14,15,0,1),(1493,37,15,15,0,1),(1494,37,3,15,0,1),(1495,37,4,15,0,1),(1496,37,16,15,0,1),(1497,37,5,15,0,1),(1498,37,17,15,0,1),(1499,37,18,15,0,1),(1500,37,6,10,2,1),(1501,37,7,10,2,1),(1502,37,19,10,2,1),(1503,37,8,10,2,1),(1504,37,9,10,2,1),(1505,37,20,10,2,1),(1506,37,5,10,2,2),(1507,37,17,10,2,2),(1508,37,18,10,2,2),(1509,37,12,32,0,1),(1510,38,10,14,1,2),(1511,38,11,14,1,2),(1512,38,12,14,1,2),(1513,38,13,14,1,2),(1514,39,1,14,0,2),(1515,39,2,14,0,2),(1516,39,5,14,0,2),(1517,39,17,14,0,2),(1518,39,20,14,0,2),(1519,39,10,14,2,2),(1520,39,11,14,2,2),(1521,39,12,14,2,2),(1522,39,13,14,2,2),(1523,39,9,14,0,2),(1524,40,8,14,0,2),(1525,40,14,14,0,2),(1526,40,3,14,0,2),(1527,40,4,14,0,2),(1528,40,6,14,0,2),(1529,40,7,14,0,2),(1530,40,15,14,0,2),(1531,40,16,14,0,2),(1532,40,18,14,0,2),(1533,40,19,14,0,2),(1534,41,6,19,0,1),(1535,41,7,19,0,1),(1536,41,8,19,0,1),(1537,41,9,19,0,1),(1538,41,10,19,0,1),(1539,41,11,19,0,1),(1540,41,12,19,0,1),(1541,41,13,19,0,1),(1542,41,19,19,0,1),(1543,41,20,19,0,1),(1544,42,6,4,0,2),(1545,42,7,4,0,2),(1546,42,11,4,0,2),(1547,42,13,4,0,2),(1548,42,19,4,0,2),(1549,43,2,3,0,6),(1550,43,14,3,0,6);
+/*!40000 ALTER TABLE `teacher_assignments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `teacher_days_off`
+--
+
+DROP TABLE IF EXISTS `teacher_days_off`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `teacher_days_off` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `teacher_id` int DEFAULT NULL,
+  `day_of_week_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `teacher_days_off`
+--
+
+LOCK TABLES `teacher_days_off` WRITE;
+/*!40000 ALTER TABLE `teacher_days_off` DISABLE KEYS */;
+INSERT INTO `teacher_days_off` VALUES (1,15,1),(2,15,2);
+/*!40000 ALTER TABLE `teacher_days_off` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `teacher_forbidden_slots`
+--
+
+DROP TABLE IF EXISTS `teacher_forbidden_slots`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `teacher_forbidden_slots` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `teacher_id` int DEFAULT NULL,
+  `day_of_week_id` int DEFAULT NULL,
+  `slot_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `teacher_forbidden_slots`
+--
+
+LOCK TABLES `teacher_forbidden_slots` WRITE;
+/*!40000 ALTER TABLE `teacher_forbidden_slots` DISABLE KEYS */;
+INSERT INTO `teacher_forbidden_slots` VALUES (1,2,3,7),(2,2,1,7),(3,5,1,1),(4,5,4,7);
+/*!40000 ALTER TABLE `teacher_forbidden_slots` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `teacher_slot_weight`
+--
+
+DROP TABLE IF EXISTS `teacher_slot_weight`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `teacher_slot_weight` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `teacher_id` int DEFAULT NULL,
+  `day_of_week` int DEFAULT NULL,
+  `slot_id` int DEFAULT NULL,
+  `weight` double DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `teacher_slot_weight`
+--
+
+LOCK TABLES `teacher_slot_weight` WRITE;
+/*!40000 ALTER TABLE `teacher_slot_weight` DISABLE KEYS */;
+INSERT INTO `teacher_slot_weight` VALUES (1,2,2,1,8);
+/*!40000 ALTER TABLE `teacher_slot_weight` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `teachers`
+--
+
+DROP TABLE IF EXISTS `teachers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `teachers` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `subject_group_id` int DEFAULT NULL,
+  `full_name` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `teachers`
+--
+
+LOCK TABLES `teachers` WRITE;
+/*!40000 ALTER TABLE `teachers` DISABLE KEYS */;
+INSERT INTO `teachers` VALUES (1,9,'Гасанова А.Ш'),(2,4,'Вакансия 2'),(3,10,'Уланова О.В'),(4,7,'Живоглотова В.И'),(5,4,'Белова И.В'),(6,2,'Колганов И.Л'),(8,2,'Солостовская М.А'),(9,2,'Лоскутов А.С'),(10,4,'Вакансия 1'),(11,4,'Одегова О.Г.'),(12,7,'Гостищева Е.О'),(13,7,'Шаменская В.Э'),(14,7,'Парунина В.Ю'),(15,3,'Осипова Е.М'),(16,6,'Григорович Т.В'),(17,9,'Обухова К.В.'),(18,3,'Бадюкевич М.В'),(19,10,'Варенникова С.Г'),(20,7,'Кучкарова Е.Н'),(21,10,'Воронова И.Г'),(23,5,'Перминов С.И.'),(24,7,'Зуева С.Г'),(25,7,'Гоцева Е.В'),(26,10,'Сахарова Е.В'),(27,4,'Черкасова Л.Н'),(28,4,'Одеркова Д.В'),(29,4,'Пысенкова Л.П'),(30,2,'Радзивановская О.В'),(31,2,'Путушкина М.Г'),(32,3,'Стасюк Е.В'),(33,3,'Вакансия И'),(34,7,'Майорова А.Ю'),(35,6,'Камышникова О.В'),(36,11,'Булеков А.С'),(37,6,'Камонина С.И'),(38,5,'Зуева М'),(39,5,'Вакансия Физра'),(40,5,'Бурлаков Н.С'),(41,12,'Филлипов Д.М'),(42,10,'Вакансия Физика'),(43,2,'Залецкая Д.И');
+/*!40000 ALTER TABLE `teachers` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `time_slots`
+--
+
+DROP TABLE IF EXISTS `time_slots`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `time_slots` (
+  `period` int NOT NULL,
+  PRIMARY KEY (`period`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `time_slots`
+--
+
+LOCK TABLES `time_slots` WRITE;
+/*!40000 ALTER TABLE `time_slots` DISABLE KEYS */;
+INSERT INTO `time_slots` VALUES (1),(2),(3),(4),(5),(6),(7),(8);
+/*!40000 ALTER TABLE `time_slots` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `users`
+--
+
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (1,'Гайрат');
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Dumping routines for database 'school_sheduller'
+--
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2025-10-01 23:29:26
