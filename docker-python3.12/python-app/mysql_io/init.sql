@@ -29,7 +29,7 @@ CREATE TABLE calculation_results (
     wall_time_s DOUBLE,
     total_lonely_lessons INT,
     total_teacher_windows INT,
-    
+
     -- JSON-представления остальных данных
     weights_json JSON,
     input_data_json JSON,
@@ -52,4 +52,5 @@ CREATE TABLE schedule_details (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE
 );
+
 
