@@ -2,10 +2,16 @@
 
 SELECT
     result_id,
-
     JSON_EXTRACT(solution_maps_json, '$.x') AS x_data
 FROM
     calculation_results;
+
+SELECT
+    result_id,
+    JSON_EXTRACT(solution_maps_json, '$.z') AS x_data
+FROM
+    calculation_results
+limit 50;
 
 # Этот запрос извлечет данные из ключа 'x',
 # преобразует каждую пару "ключ-значение" в отдельную строку и
@@ -81,3 +87,36 @@ WHERE
     jt.value = 1 and cr.job_id = 1
 GROUP BY
     cr.job_id;
+
+# =============== Z
+-- =====================================================================================
+-- Адаптированный запрос для извлечения данных из ключа 'z' (5 элементов в ключе)
+-- =====================================================================================
+SELECT
+    cr.result_id,
+    cr.job_id,
+
+     -- Адаптированная логика разбора ключа для 5 элементов
+     REPLACE(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(jt.key_string, ',', 1), '(', -1), "'", ''), " ", "") AS class,
+     REPLACE(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(jt.key_string, ',', 2), ',', -1), "'", ''), " ", "") AS subject,
+     -- Новая колонка для 3-го элемента в ключе (например, teacher_id)
+     REPLACE(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(jt.key_string, ',', 3), ',', -1), "'", ''), " ", "") AS subgoup_id,
+     -- Смещаем индексы для оставшихся колонок
+     REPLACE(REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(jt.key_string, ',', 4), ',', -1), "'", ''), " ", "") AS day,
+     REPLACE(REPLACE(SUBSTRING_INDEX(jt.key_string, ',', -1), ')', ''), ' ', '') AS period,
+
+     -- Извлекаем значение, используя ключ из объекта 'z'
+     JSON_UNQUOTE(JSON_EXTRACT(cr.solution_maps_json, CONCAT('$.z."', jt.key_string, '"'))) AS value
+FROM
+    calculation_results cr,
+    -- 1. Получаем массив ключей из объекта 'z'
+    JSON_TABLE(
+        JSON_KEYS(cr.solution_maps_json, '$.z'),
+        '$[*]' COLUMNS (
+            key_string VARCHAR(100) PATH '$'
+        )
+    ) AS jt
+WHERE
+    cr.job_id = 1
+HAVING
+    value > 0;
