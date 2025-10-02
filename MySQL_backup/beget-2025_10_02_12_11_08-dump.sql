@@ -88,7 +88,9 @@ CREATE TABLE `class_forbidden_slots` (
   `day_of_week_id` int DEFAULT NULL,
   `slot_id` int DEFAULT NULL,
   `comment` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `class_forbidden_slots_classes_id_fk` (`class_id`),
+  CONSTRAINT `class_forbidden_slots_classes_id_fk` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -115,7 +117,9 @@ CREATE TABLE `class_slot_weight` (
   `day_of_week` int DEFAULT NULL,
   `slot_id` int DEFAULT NULL,
   `weight` double DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `class_slot_weight_classes_id_fk` (`class_id`),
+  CONSTRAINT `class_slot_weight_classes_id_fk` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -142,7 +146,13 @@ CREATE TABLE `class_subject_day_weight` (
   `subject_id` int DEFAULT NULL,
   `day_of_week` int DEFAULT NULL,
   `weight` double DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `class_subject_day_weight_classes_id_fk` (`class_id`),
+  KEY `class_subject_day_weight_subjects_id_fk` (`subject_id`),
+  KEY `class_subject_day_weight_days_of_week_id_fk` (`day_of_week`),
+  CONSTRAINT `class_subject_day_weight_classes_id_fk` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`),
+  CONSTRAINT `class_subject_day_weight_days_of_week_id_fk` FOREIGN KEY (`day_of_week`) REFERENCES `days_of_week` (`id`),
+  CONSTRAINT `class_subject_day_weight_subjects_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -193,7 +203,11 @@ CREATE TABLE `compatible_subject_pairs` (
   `id` int NOT NULL AUTO_INCREMENT,
   `subject1_id` int DEFAULT NULL,
   `subject2_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `compatible_subject_pairs_subjects_id_fk` (`subject1_id`),
+  KEY `compatible_subject_pairs_subjects_id_fk_2` (`subject2_id`),
+  CONSTRAINT `compatible_subject_pairs_subjects_id_fk` FOREIGN KEY (`subject1_id`) REFERENCES `subjects` (`id`),
+  CONSTRAINT `compatible_subject_pairs_subjects_id_fk_2` FOREIGN KEY (`subject2_id`) REFERENCES `subjects` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -268,7 +282,9 @@ CREATE TABLE `grade_subject_max_consecutive_days` (
   `grade` int DEFAULT NULL,
   `subject_id` int DEFAULT NULL,
   `max_days` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `grade_subject_max_consecutive_days_subjects_id_fk` (`subject_id`),
+  CONSTRAINT `grade_subject_max_consecutive_days_subjects_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -318,7 +334,9 @@ DROP TABLE IF EXISTS `paired_subjects`;
 CREATE TABLE `paired_subjects` (
   `id` int NOT NULL AUTO_INCREMENT,
   `paired_subject_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `paired_subjects_subjects_id_fk` (`paired_subject_id`),
+  CONSTRAINT `paired_subjects_subjects_id_fk` FOREIGN KEY (`paired_subject_id`) REFERENCES `subjects` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -373,9 +391,9 @@ DROP TABLE IF EXISTS `subgroups`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `subgroups` (
-  `id` int NOT NULL AUTO_INCREMENT,
+  `id` int NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -384,7 +402,7 @@ CREATE TABLE `subgroups` (
 
 LOCK TABLES `subgroups` WRITE;
 /*!40000 ALTER TABLE `subgroups` DISABLE KEYS */;
-INSERT INTO `subgroups` VALUES (1),(2);
+INSERT INTO `subgroups` VALUES (0),(1),(2);
 /*!40000 ALTER TABLE `subgroups` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -399,11 +417,11 @@ CREATE TABLE `subject_difficulties` (
   `id` int NOT NULL AUTO_INCREMENT,
   `subject_id` int NOT NULL,
   `grade` int NOT NULL,
-  `difficulty` int NOT NULL,
+  `difficulty` int NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_subject_grade` (`subject_id`,`grade`),
   CONSTRAINT `fk_subject_difficulties_subject` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=256 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -412,6 +430,7 @@ CREATE TABLE `subject_difficulties` (
 
 LOCK TABLES `subject_difficulties` WRITE;
 /*!40000 ALTER TABLE `subject_difficulties` DISABLE KEYS */;
+INSERT INTO `subject_difficulties` VALUES (1,1,5,8),(2,1,6,12),(3,1,7,11),(4,1,8,7),(5,1,9,6),(6,1,10,9),(7,1,11,9),(8,2,5,4),(9,2,6,6),(10,2,7,4),(11,2,8,4),(12,2,9,7),(13,2,10,8),(14,2,11,8),(15,3,5,10),(16,3,6,13),(17,3,7,0),(18,3,8,0),(19,3,9,0),(20,3,10,0),(21,3,11,0),(22,4,5,0),(23,4,6,0),(24,4,7,8),(25,4,8,9),(26,4,9,13),(27,4,10,12),(28,4,11,12),(29,5,5,10),(30,5,6,8),(31,5,7,7),(32,5,8,7),(33,5,9,7),(34,5,10,7),(35,5,11,7),(36,6,5,0),(37,6,6,0),(38,6,7,0),(39,6,8,10),(40,6,9,12),(41,6,10,11),(42,6,11,11),(43,7,5,0),(44,7,6,7),(45,7,7,6),(46,7,8,6),(47,7,9,5),(48,7,10,3),(49,7,11,3),(50,8,5,0),(51,8,6,0),(52,8,7,0),(53,8,8,0),(54,8,9,0),(55,8,10,0),(56,8,11,0),(57,9,5,0),(58,9,6,0),(59,9,7,10),(60,9,8,9),(61,9,9,7),(62,9,10,10),(63,9,11,10),(64,10,5,0),(65,10,6,0),(66,10,7,0),(67,10,8,0),(68,10,9,0),(69,10,10,0),(70,10,11,0),(71,11,5,0),(72,11,6,0),(73,11,7,0),(74,11,8,0),(75,11,9,0),(76,11,10,0),(77,11,11,0),(78,12,5,5),(79,12,6,8),(80,12,7,6),(81,12,8,8),(82,12,9,10),(83,12,10,5),(84,12,11,5),(85,13,5,9),(86,13,6,11),(87,13,7,10),(88,13,8,8),(89,13,9,9),(90,13,10,8),(91,13,11,8),(92,14,5,0),(93,14,6,0),(94,14,7,0),(95,14,8,0),(96,14,9,0),(97,14,10,0),(98,14,11,0),(99,15,5,3),(100,15,6,3),(101,15,7,1),(102,15,8,0),(103,15,9,0),(104,15,10,0),(105,15,11,0),(106,16,5,0),(107,16,6,0),(108,16,7,0),(109,16,8,0),(110,16,9,0),(111,16,10,0),(112,16,11,0),(113,17,5,0),(114,17,6,0),(115,17,7,0),(116,17,8,0),(117,17,9,0),(118,17,10,0),(119,17,11,0),(120,18,5,6),(121,18,6,9),(122,18,7,9),(123,18,8,5),(124,18,9,5),(125,18,10,5),(126,18,11,5),(127,19,5,0),(128,19,6,0),(129,19,7,0),(130,19,8,0),(131,19,9,0),(132,19,10,0),(133,19,11,0),(134,20,5,0),(135,20,6,0),(136,20,7,0),(137,20,8,0),(138,20,9,0),(139,20,10,0),(140,20,11,0),(141,21,5,4),(142,21,6,10),(143,21,7,4),(144,21,8,7),(145,21,9,7),(146,21,10,6),(147,21,11,6),(148,22,5,0),(149,22,6,0),(150,22,7,12),(151,22,8,10),(152,22,9,8),(153,22,10,11),(154,22,11,11),(155,23,5,0),(156,23,6,0),(157,23,7,6),(158,23,8,6),(159,23,9,6),(160,23,10,6),(161,23,11,6),(162,24,5,0),(163,24,6,0),(164,24,7,0),(165,24,8,0),(166,24,9,0),(167,24,10,0),(168,24,11,0),(169,25,5,0),(170,25,6,0),(171,25,7,0),(172,25,8,0),(173,25,9,0),(174,25,10,0),(175,25,11,0),(176,26,5,0),(177,26,6,0),(178,26,7,0),(179,26,8,0),(180,26,9,0),(181,26,10,0),(182,26,11,0),(183,27,5,0),(184,27,6,0),(185,27,7,0),(186,27,8,0),(187,27,9,0),(188,27,10,0),(189,27,11,0),(190,28,5,0),(191,28,6,0),(192,28,7,0),(193,28,8,0),(194,28,9,0),(195,28,10,0),(196,28,11,0),(197,29,5,0),(198,29,6,0),(199,29,7,0),(200,29,8,0),(201,29,9,0),(202,29,10,0),(203,29,11,0),(204,30,5,0),(205,30,6,0),(206,30,7,0),(207,30,8,0),(208,30,9,0),(209,30,10,0),(210,30,11,0),(211,31,5,0),(212,31,6,0),(213,31,7,0),(214,31,8,0),(215,31,9,0),(216,31,10,0),(217,31,11,0),(218,32,5,0),(219,32,6,0),(220,32,7,0),(221,32,8,0),(222,32,9,0),(223,32,10,0),(224,32,11,0);
 /*!40000 ALTER TABLE `subject_difficulties` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -449,7 +468,6 @@ DROP TABLE IF EXISTS `subjects`;
 CREATE TABLE `subjects` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
-  `subject_name_eng_long` varchar(255) DEFAULT NULL,
   `name_eng` varchar(255) DEFAULT NULL,
   `is_split_subject` bit(1) DEFAULT NULL,
   PRIMARY KEY (`id`)
@@ -462,7 +480,7 @@ CREATE TABLE `subjects` (
 
 LOCK TABLES `subjects` WRITE;
 /*!40000 ALTER TABLE `subjects` DISABLE KEYS */;
-INSERT INTO `subjects` VALUES (1,'Русский язык/Родной язык','RUSSKIY YaZYK/RODNOY YaZYK','Rus',_binary '\0'),(2,'Литература','LITERATURA','Lit',_binary '\0'),(3,'Математика','MATEMATIKA','Math',_binary '\0'),(4,'Физика','FIZIKA','Phys',_binary '\0'),(5,'Биология','BIOLOGIYa','Bio',_binary '\0'),(6,'Химия','KhIMIYa','Chem',_binary '\0'),(7,'География','GEOGRAFIYa','Geog',_binary '\0'),(8,'Окружающий мир','OKRUZhAYuShchIY MIR','Env',_binary '\0'),(9,'Алгебра','ALGEBRA','Alg',_binary '\0'),(10,'Технология','TEKhNOLOGIYa','Trud',_binary ''),(11,'Искусство (МХК)','ISKUSSTVO (MKhK)','Art',_binary '\0'),(12,'История','ISTORIYa','Hist',_binary '\0'),(13,'Иностранный язык','INOSTRANNYY YaZYK','Eng',_binary ''),(14,'Физическая культура','FIZIChESKAYa KULTURA','PE',_binary '\0'),(15,'Изобразительное искусство','IZOBRAZITELNOE ISKUSSTVO','VisArt',_binary '\0'),(16,'Музыка','MUZYKA','Mus',_binary '\0'),(17,'Черчение','ChERChENIE','Draw',_binary '\0'),(18,'Обществознание','OBShchESTVOZNANIE','Soc',_binary '\0'),(19,'Основы безопасности жизнедеятельности','OSNOVY BEZOPASNOSTI ZhIZNEDEYaTELNOSTI','Safe',_binary '\0'),(20,'Природоведение','PRIRODOVEDENIE','NatSci',_binary '\0'),(21,'Информатика и ИКТ','INFORMATIKA I IKT','CS',_binary ''),(22,'Геометрия','GEOMETRIYa','Geom',_binary '\0'),(23,'Вероятность и статистика','Probability and Statistics','Stat',_binary '\0'),(24,'Школьный компонент','School Component','SchComp',_binary '\0'),(25,'Духовное краеведение Подмосковь','Spiritual Local History of the Moscow Region','Relig',_binary '\0'),(26,'электив параметры','Elective: Parameters','ElParms',_binary '\0'),(27,'Индивидуальный проект','Individual Project','Proj',_binary '\0'),(28,'Избранные вопросы математики','Selected Topics in Mathematics','MathAdv',_binary '\0'),(29,'Финансовая грамотность цифровой мир','Financial Literacy in the Digital World','Fin',_binary '\0'),(30,'Политология','Political Science','Pol',_binary '\0'),(31,'Электив русский язык','Elective: Russian Language','ElRu',_binary '\0'),(32,'электив','Elective','El',_binary '\0');
+INSERT INTO `subjects` VALUES (1,'Русский язык/Родной язык','Rus',_binary '\0'),(2,'Литература','Lit',_binary '\0'),(3,'Математика','Math',_binary '\0'),(4,'Физика','Phys',_binary '\0'),(5,'Биология','Bio',_binary '\0'),(6,'Химия','Chem',_binary '\0'),(7,'География','Geog',_binary '\0'),(8,'Окружающий мир','Env',_binary '\0'),(9,'Алгебра','Alg',_binary '\0'),(10,'Технология','Trud',_binary ''),(11,'Искусство (МХК)','Art',_binary '\0'),(12,'История','Hist',_binary '\0'),(13,'Иностранный язык','Eng',_binary ''),(14,'Физическая культура','PE',_binary '\0'),(15,'Изобразительное искусство','VisArt',_binary '\0'),(16,'Музыка','Mus',_binary '\0'),(17,'Черчение','Draw',_binary '\0'),(18,'Обществознание','Soc',_binary '\0'),(19,'Основы безопасности жизнедеятельности','Safe',_binary '\0'),(20,'Природоведение','NatSci',_binary '\0'),(21,'Информатика и ИКТ','CS',_binary ''),(22,'Геометрия','Geom',_binary '\0'),(23,'Вероятность и статистика','Stat',_binary '\0'),(24,'Школьный компонент','SchComp',_binary '\0'),(25,'Духовное краеведение Подмосковь','Relig',_binary '\0'),(26,'электив параметры','ElParms',_binary '\0'),(27,'Индивидуальный проект','Proj',_binary '\0'),(28,'Избранные вопросы математики','MathAdv',_binary '\0'),(29,'Финансовая грамотность цифровой мир','Fin',_binary '\0'),(30,'Политология','Pol',_binary '\0'),(31,'Электив русский язык','ElRu',_binary '\0'),(32,'электив','El',_binary '\0');
 /*!40000 ALTER TABLE `subjects` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -477,7 +495,9 @@ CREATE TABLE `subjects_not_last_lesson` (
   `id` int NOT NULL AUTO_INCREMENT,
   `grade` int DEFAULT NULL,
   `subject_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `subjects_not_last_lesson_subjects_id_fk` (`subject_id`),
+  CONSTRAINT `subjects_not_last_lesson_subjects_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -499,7 +519,9 @@ DROP TABLE IF EXISTS `synchronized_split_subjects`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `synchronized_split_subjects` (
-  `subject_id` int DEFAULT NULL
+  `subject_id` int DEFAULT NULL,
+  KEY `synchronized_split_subjects_subjects_id_fk` (`subject_id`),
+  CONSTRAINT `synchronized_split_subjects_subjects_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -527,7 +549,15 @@ CREATE TABLE `teacher_assignments` (
   `subject_id` int DEFAULT NULL,
   `subgroup_id` int DEFAULT NULL,
   `weekly_hours` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `teacher_assignments_classes_id_fk` (`class_id`),
+  KEY `teacher_assignments_teachers_id_fk` (`teacher_id`),
+  KEY `teacher_assignments_subjects_id_fk` (`subject_id`),
+  KEY `teacher_assignments_subgroups_id_fk` (`subgroup_id`),
+  CONSTRAINT `teacher_assignments_classes_id_fk` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`),
+  CONSTRAINT `teacher_assignments_subgroups_id_fk` FOREIGN KEY (`subgroup_id`) REFERENCES `subgroups` (`id`),
+  CONSTRAINT `teacher_assignments_subjects_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `teacher_assignments_teachers_id_fk` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1551 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -552,7 +582,11 @@ CREATE TABLE `teacher_days_off` (
   `id` int NOT NULL AUTO_INCREMENT,
   `teacher_id` int DEFAULT NULL,
   `day_of_week_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `teacher_days_off_teachers_id_fk` (`teacher_id`),
+  KEY `teacher_days_off_days_of_week_id_fk` (`day_of_week_id`),
+  CONSTRAINT `teacher_days_off_days_of_week_id_fk` FOREIGN KEY (`day_of_week_id`) REFERENCES `days_of_week` (`id`),
+  CONSTRAINT `teacher_days_off_teachers_id_fk` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -578,7 +612,11 @@ CREATE TABLE `teacher_forbidden_slots` (
   `teacher_id` int DEFAULT NULL,
   `day_of_week_id` int DEFAULT NULL,
   `slot_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `teacher_forbidden_slots_teachers_id_fk` (`teacher_id`),
+  KEY `teacher_forbidden_slots_days_of_week_id_fk` (`day_of_week_id`),
+  CONSTRAINT `teacher_forbidden_slots_days_of_week_id_fk` FOREIGN KEY (`day_of_week_id`) REFERENCES `days_of_week` (`id`),
+  CONSTRAINT `teacher_forbidden_slots_teachers_id_fk` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -605,7 +643,11 @@ CREATE TABLE `teacher_slot_weight` (
   `day_of_week` int DEFAULT NULL,
   `slot_id` int DEFAULT NULL,
   `weight` double DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `teacher_slot_weight_teachers_id_fk` (`teacher_id`),
+  KEY `teacher_slot_weight_days_of_week_id_fk` (`day_of_week`),
+  CONSTRAINT `teacher_slot_weight_days_of_week_id_fk` FOREIGN KEY (`day_of_week`) REFERENCES `days_of_week` (`id`),
+  CONSTRAINT `teacher_slot_weight_teachers_id_fk` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -630,7 +672,9 @@ CREATE TABLE `teachers` (
   `id` int NOT NULL AUTO_INCREMENT,
   `subject_group_id` int DEFAULT NULL,
   `full_name` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `name_eng` varchar(100) NOT NULL DEFAULT (concat(_utf8mb4'teach',to_base64(random_bytes(5)))),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `teachers_name_eng` (`name_eng`)
 ) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -640,7 +684,7 @@ CREATE TABLE `teachers` (
 
 LOCK TABLES `teachers` WRITE;
 /*!40000 ALTER TABLE `teachers` DISABLE KEYS */;
-INSERT INTO `teachers` VALUES (1,9,'Гасанова А.Ш'),(2,4,'Вакансия 2'),(3,10,'Уланова О.В'),(4,7,'Живоглотова В.И'),(5,4,'Белова И.В'),(6,2,'Колганов И.Л'),(8,2,'Солостовская М.А'),(9,2,'Лоскутов А.С'),(10,4,'Вакансия 1'),(11,4,'Одегова О.Г.'),(12,7,'Гостищева Е.О'),(13,7,'Шаменская В.Э'),(14,7,'Парунина В.Ю'),(15,3,'Осипова Е.М'),(16,6,'Григорович Т.В'),(17,9,'Обухова К.В.'),(18,3,'Бадюкевич М.В'),(19,10,'Варенникова С.Г'),(20,7,'Кучкарова Е.Н'),(21,10,'Воронова И.Г'),(23,5,'Перминов С.И.'),(24,7,'Зуева С.Г'),(25,7,'Гоцева Е.В'),(26,10,'Сахарова Е.В'),(27,4,'Черкасова Л.Н'),(28,4,'Одеркова Д.В'),(29,4,'Пысенкова Л.П'),(30,2,'Радзивановская О.В'),(31,2,'Путушкина М.Г'),(32,3,'Стасюк Е.В'),(33,3,'Вакансия И'),(34,7,'Майорова А.Ю'),(35,6,'Камышникова О.В'),(36,11,'Булеков А.С'),(37,6,'Камонина С.И'),(38,5,'Зуева М'),(39,5,'Вакансия Физра'),(40,5,'Бурлаков Н.С'),(41,12,'Филлипов Д.М'),(42,10,'Вакансия Физика'),(43,2,'Залецкая Д.И');
+INSERT INTO `teachers` VALUES (1,9,'Гасанова А.Ш','teach9z57gyo='),(2,4,'Вакансия 2','teachXrFJJuE='),(3,10,'Уланова О.В','teachmRHQKMA='),(4,7,'Живоглотова В.И','teachGg9wYws='),(5,4,'Белова И.В','teach+vVbs+8='),(6,2,'Колганов И.Л','teachapdyG90='),(8,2,'Солостовская М.А','teachxzZuDYI='),(9,2,'Лоскутов А.С','teach45J/na4='),(10,4,'Вакансия 1','teachUzLg+QM='),(11,4,'Одегова О.Г.','teachEHsMiME='),(12,7,'Гостищева Е.О','teach3QXUqKo='),(13,7,'Шаменская В.Э','teachuCX/9dU='),(14,7,'Парунина В.Ю','teachzDCWcuY='),(15,3,'Осипова Е.М','teachSQpqhlc='),(16,6,'Григорович Т.В','teachcsncIO0='),(17,9,'Обухова К.В.','teachLezgM4s='),(18,3,'Бадюкевич М.В','teachtn93OHo='),(19,10,'Варенникова С.Г','teachUmnlt2I='),(20,7,'Кучкарова Е.Н','teach7QJE9FU='),(21,10,'Воронова И.Г','teachyY+Go0o='),(23,5,'Перминов С.И.','teachjCEmzkw='),(24,7,'Зуева С.Г','teachxg4T8K8='),(25,7,'Гоцева Е.В','teachMhmswFE='),(26,10,'Сахарова Е.В','teach8fXScTo='),(27,4,'Черкасова Л.Н','teachvTdy+iM='),(28,4,'Одеркова Д.В','teachURLt2N0='),(29,4,'Пысенкова Л.П','teachuB/+rsg='),(30,2,'Радзивановская О.В','teachFcxbpP0='),(31,2,'Путушкина М.Г','teachFf05axA='),(32,3,'Стасюк Е.В','teachA5F8sdU='),(33,3,'Вакансия И','teachy9a+tQ0='),(34,7,'Майорова А.Ю','teachITRgZes='),(35,6,'Камышникова О.В','teach3i0LnEY='),(36,11,'Булеков А.С','teachmy7izG4='),(37,6,'Камонина С.И','teachXOdzVxA='),(38,5,'Зуева М','teachhGcIsNo='),(39,5,'Вакансия Физра','teacharzdSFY='),(40,5,'Бурлаков Н.С','teachIasGIdY='),(41,12,'Филлипов Д.М','teachy2wBsPA='),(42,10,'Вакансия Физика','teachDHqbLcw='),(43,2,'Залецкая Д.И','teachj/2mcvA=');
 /*!40000 ALTER TABLE `teachers` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -704,4 +748,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-01 23:29:26
+-- Dump completed on 2025-10-02 12:12:59

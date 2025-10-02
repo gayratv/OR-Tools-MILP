@@ -68,7 +68,9 @@ CREATE TABLE `class_forbidden_slots` (
   `day_of_week_id` int DEFAULT NULL,
   `slot_id` int DEFAULT NULL,
   `comment` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `class_forbidden_slots_classes_id_fk` (`class_id`),
+  CONSTRAINT `class_forbidden_slots_classes_id_fk` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -85,7 +87,9 @@ CREATE TABLE `class_slot_weight` (
   `day_of_week` int DEFAULT NULL,
   `slot_id` int DEFAULT NULL,
   `weight` double DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `class_slot_weight_classes_id_fk` (`class_id`),
+  CONSTRAINT `class_slot_weight_classes_id_fk` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -102,7 +106,13 @@ CREATE TABLE `class_subject_day_weight` (
   `subject_id` int DEFAULT NULL,
   `day_of_week` int DEFAULT NULL,
   `weight` double DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `class_subject_day_weight_classes_id_fk` (`class_id`),
+  KEY `class_subject_day_weight_subjects_id_fk` (`subject_id`),
+  KEY `class_subject_day_weight_days_of_week_id_fk` (`day_of_week`),
+  CONSTRAINT `class_subject_day_weight_classes_id_fk` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`),
+  CONSTRAINT `class_subject_day_weight_days_of_week_id_fk` FOREIGN KEY (`day_of_week`) REFERENCES `days_of_week` (`id`),
+  CONSTRAINT `class_subject_day_weight_subjects_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -133,7 +143,11 @@ CREATE TABLE `compatible_subject_pairs` (
   `id` int NOT NULL AUTO_INCREMENT,
   `subject1_id` int DEFAULT NULL,
   `subject2_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `compatible_subject_pairs_subjects_id_fk` (`subject1_id`),
+  KEY `compatible_subject_pairs_subjects_id_fk_2` (`subject2_id`),
+  CONSTRAINT `compatible_subject_pairs_subjects_id_fk` FOREIGN KEY (`subject1_id`) REFERENCES `subjects` (`id`),
+  CONSTRAINT `compatible_subject_pairs_subjects_id_fk_2` FOREIGN KEY (`subject2_id`) REFERENCES `subjects` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -178,7 +192,9 @@ CREATE TABLE `grade_subject_max_consecutive_days` (
   `grade` int DEFAULT NULL,
   `subject_id` int DEFAULT NULL,
   `max_days` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `grade_subject_max_consecutive_days_subjects_id_fk` (`subject_id`),
+  CONSTRAINT `grade_subject_max_consecutive_days_subjects_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -208,7 +224,9 @@ DROP TABLE IF EXISTS `paired_subjects`;
 CREATE TABLE `paired_subjects` (
   `id` int NOT NULL AUTO_INCREMENT,
   `paired_subject_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `paired_subjects_subjects_id_fk` (`paired_subject_id`),
+  CONSTRAINT `paired_subjects_subjects_id_fk` FOREIGN KEY (`paired_subject_id`) REFERENCES `subjects` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -243,9 +261,9 @@ DROP TABLE IF EXISTS `subgroups`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `subgroups` (
-  `id` int NOT NULL AUTO_INCREMENT,
+  `id` int NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -259,11 +277,11 @@ CREATE TABLE `subject_difficulties` (
   `id` int NOT NULL AUTO_INCREMENT,
   `subject_id` int NOT NULL,
   `grade` int NOT NULL,
-  `difficulty` int NOT NULL,
+  `difficulty` int NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_subject_grade` (`subject_id`,`grade`),
   CONSTRAINT `fk_subject_difficulties_subject` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=256 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -290,7 +308,6 @@ DROP TABLE IF EXISTS `subjects`;
 CREATE TABLE `subjects` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
-  `subject_name_eng_long` varchar(255) DEFAULT NULL,
   `name_eng` varchar(255) DEFAULT NULL,
   `is_split_subject` bit(1) DEFAULT NULL,
   PRIMARY KEY (`id`)
@@ -308,7 +325,9 @@ CREATE TABLE `subjects_not_last_lesson` (
   `id` int NOT NULL AUTO_INCREMENT,
   `grade` int DEFAULT NULL,
   `subject_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `subjects_not_last_lesson_subjects_id_fk` (`subject_id`),
+  CONSTRAINT `subjects_not_last_lesson_subjects_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -320,7 +339,9 @@ DROP TABLE IF EXISTS `synchronized_split_subjects`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `synchronized_split_subjects` (
-  `subject_id` int DEFAULT NULL
+  `subject_id` int DEFAULT NULL,
+  KEY `synchronized_split_subjects_subjects_id_fk` (`subject_id`),
+  CONSTRAINT `synchronized_split_subjects_subjects_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -338,7 +359,15 @@ CREATE TABLE `teacher_assignments` (
   `subject_id` int DEFAULT NULL,
   `subgroup_id` int DEFAULT NULL,
   `weekly_hours` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `teacher_assignments_classes_id_fk` (`class_id`),
+  KEY `teacher_assignments_teachers_id_fk` (`teacher_id`),
+  KEY `teacher_assignments_subjects_id_fk` (`subject_id`),
+  KEY `teacher_assignments_subgroups_id_fk` (`subgroup_id`),
+  CONSTRAINT `teacher_assignments_classes_id_fk` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`),
+  CONSTRAINT `teacher_assignments_subgroups_id_fk` FOREIGN KEY (`subgroup_id`) REFERENCES `subgroups` (`id`),
+  CONSTRAINT `teacher_assignments_subjects_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `teacher_assignments_teachers_id_fk` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1551 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -353,7 +382,11 @@ CREATE TABLE `teacher_days_off` (
   `id` int NOT NULL AUTO_INCREMENT,
   `teacher_id` int DEFAULT NULL,
   `day_of_week_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `teacher_days_off_teachers_id_fk` (`teacher_id`),
+  KEY `teacher_days_off_days_of_week_id_fk` (`day_of_week_id`),
+  CONSTRAINT `teacher_days_off_days_of_week_id_fk` FOREIGN KEY (`day_of_week_id`) REFERENCES `days_of_week` (`id`),
+  CONSTRAINT `teacher_days_off_teachers_id_fk` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -369,7 +402,11 @@ CREATE TABLE `teacher_forbidden_slots` (
   `teacher_id` int DEFAULT NULL,
   `day_of_week_id` int DEFAULT NULL,
   `slot_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `teacher_forbidden_slots_teachers_id_fk` (`teacher_id`),
+  KEY `teacher_forbidden_slots_days_of_week_id_fk` (`day_of_week_id`),
+  CONSTRAINT `teacher_forbidden_slots_days_of_week_id_fk` FOREIGN KEY (`day_of_week_id`) REFERENCES `days_of_week` (`id`),
+  CONSTRAINT `teacher_forbidden_slots_teachers_id_fk` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -386,7 +423,11 @@ CREATE TABLE `teacher_slot_weight` (
   `day_of_week` int DEFAULT NULL,
   `slot_id` int DEFAULT NULL,
   `weight` double DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `teacher_slot_weight_teachers_id_fk` (`teacher_id`),
+  KEY `teacher_slot_weight_days_of_week_id_fk` (`day_of_week`),
+  CONSTRAINT `teacher_slot_weight_days_of_week_id_fk` FOREIGN KEY (`day_of_week`) REFERENCES `days_of_week` (`id`),
+  CONSTRAINT `teacher_slot_weight_teachers_id_fk` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -401,7 +442,9 @@ CREATE TABLE `teachers` (
   `id` int NOT NULL AUTO_INCREMENT,
   `subject_group_id` int DEFAULT NULL,
   `full_name` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `name_eng` varchar(100) NOT NULL DEFAULT (concat(_utf8mb4'teach',to_base64(random_bytes(5)))),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `teachers_name_eng` (`name_eng`)
 ) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -445,4 +488,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-01 23:27:07
+-- Dump completed on 2025-10-02 12:08:20
