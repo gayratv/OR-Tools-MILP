@@ -16,27 +16,13 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `calculated_years`
+-- Table structure for table `calc_results`
 --
 
-DROP TABLE IF EXISTS `calculated_years`;
+DROP TABLE IF EXISTS `calc_results`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `calculated_years` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `training_year` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `calculation_results`
---
-
-DROP TABLE IF EXISTS `calculation_results`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `calculation_results` (
+CREATE TABLE `calc_results` (
   `id` int NOT NULL AUTO_INCREMENT,
   `job_id` int NOT NULL,
   `status` varchar(255) DEFAULT NULL,
@@ -51,8 +37,45 @@ CREATE TABLE `calculation_results` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `fk_calculation_results_job` (`job_id`),
-  CONSTRAINT `fk_calculation_results_job` FOREIGN KEY (`job_id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE
+  CONSTRAINT `fk_calculation_results_job` FOREIGN KEY (`job_id`) REFERENCES `core_jobs` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `calc_schedule_details`
+--
+
+DROP TABLE IF EXISTS `calc_schedule_details`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `calc_schedule_details` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `job_id` int NOT NULL,
+  `class_name` varchar(255) NOT NULL,
+  `subject_name` varchar(255) NOT NULL,
+  `teacher_name` varchar(255) NOT NULL,
+  `day` varchar(50) NOT NULL,
+  `period` int NOT NULL,
+  `subgroup_id` int DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `job_id` (`job_id`),
+  CONSTRAINT `calc_schedule_details_ibfk_1` FOREIGN KEY (`job_id`) REFERENCES `core_jobs` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=794 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `calculated_years`
+--
+
+DROP TABLE IF EXISTS `calculated_years`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `calculated_years` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `training_year` int DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -152,6 +175,36 @@ CREATE TABLE `compatible_subject_pairs` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `core_jobs`
+--
+
+DROP TABLE IF EXISTS `core_jobs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `core_jobs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `jobs_user_id_fk` (`user_id`),
+  CONSTRAINT `jobs_user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `core_users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `core_users`
+--
+
+DROP TABLE IF EXISTS `core_users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `core_users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `days_of_week`
 --
 
@@ -199,22 +252,6 @@ CREATE TABLE `grade_subject_max_consecutive_days` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `jobs`
---
-
-DROP TABLE IF EXISTS `jobs`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `jobs` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `user_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `jobs_user_id_fk` (`user_id`),
-  CONSTRAINT `jobs_user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `paired_subjects`
 --
 
@@ -228,29 +265,6 @@ CREATE TABLE `paired_subjects` (
   KEY `paired_subjects_subjects_id_fk` (`paired_subject_id`),
   CONSTRAINT `paired_subjects_subjects_id_fk` FOREIGN KEY (`paired_subject_id`) REFERENCES `subjects` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `schedule_details`
---
-
-DROP TABLE IF EXISTS `schedule_details`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `schedule_details` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `job_id` int NOT NULL,
-  `class_name` varchar(255) NOT NULL,
-  `subject_name` varchar(255) NOT NULL,
-  `teacher_name` varchar(255) NOT NULL,
-  `day` varchar(50) NOT NULL,
-  `period` int NOT NULL,
-  `subgroup_id` int DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `job_id` (`job_id`),
-  CONSTRAINT `schedule_details_ibfk_1` FOREIGN KEY (`job_id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=794 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -462,20 +476,6 @@ CREATE TABLE `time_slots` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `users`
---
-
-DROP TABLE IF EXISTS `users`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `users` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Dumping routines for database 'school_sheduller'
 --
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -488,4 +488,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-03  9:05:20
+-- Dump completed on 2025-10-03  9:24:52
