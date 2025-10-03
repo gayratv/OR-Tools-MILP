@@ -13,3 +13,31 @@ schedule_details
 
 Задание:
 предложи префиксы которые уточняли бы назначения таблиц и переименуй их
+
+=============
+проанализируй схемы таблиц кроме таблиц с префиксами
+core_  calc_
+
+предложи префиксы к таблицам
+создай файл a.sql в котором напиши команды для переименования таблиц
+
+добавь ко всем таблицам кроме таблиц с префиксами core_  calc_
+дополнительное поле
+version_id INT default NULL
+и
+ foreign key (user_id) references core_users (id)
+            on delete cascade
+==================
+создай файл a.sql для MYSQL 8
+возьми  таблицы с префиксом input_
+
+добавь к ним поле
+    ADD COLUMN `version_id` INT DEFAULT NULL,
+    ADD CONSTRAINT FOREIGN KEY (`version_id`) REFERENCES `core_versions` (`id`) ON DELETE CASCADE;
+
+====
+создай файл a.sql для MYSQL 8
+возьми  таблицы с префиксом input_
+
+напиши для них запрос на обновление
+set version_id=1
