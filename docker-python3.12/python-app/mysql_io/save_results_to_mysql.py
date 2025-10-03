@@ -1,5 +1,5 @@
 
-import os
+
 import json
 from typing import Dict, Any, Tuple
 
@@ -46,6 +46,7 @@ def save_calculation_results(
         weights (OptimizationWeights): Weights used for optimization.
     """
     conn = None
+    cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -60,7 +61,7 @@ def save_calculation_results(
 
         # 2. Insert into calculation_results table
         insert_results_query = '''
-        INSERT INTO calculation_results (
+        INSERT INTO calc_results(
             job_id, status, objective_value, wall_time_s,
             total_lonely_lessons, total_teacher_windows,
             weights_json, input_data_json, solution_maps_json, display_maps_json
@@ -107,7 +108,7 @@ def save_calculation_results(
 
         if schedule_records:
             insert_schedule_query = '''
-            INSERT INTO schedule_details (
+            INSERT INTO  calc_schedule_details(
                 job_id, class_name, subject_name, teacher_name, day, period, subgroup_id
             ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             '''
@@ -123,6 +124,7 @@ def save_calculation_results(
         print(f"Error while saving to DB: {e}")
     finally:
         if conn and conn.is_connected():
-            cursor.close()
+            if cursor:
+                cursor.close()
             conn.close()
             print("Database connection closed.")

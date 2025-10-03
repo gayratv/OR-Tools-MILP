@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy import create_engine
 from urllib.parse import quote_plus
-from input_data import InputData, ClassInfo
+from data_types.input_data import InputData, ClassInfo
 from pprint import pprint
 from sqlalchemy import text
 from typing import Dict, Set, List
@@ -27,7 +27,7 @@ def _sanitize_lp_name(name: str) -> str:
         return str(name)
     # Заменяем последовательности пробелов и других проблемных символов на один '_'.
     # Это помогает избежать ошибок парсинга в решателях вроде HiGHS.
-    return re.sub(r'[\s/.():\-]+', '_', name)
+    return re.sub(r'[\\s/.():\\-]+', '_', name)
 
 
 def load_data_from_access(db_path: str) -> InputData:

@@ -6,7 +6,8 @@ data structure is filled explicitly so the file doubles as comprehensive
 documentation of the expected input format.
 """
 
-from input_data import ClassInfo, InputData, OptimizationWeights
+from ..data_types.input_data import ClassInfo, InputData
+from optimization_weights import  OptimizationWeights
 
 
 def make_default_compat() -> set[tuple[str, str]]:
@@ -23,7 +24,9 @@ def make_default_compat() -> set[tuple[str, str]]:
     def add(subj_a: str, subj_b: str) -> None:
         """Add an unordered pair of subjects to the compatibility set."""
 
-        allowed.add(tuple(sorted((subj_a, subj_b))))
+        if subj_a > subj_b:
+            subj_a, subj_b = subj_b, subj_a
+        allowed.add((subj_a, subj_b))
 
     # Разрешаем вести эти split‑предметы параллельно в одном классе и слоте
     add("cs", "eng")
@@ -226,8 +229,8 @@ def create_optimization_weights() -> OptimizationWeights:
         epsilon_pairing=20,
         pref_scale=1,
         last_ok_period=6,
-        use_lexico=False,
-        lexico_primary="teacher_windows",
+        
+        
         num_search_workers=4,
         random_seed=42,
         time_limit_s=30.0,
