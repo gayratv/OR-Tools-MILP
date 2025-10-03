@@ -6,8 +6,8 @@ data structure is filled explicitly so the file doubles as comprehensive
 documentation of the expected input format.
 """
 
-from ..data_types.input_data import ClassInfo, InputData
-from optimization_weights import  OptimizationWeights
+from data_types.input_data import ClassInfo, InputData
+from input_data.optimization_weights import  OptimizationWeights
 
 
 def make_default_compat() -> set[tuple[str, str]]:

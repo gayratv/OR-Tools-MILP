@@ -1,7 +1,7 @@
 import itertools
 # from typing import Dict, List, Union
 from ortools.sat.python import cp_model
-from ..data_types.input_data import InputData
+from data_types.input_data import InputData
 
 
 def calculate_teacher_windows(data: InputData,

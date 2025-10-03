@@ -1,5 +1,6 @@
 
-from input_data import InputData, ClassInfo
+from data_types.input_data import InputData, ClassInfo
+
 
 # ====================================================================
 # Этот файл был сгенерирован автоматически скриптом generate_static_data_file.py

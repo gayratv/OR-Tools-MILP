@@ -9,7 +9,7 @@ docker compose build calculator-dev
 docker compose up -d
 
 python schedule_calculator.py
-
+PYTHONPATH=. python -m schedule_calculator
 
 docker compose down
 

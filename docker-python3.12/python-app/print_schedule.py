@@ -10,7 +10,11 @@ from tabulate import tabulate
 import openpyxl
 from openpyxl.styles import Font, Alignment
 
-from input_data import InputData, OptimizationWeights
+
+from data_types.input_data import InputData, ClassInfo  # если ClassInfo нужен
+from input_data.optimization_weights import OptimizationWeights
+# если нужны данные:
+
 
 
 def _val(var: Any) -> float:
