@@ -38,7 +38,7 @@ CREATE TABLE `calc_results` (
   PRIMARY KEY (`id`),
   KEY `fk_calculation_results_job` (`job_id`),
   CONSTRAINT `fk_calculation_results_job` FOREIGN KEY (`job_id`) REFERENCES `core_jobs` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -61,7 +61,7 @@ CREATE TABLE `calc_schedule_details` (
   PRIMARY KEY (`id`),
   KEY `job_id` (`job_id`),
   CONSTRAINT `calc_schedule_details_ibfk_1` FOREIGN KEY (`job_id`) REFERENCES `core_jobs` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=794 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1587 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -570,4 +570,4 @@ CREATE TABLE `input_time_slots` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-03  9:53:16
+-- Dump completed on 2025-10-04 13:06:25
