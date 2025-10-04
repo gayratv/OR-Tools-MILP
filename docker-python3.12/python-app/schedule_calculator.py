@@ -36,7 +36,7 @@ from ortools.sat.python import cp_model
 from data_types.input_data import InputData, OptimizationGoals
 from input_data.optimization_weights import OptimizationWeights, get_default_optimization_weights
 from input_data.rasp_data import create_manual_data
-from access_loader import load_data_from_access
+from load_data.access_loader import load_data_from_access
 from milp_equations.rasp_data_generated import create_timetable_data
 from utils.print_schedule import get_solution_maps, export_full_schedule_to_excel, print_schedule_to_console
 from milp_equations.teacher_windows_opus import add_teacher_window_optimization_span

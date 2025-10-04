@@ -9,7 +9,7 @@ services:
     # entrypoint-dev.sh
     volumes:
       # Bind mount для разработки: связывает локальный код с кодом в контейнере
-      - ./python-app:/home/appuser/app
+      - ./python-app:/app
       # Папка для сохранения результатов. Файлы будут доступны на VPS в ./output_data
       - ./output_data:/home/appuser/app/output
       # Монтируем ключ SA как файл только для чтения
