@@ -38,9 +38,9 @@ from input_data.optimization_weights import OptimizationWeights, get_default_opt
 from input_data.rasp_data import create_manual_data
 from access_loader import load_data_from_access
 from rasp_data_generated import create_timetable_data
-from print_schedule import get_solution_maps, export_full_schedule_to_excel, print_schedule_to_console
+from utils.print_schedule import get_solution_maps, export_full_schedule_to_excel, print_schedule_to_console
 from teacher_windows_opus import add_teacher_window_optimization_span
-from put_to_bucket import upload_file_to_s3
+from utils.put_to_bucket import upload_file_to_s3
 from mysql_io.save_results_to_mysql import save_calculation_results
 from utils.helpers import validate_input_data, calculate_teacher_windows
 

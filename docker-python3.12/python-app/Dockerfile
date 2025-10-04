@@ -57,10 +57,14 @@ RUN pip install --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
 
 # Копируем код приложения
 # Копируем скрипты и делаем их исполняемыми
-COPY --chown=appuser:appuser . .
+#COPY --chown=appuser:appuser . .
+COPY . .
 
-# делаем скрипты исполняемыми
-RUN chmod +x /app/scripts/*.sh
+ # Создаем директорию для выходных файлов и меняем владельца всего приложения
+RUN mkdir -p /app/output && \
+     chown -R appuser:appuser /app && \
+     chmod +x /app/scripts/*.sh
+
 
 # Переключаемся на пользователя
 USER appuser
