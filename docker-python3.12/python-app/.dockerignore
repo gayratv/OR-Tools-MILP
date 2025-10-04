@@ -1,7 +1,7 @@
 # Папка, которую нужно исключить
 responce/
 output/
-db/
+db-access-old/
 
 # --- Общие рекомендации ---
 
@@ -11,6 +11,7 @@ db/
 
 # Файлы Docker (не нужны внутри самого образа)
 Dockerfile
+Dockerfile-yandex
 .dockerignore
 
 # Кэш и виртуальные окружения Python
