@@ -1,5 +1,5 @@
 # --- Этап 1: Сборщик с YC CLI ---
-FROM python:3.12 as builder
+FROM python:3.12 AS builder
 
 # Устанавливаем системные зависимости, необходимые для сборки python-пакетов (например, pyodbc)
 # В базовом образе python:3.12 уже есть build-essential, нужно доставить только unixodbc-dev
