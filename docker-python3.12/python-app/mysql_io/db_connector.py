@@ -1,7 +1,7 @@
 
 import os
 import mysql.connector
-from mysql.connector.connection import MySQLConnection
+from mysql.connector.abstracts import MySQLConnectionAbstract
 from dotenv import load_dotenv
 
 # --- Database Connection Setup ---
@@ -27,7 +27,7 @@ db_config = {
     "connection_timeout": 10,
 }
 
-def get_db_connection() -> MySQLConnection:
+def get_db_connection() -> MySQLConnectionAbstract:
     """
     Establishes and returns a new MySQL database connection using the centralized configuration.
     
@@ -36,7 +36,7 @@ def get_db_connection() -> MySQLConnection:
         mysql.connector.Error: For other connection errors.
         
     Returns:
-        A mysql.connector.connection.MySQLConnection object.
+        A MySQLConnectionAbstract object.
     """
     if not db_config["password"]:
         raise ValueError("Database password (MYSQL_PASSWORD) not found in .env file.")
