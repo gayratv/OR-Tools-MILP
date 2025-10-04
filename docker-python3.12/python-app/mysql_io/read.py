@@ -38,7 +38,7 @@ try:
 
     cur = conn.cursor(dictionary=True)  # результаты в виде словаря (удобно читать)
 
-    cur.execute("SELECT * FROM user;")
+    cur.execute("SELECT * FROM core_users;")
     rows = cur.fetchall()
 
     print("Таблица user:")
