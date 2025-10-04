@@ -68,6 +68,7 @@ def _get_weight(weights: OptimizationWeights, name: str, default: int = 0) -> in
 def build_and_solve_with_or_tools(
     data: InputData,
     userid: int,
+    versionid: int,
     jobid: int,
     log: bool = True,
     print_timetable_to_console: bool = False,
@@ -800,7 +801,7 @@ def build_and_solve_with_or_tools(
         #         solution_stats: Dict[str, Any],
         #         weights: Any  # OptimizationWeights
         # ):
-        save_calculation_results(1,data,solution_maps,display_maps,solution_stats,weights)
+        save_calculation_results(jobid,data,solution_maps,display_maps,solution_stats,weights)
         export_full_schedule_to_excel(output_filename, data, solution_maps, display_maps, solution_stats, weights)
         upload_file_to_s3(Path(output_filename), f"user_{userid}/job_{jobid}_solution.xlsx")
 
@@ -844,7 +845,7 @@ if __name__ == '__main__':
     # Запуск
     build_and_solve_with_or_tools(
         loaded_data,
-        userid=0,  # Пример ID пользователя
-        jobid=0,   # Пример ID задачи
+        userid=1,  # Пример ID пользователя
+        jobid=2,   # Пример ID задачи
         print_timetable_to_console=OptimizationGoals().print_timetable_to_console, # <--- Установите True для вывода в консоль
     )
