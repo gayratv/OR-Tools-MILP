@@ -40,36 +40,30 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-
 # Создаем пользователя без root-прав
 RUN useradd -m appuser
 
-WORKDIR /home/appuser/app
+ENV PYTHONUNBUFFERED=1 \
+    PATH="/home/appuser/yandex-cloud/bin:/app/scripts:${PATH}"
+
+WORKDIR /app
 
 # Копируем YC CLI из сборщика
-COPY --from=builder /root/yandex-cloud /home/appuser/yandex-cloud
+COPY --from=builder --chown=appuser:appuser /root/yandex-cloud /home/appuser/yandex-cloud
 
 # Копируем "колеса" зависимостей и устанавливаем их
 COPY --from=builder /wheels /wheels
 RUN pip install --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
 
 # Копируем код приложения
-COPY . .
-
 # Копируем скрипты и делаем их исполняемыми
-COPY scripts/ /home/appuser/scripts/
+COPY --chown=appuser:appuser . .
 
-# Добавляем yc и скрипты в PATH
-ENV PATH="/home/appuser/yandex-cloud/bin:/home/appuser/scripts:${PATH}"
-
-# Меняем владельца всех файлов и делаем скрипты исполняемыми
-RUN chown -R appuser:appuser /home/appuser && \
-    chmod +x /home/appuser/scripts/*.sh && \
-    chmod +x /home/appuser/app/entrypoint.sh
+# делаем скрипты исполняемыми
+RUN chmod +x /app/scripts/*.sh
 
 # Переключаемся на пользователя
 USER appuser
 
 ## ========== 3) dev/prod: только разный ENTRYPOINT ==========
-#FROM final AS dev
-ENTRYPOINT ["/home/appuser/app/entrypoint-dev.sh"]
+ENTRYPOINT ["/app/scripts/entrypoint-dev.sh"]
