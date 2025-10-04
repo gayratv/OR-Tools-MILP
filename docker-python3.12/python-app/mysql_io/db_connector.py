@@ -15,8 +15,8 @@ MYSQL_DIR = os.path.join(os.path.dirname(__file__), "..", "responce", ".mysql-ou
 
 # Centralized database configuration
 db_config = {
-    "host": "uroktime.store",
-    "port": 45321,
+    "host": os.environ.get("DOMAIN","uroktime.store"),
+    "port": os.environ.get("MYSQL_EXTERNAL_PORT",45321),
     "user": os.environ.get("MYSQL_USER", "appuser"),
     "password": os.environ.get("MYSQL_PASSWORD"),
     "database": os.environ.get("MYSQL_DATABASE", "school_sheduller"),
