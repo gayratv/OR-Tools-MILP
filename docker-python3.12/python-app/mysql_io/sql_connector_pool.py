@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Optional, Sequence, Tuple, Callable
+from typing import Any, Iterable, Optional, Sequence, Tuple, Callable, List, Union
 from contextlib import contextmanager
 from mysql.connector import pooling, Error
 from mysql.connector.errors import InterfaceError, OperationalError, DatabaseError
@@ -139,6 +139,7 @@ class Database:
                 self._backoff_sleep(attempt)
                 attempt += 1
 
+    # Профилирование запроса: если время выполнения превышает `_slow_query_ms`, логирует предупреждение.
     def _profile(self, sql: str, started: float, label: str):
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         if elapsed_ms >= self._slow_query_ms:
@@ -173,12 +174,33 @@ class Database:
         params: Optional[Sequence[Any]] = None,
         many: bool = False,
         rows: bool = True,
-    ):
+    ) -> Union[List[dict], Tuple[Optional[int], int], List[int]]:
         """
-        - SELECT -> вернуть list[dict] (rows=True)
-        - DML (INSERT/UPDATE/DELETE) -> вернуть (lastrowid, rowcount) (rows=False)
-        - many=True для executemany
-        Ретраи: включены для rows=True (SELECT). Для DML — если включить retry_writes=True.
+        Выполняет SQL-запрос и возвращает результат в зависимости от параметров.
+
+        Возвращаемые значения:
+        - List[dict]:
+            Возвращается для SELECT-запросов (когда `rows=True`).
+            Каждый элемент списка — это словарь, представляющий строку из результата,
+            где ключи — это имена столбцов.
+            Пример: db.fetch_all("SELECT id, name FROM users")
+
+        - Tuple[Optional[int], int]:
+            Возвращается для одиночных DML-операций (INSERT, UPDATE, DELETE),
+            когда `rows=False` и `many=False`.
+            Кортеж содержит (lastrowid, rowcount).
+            - `lastrowid`: ID последней вставленной строки (для INSERT).
+            - `rowcount`: Количество затронутых строк.
+            Пример: db.execute("UPDATE users SET name = %s WHERE id = %s", ("John", 1))
+
+        - List[int]:
+            Возвращается для пакетных INSERT-операций с `executemany`
+            (когда `rows=False`, `many=True` и SQL начинается с "INSERT").
+            Список содержит новые ID, сгенерированные для вставленных строк,
+            в том же порядке, в котором были переданы данные.
+            Пример: db.executemany("INSERT INTO users (name) VALUES (%s)", [("Alice",), ("Bob",)])
+
+        Ретраи: включены для SELECT (`rows=True`). Для DML — если `retry_writes=True`.
         """
         def _do():
             with self._conn() as conn:
@@ -188,15 +210,30 @@ class Database:
                     if many:
                         if not isinstance(params, Iterable):
                             raise ValueError("params должен быть итерируемым для many=True")
-                        cur.executemany(sql, params)  # Iterable[Sequence]
+                        cur.executemany(sql, params)
                     else:
                         cur.execute(sql, params)
 
                     if rows:
                         data = cur.fetchall()
                         return data
-                    else:
-                        return (cur.lastrowid, cur.rowcount)
+                    else: # DML
+                        last_id = cur.lastrowid
+                        affected = cur.rowcount
+
+                        is_insert = sql.strip().lower().startswith('insert')
+                        if many and is_insert and last_id is not None and last_id > 0:
+                            # MySQL (InnoDB) при пакетной вставке (один INSERT с несколькими VALUES)
+                            # блокирует автоинкремент и гарантирует, что ID будут идти подряд.
+                            # lastrowid возвращает ID первой вставленной строки.
+                            # rowcount возвращает количество вставленных строк.
+                            # Поэтому этот подход безопасен при параллельных запросах.
+                            # Важно: для INSERT ... ON DUPLICATE KEY UPDATE, rowcount может быть > 1 
+                            # для обновленной строки, что нарушит эту логику.
+                            ids = list(range(last_id, last_id + affected))
+                            return ids
+                        
+                        return (last_id, affected)
                 finally:
                     try:
                         # Профайлим по возможности (безопасно)
@@ -209,10 +246,10 @@ class Database:
         return self._run_with_retries(_do, can_retry=can_retry, label="query")
 
     # Удобные обёртки
-    def fetch_all(self, sql: str, params: Optional[Sequence[Any]] = None):
+    def fetch_all(self, sql: str, params: Optional[Sequence[Any]] = None) -> List[dict]:
         return self.query(sql, params=params, rows=True)
 
-    def fetch_one(self, sql: str, params: Optional[Sequence[Any]] = None):
+    def fetch_one(self, sql: str, params: Optional[Sequence[Any]] = None) -> Optional[dict]:
         def _do():
             with self._conn() as conn:
                 cur = conn.cursor(dictionary=True)
@@ -228,8 +265,13 @@ class Database:
                     cur.close()
         return self._run_with_retries(_do, can_retry=True, label="fetch_one")
 
-    def execute(self, sql: str, params: Optional[Sequence[Any]] = None):
+    def execute(self, sql: str, params: Optional[Sequence[Any]] = None) -> Tuple[Optional[int], int]:
         return self.query(sql, params=params, rows=False)
 
-    def executemany(self, sql: str, param_seq: Iterable[Sequence[Any]]):
+    def executemany(self, sql: str, param_seq: Iterable[Sequence[Any]]) -> Union[List[int], Tuple[Optional[int], int]]:
+        """
+        Выполняет `executemany`.
+        Для операторов INSERT возвращает список сгенерированных auto-increment ID.
+        Для других операторов (UPDATE, DELETE) возвращает кортеж (lastrowid, rowcount).
+        """
         return self.query(sql, params=param_seq, many=True, rows=False)

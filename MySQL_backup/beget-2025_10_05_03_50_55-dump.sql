@@ -123,8 +123,9 @@ DROP TABLE IF EXISTS `core_users`;
 CREATE TABLE `core_users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -133,7 +134,7 @@ CREATE TABLE `core_users` (
 
 LOCK TABLES `core_users` WRITE;
 /*!40000 ALTER TABLE `core_users` DISABLE KEYS */;
-INSERT INTO `core_users` VALUES (1,'Гайрат'),(2,'Рита');
+INSERT INTO `core_users` VALUES (1,'Гайрат',NULL),(2,'Рита',NULL);
 /*!40000 ALTER TABLE `core_users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -847,4 +848,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-04 14:26:56
+-- Dump completed on 2025-10-05  3:52:51
