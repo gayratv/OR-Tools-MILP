@@ -115,8 +115,15 @@ def save_calculation_results(
             ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             '''
             # cursor.executemany(insert_schedule_query, schedule_records)
-            last_id, affected =db.executemany(insert_schedule_query,  schedule_records)
-            print(f"{affected} detailed schedule records have been saved.")
+
+            # - List[int]:
+            #             Возвращается для пакетных INSERT-операций с `executemany`
+            #             (когда `rows=False`, `many=True` и SQL начинается с "INSERT").
+            #             Список содержит новые ID, сгенерированные для вставленных строк,
+            #             в том же порядке, в котором были переданы данные.
+            #             Пример: db.executemany("INSERT INTO users (name) VALUES (%s)", [("Alice",), ("Bob",)])
+            id_list =db.executemany(insert_schedule_query,  schedule_records)
+            print(f"{len(id_list)} detailed schedule records have been saved. New IDs: {id_list}")
 
         # conn.commit()
         print("All data has been successfully saved to the database.")

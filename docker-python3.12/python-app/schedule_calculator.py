@@ -68,7 +68,6 @@ def _get_weight(weights: OptimizationWeights, name: str, default: int = 0) -> in
 def build_and_solve_with_or_tools(
     data: InputData,
     userid: int,
-    versionid: int,
     jobid: int,
     log: bool = True,
     print_timetable_to_console: bool = False,
