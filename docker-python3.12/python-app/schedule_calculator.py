@@ -845,6 +845,6 @@ if __name__ == '__main__':
     build_and_solve_with_or_tools(
         loaded_data,
         userid=1,  # Пример ID пользователя
-        jobid=2,   # Пример ID задачи
+        jobid=3,   # Пример ID задачи
         print_timetable_to_console=OptimizationGoals().print_timetable_to_console, # <--- Установите True для вывода в консоль
     )

@@ -80,7 +80,7 @@ def save_calculation_results(
             solution_maps_json,
             display_maps_json
         )
-        # cursor.execute(insert_results_query, results_data)
+
         db.execute(insert_results_query, results_data)
         print(f"Summary results for job_id={job_id} have been saved.")
 
@@ -123,18 +123,13 @@ def save_calculation_results(
             #             в том же порядке, в котором были переданы данные.
             #             Пример: db.executemany("INSERT INTO users (name) VALUES (%s)", [("Alice",), ("Bob",)])
             id_list =db.executemany(insert_schedule_query,  schedule_records)
-            print(f"{len(id_list)} detailed schedule records have been saved. New IDs: {id_list}")
+            # print(f"{len(id_list)} detailed schedule records have been saved. New IDs: {id_list}")
+            print(f"{len(id_list)} detailed schedule records have been saved. ")
 
         # conn.commit()
         print("All data has been successfully saved to the database.")
 
     # except Exception as e:
-    #     if conn:
-    #         conn.rollback()
-    #     print(f"Error while saving to DB: {e}")
+    #     Exception обрабабатывается внутри db.execute
     finally:
-    #     if conn and conn.is_connected():
-    #         if cursor:
-    #             cursor.close()
-    #         conn.close()
             print("Database connection closed.")
