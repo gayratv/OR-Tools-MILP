@@ -38,7 +38,7 @@ CREATE TABLE `calc_results` (
   PRIMARY KEY (`id`),
   KEY `fk_calculation_results_job` (`job_id`),
   CONSTRAINT `fk_calculation_results_job` FOREIGN KEY (`job_id`) REFERENCES `core_jobs` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -61,7 +61,7 @@ CREATE TABLE `calc_schedule_details` (
   PRIMARY KEY (`id`),
   KEY `job_id` (`job_id`),
   CONSTRAINT `calc_schedule_details_ibfk_1` FOREIGN KEY (`job_id`) REFERENCES `core_jobs` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3173 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4759 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -77,7 +77,7 @@ CREATE TABLE `core_jobs` (
   PRIMARY KEY (`id`),
   KEY `jobs_user_id_fk` (`user_id`),
   CONSTRAINT `jobs_user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `core_users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -229,7 +229,7 @@ DROP TABLE IF EXISTS `input_classes`;
 CREATE TABLE `input_classes` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(30) DEFAULT (concat(_utf8mb4'class',to_base64(random_bytes(5)))),
-  `name_eng` varchar(255) DEFAULT (concat(_utf8mb4'class_',`training_year`,_utf8mb4'_',to_base64(random_bytes(5)))),
+  `name_eng` varchar(255),
   `training_year` int DEFAULT NULL,
   `version_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -585,6 +585,35 @@ CREATE TABLE `input_time_slots` (
 --
 -- Dumping routines for database 'school_sheduller'
 --
+/*!50003 DROP PROCEDURE IF EXISTS `update_name_eng_all` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`%` PROCEDURE `update_name_eng_all`()
+BEGIN
+  -- Обновляем input_classes
+  UPDATE input_classes
+  SET name_eng = CONCAT('class_', training_year, '_', id);
+
+  -- Обновляем input_subjects
+  UPDATE input_subjects
+  SET name_eng = CONCAT('subject_', id);
+
+  -- Обновляем input_teachers
+  UPDATE input_teachers
+  SET name_eng = CONCAT('teacher_', id);
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -595,4 +624,4 @@ CREATE TABLE `input_time_slots` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-05  4:48:21
+-- Dump completed on 2025-10-05 21:07:00

@@ -20,3 +20,4 @@ curl -N -H "Accept: text/event-stream" "http://localhost:8000/logs/python-solver
 yc-secrets-get.sh
 
 
+CALL update_name_eng_all();

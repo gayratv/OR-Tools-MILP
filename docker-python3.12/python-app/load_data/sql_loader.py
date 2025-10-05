@@ -2,8 +2,9 @@ import pandas as pd
 from data_types.input_data import InputData, ClassInfo
 from typing import Dict, Set, List
 import re
-from mysql_io.db_connector import get_db_connection
+from mysql_io.sql_connector_pool import Database
 
+db = Database()
 
 def _sanitize_lp_name(name: str) -> str:
     """
@@ -22,7 +23,7 @@ def load_data_from_sql() -> InputData:
     Подключается к базе данных MS Access, загружает все необходимые данные
     из предопределенных представлений (v*) и возвращает заполненный объект InputData.
     """
-    engine = get_db_connection()
+
 
     # --- Вспомогательные функции для чистоты кода ---
 
@@ -87,8 +88,8 @@ def load_data_from_sql() -> InputData:
 
     # 1. Списки
     classes = get_class_info_list("vCLASS")
-    # print(classes)
-    # return
+    print(classes)
+    return
 
 
     # subjects = ["math", "cs", "eng", "labor", "history"]
