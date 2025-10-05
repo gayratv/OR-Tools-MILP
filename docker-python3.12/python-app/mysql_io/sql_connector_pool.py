@@ -3,8 +3,7 @@ from contextlib import contextmanager
 from mysql.connector import pooling, Error
 from mysql.connector.errors import InterfaceError, OperationalError, DatabaseError
 import logging, time, random
-import os
-from dotenv import load_dotenv
+from config.db import DB_CONFIG
 
 # ----------------------------------------------------------
 # ЛОГИРОВАНИЕ
@@ -17,15 +16,6 @@ if not logger.handlers:
     logger.addHandler(handler)
 logger.setLevel(logging.INFO)  # при желании: DEBUG
 
-# Путь к .env
-# ENV_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "docker-compose-full", ".env")
-ENV_PATH = r"../responce/.env"
-
-# Загружаем переменные окружения
-load_dotenv(ENV_PATH)
-
-# Базовый путь для .mysql (по умолчанию Windows)
-MYSQL_DIR = r"../responce/.mysql-out"
 
 class Database:
     """
@@ -49,31 +39,12 @@ class Database:
 
     ) -> None:
 
-        # Конфигурация SSL (TLS)
-
-        dbconfig = {
-            "host": os.environ.get("DOMAIN", "appuser"),
-            "port": os.environ.get("MYSQL_EXTERNAL_PORT", 45321),
-            "user": os.environ.get("MYSQL_USER", "appuser"),
-            "password": os.environ.get("MYSQL_PASSWORD"),  # ← пароль из .env
-            "database": os.environ.get("MYSQL_DATABASE", "school_sheduller"),
-            "charset": "utf8mb4",
-            "autocommit": True,
-            "connect_timeout": 10,
-
-            "ssl_ca": os.path.join(MYSQL_DIR, "ca.pem"),
-            "ssl_cert": os.path.join(MYSQL_DIR, "client-cert.pem"),
-            "ssl_key": os.path.join(MYSQL_DIR, "client-key.pem"),
-            "ssl_verify_cert": True,
-
-        }
-        
         # Создание пула
         self._pool = pooling.MySQLConnectionPool(
             pool_name=pool_name,
             pool_size=pool_size,
             pool_reset_session=True,
-            **dbconfig
+            **DB_CONFIG
         )
 
 
