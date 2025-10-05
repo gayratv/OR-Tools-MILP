@@ -1,12 +1,13 @@
-
-
 import json
 from typing import Dict, Any, Tuple
 
 # Import the database connection function using a relative import
-from .db_connector import get_db_connection
+# from .db_connector import get_db_connection
+from mysql_io.sql_connector_pool import Database
 
 # --- JSON serialization helper ---
+
+db = Database()
 
 def to_serializable(obj: Any) -> Any:
     """
@@ -48,8 +49,8 @@ def save_calculation_results(
     conn = None
     cursor = None
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        # conn = get_db_connection()
+        # cursor = conn.cursor()
 
         print(f"======== Save to MYSQL ==============")
 
@@ -79,7 +80,8 @@ def save_calculation_results(
             solution_maps_json,
             display_maps_json
         )
-        cursor.execute(insert_results_query, results_data)
+        # cursor.execute(insert_results_query, results_data)
+        db.execute(insert_results_query, results_data)
         print(f"Summary results for job_id={job_id} have been saved.")
 
         # 3. Prepare and insert detailed schedule into schedule_details
@@ -112,19 +114,20 @@ def save_calculation_results(
                 job_id, class_name, subject_name, teacher_name, day, period, subgroup_id
             ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             '''
-            cursor.executemany(insert_schedule_query, schedule_records)
-            print(f"{cursor.rowcount} detailed schedule records have been saved.")
+            # cursor.executemany(insert_schedule_query, schedule_records)
+            last_id, affected =db.executemany(insert_schedule_query,  schedule_records)
+            print(f"{affected} detailed schedule records have been saved.")
 
-        conn.commit()
+        # conn.commit()
         print("All data has been successfully saved to the database.")
 
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        print(f"Error while saving to DB: {e}")
+    # except Exception as e:
+    #     if conn:
+    #         conn.rollback()
+    #     print(f"Error while saving to DB: {e}")
     finally:
-        if conn and conn.is_connected():
-            if cursor:
-                cursor.close()
-            conn.close()
+    #     if conn and conn.is_connected():
+    #         if cursor:
+    #             cursor.close()
+    #         conn.close()
             print("Database connection closed.")
