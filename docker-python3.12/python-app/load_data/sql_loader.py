@@ -128,23 +128,43 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     # plan_hours = {("5A", "math"): 2, ("5B", "math"): 2, ...}
     query="""
         select cl.name_eng as class, sbjct.name_eng as subject, ta.weekly_hours, sbjct.is_split_subject
-            from input_teacher_assignments ta
-             inner join input_classes cl on
-                cl.id = ta.class_id and ta.version_id = cl.version_id
-             inner join input_subjects sbjct on
-                sbjct.id = ta.subject_id and ta.version_id = sbjct.version_id
-            where ta.version_id = %s
-                and sbjct.is_split_subject = false
+        from input_teacher_assignments ta
+         inner join input_classes cl on
+            cl.id = ta.class_id and ta.version_id = cl.version_id
+         inner join input_calculated_years cy on
+            cy.version_id = cl.version_id and
+            cl.training_year = cy.training_year
+         inner join input_subjects sbjct on
+            sbjct.id = ta.subject_id and ta.version_id = sbjct.version_id
+        where ta.version_id = %s
+          and sbjct.is_split_subject = false;
     """
     plan_hours = get_dict(query, key_cols=["class", "subject"], value_col="weekly_hours", value_is_numeric=True)
     # pprint(plan_hours)
     # return
 
+
     # subgroup_plan_hours = {("5A", "eng", 1): 2, ("5A", "eng", 2): 2, ...}
-    subgroup_plan_hours = get_dict("v_subgroup_plan_hours", ["класс_eng", "предмет_eng", "ПОДГРУППА Idgg"], "Hours",
+    query="""
+        select cl.name_eng as class, sbjct.name_eng as subject,ta.subgroup_id ,ta.weekly_hours, sbjct.is_split_subject
+        from input_teacher_assignments ta
+                 inner join input_classes cl on
+                    cl.id = ta.class_id and ta.version_id = cl.version_id
+                 inner join input_calculated_years cy on
+                    cy.version_id = cl.version_id and
+                    cl.training_year = cy.training_year
+                 inner join input_subjects sbjct on
+                    sbjct.id = ta.subject_id and ta.version_id = sbjct.version_id
+        where ta.version_id = %s
+            and sbjct.is_split_subject = true
+            and ta.subgroup_id >0;
+    """
+    subgroup_plan_hours = get_dict(query,
+                                   key_cols=["class", "subject", "subgroup_id"],
+                                   value_col= "weekly_hours",
                                    value_is_numeric=True)
-    # pprint(subgroup_plan_hours)
-    # return
+    pprint(subgroup_plan_hours)
+    return
 
     # assigned_teacher = {("5A", "math"): "Ivanov E K ", ...}
     assigned_teacher = get_dict("v_assigned_teacher", ["класс_eng", "предмет_eng"], "teacher")
