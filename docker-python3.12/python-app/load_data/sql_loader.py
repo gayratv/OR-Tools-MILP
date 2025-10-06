@@ -290,11 +290,20 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     """
     teacher_slot_weight = get_dict(query, ["teacher", "day_of_week", "slot_id"], "weight",
                                    value_is_numeric=True)
-    pprint(teacher_slot_weight)
-    return
+    # pprint(teacher_slot_weight)
+    # return
 
     # class_subject_day_weight = {("5B", "math", "Mon"): 6.0}
-    class_subject_day_weight = get_dict("v_class_subject_day_weight", ["ClassName", "SubjectName", "day_of_week"],
+    query="""
+        select c.name_eng as class,s.name_eng as subject,dw.day_of_week,csdw.weight from
+        input_class_subject_day_weight csdw
+        inner join input_subjects s on s.id=csdw.day_of_week_id and s.version_id=csdw.version_id
+        inner join input_days_of_week dw on csdw.day_of_week_id=dw.id
+        inner join input_classes c on c.id=csdw.class_id and c.version_id=csdw.version_id
+        where csdw.version_id=%s    
+    """
+    # v_class_subject_day_weight
+    class_subject_day_weight = get_dict(query, ["class", "subject", "day_of_week"],
                                         "weight", value_is_numeric=True)
 
     # Совместимость пар
