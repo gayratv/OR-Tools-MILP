@@ -257,16 +257,27 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
         df_forbidden = pd.DataFrame(forbidden_slots_data)
         forbidden_slots = {(row['class'], row['day_of_week'], int(row['slot_id'])) for index, row in df_forbidden.iterrows()}
 
-    pprint(forbidden_slots)
-    return
+    # pprint(forbidden_slots)
+    # return
 
     # Веса для предпочтений
     # class_slot_weight = {("5A", "Fri", 7): 10.0, ("5A", "Fri", 6): 5.0}
     # Штраф или бонус за назначение урока классу 'c' в конкретный день 'd' и период 'p'.
-    class_slot_weight = get_dict("v_class_slot_weight", ["ClassName", "day_of_week", "slot"], "weight",
+    query="""
+        select ic.name_eng as class, idow.day_of_week, icsw.slot_id, icsw.weight
+        from input_class_slot_weight icsw
+                 inner join input_classes ic
+                            on icsw.class_id = ic.id and icsw.version_id = ic.version_id
+                 inner join input_calculated_years icy
+                            on ic.training_year = icy.training_year and ic.version_id = icy.version_id
+                 inner join input_days_of_week idow
+                            on idow.id = icsw.day_of_week
+        where icsw.version_id = %s   
+    """
+    class_slot_weight = get_dict(query, ["class", "day_of_week", "slot_id"], "weight",
                                  value_is_numeric=True)
-    # pprint(class_slot_weight)
-    # return
+    pprint(class_slot_weight)
+    return
 
     #       Штраф или бонус за назначение урока учителю 't' в конкретный день 'd' и период 'p'.
     # teacher_slot_weight = {("Petrov", "Tue", 1): 8.0}
