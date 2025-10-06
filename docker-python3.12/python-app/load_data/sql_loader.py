@@ -1,6 +1,6 @@
 import pandas as pd
 from data_types.input_data import InputData, ClassInfo
-from typing import Dict, Set, List
+from typing import Dict, Set, List, Tuple
 import re
 from mysql_io.sql_connector_pool import Database
 
@@ -308,13 +308,19 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
 
     # Совместимость пар
     # compatible_pairs = {('cs', 'eng')}
-    df_compat = pd.read_sql("SELECT * FROM v_сompatible_pairs", engine)
-    if not df_compat.empty:
-        # Санитайзим имена предметов в обеих колонках
-        for col in df_compat.columns:
-            if df_compat[col].dtype == 'object':
-                df_compat[col] = df_compat[col].str.strip().apply(_sanitize_lp_name)
-    compatible_pairs = {tuple(sorted(pair)) for pair in df_compat.to_records(index=False)}
+    # SELECT * FROM v_сompatible_pairs
+    query="""
+        select s1.name_eng as subject1, s2.name_eng as subject2 from
+        input_compatible_subject_pairs cp
+        inner join input_subjects s1 on s1.id=cp.subject1_id and s1.version_id=cp.version_id
+        inner join input_subjects s2 on s2.id=cp.subject2_id and s2.version_id=cp.version_id
+        where cp.version_id=%s
+    """
+    compatible_pairs_data = db.fetch_all(query, (version_id,))
+    compatible_pairs: Set[Tuple[str, str]] = set()
+    if compatible_pairs_data:
+        # Преобразуем список словарей в набор отсортированных кортежей
+        compatible_pairs = {tuple(sorted(row.values())) for row in compatible_pairs_data}  # type: ignore
     # pprint(compatible_pairs)
     # return
 
