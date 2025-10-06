@@ -163,12 +163,32 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
                                    key_cols=["class", "subject", "subgroup_id"],
                                    value_col= "weekly_hours",
                                    value_is_numeric=True)
-    pprint(subgroup_plan_hours)
-    return
+    # pprint(subgroup_plan_hours)
+    # return
 
     # assigned_teacher = {("5A", "math"): "Ivanov E K ", ...}
-    assigned_teacher = get_dict("v_assigned_teacher", ["класс_eng", "предмет_eng"], "teacher")
-    # pprint(assigned_teacher)
+    query="""
+        select cl.name_eng as class, sbjct.name_eng as subject,teach.name_eng as teacher, sbjct.is_split_subject
+        from input_teacher_assignments ta
+         inner join input_classes cl on
+            cl.id = ta.class_id and ta.version_id = cl.version_id
+         inner join input_calculated_years cy on
+            cy.version_id = cl.version_id and
+            cl.training_year = cy.training_year
+         inner join input_subjects sbjct on
+            sbjct.id = ta.subject_id and ta.version_id = sbjct.version_id
+         inner join input_teachers teach on
+            teach.version_id=ta.version_id and
+            teach.id=ta.teacher_id
+        where ta.version_id = %s
+          and sbjct.is_split_subject = false
+    """
+    assigned_teacher = get_dict(query,
+                                   key_cols=["class", "subject"],
+                                   value_col="teacher",
+                                   value_is_numeric=False)
+    pprint(assigned_teacher)
+    return
 
     # subgroup_assigned_teacher = {("5A", "eng", 1): "Sidorov", ...}
     subgroup_assigned_teacher = get_dict("v_subgroup_assigned_teacher", ["класс_eng", "предмет_eng", "ПОДГРУППА Idgg"],
