@@ -211,18 +211,30 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
                                 key_cols=["class", "subject","subgroup_id"],
                                 value_col="teacher",
                                 value_is_numeric=False)
-    pprint(subgroup_assigned_teacher)
-    return
+    # pprint(subgroup_assigned_teacher)
+    # return
 
     # 3. Более сложные структуры
     # days_off = {"Petrov": {"Mon", "Tue"}}
-    df_days_off = pd.read_sql("SELECT * FROM v_days_off", engine)
-    if not df_days_off.empty:
-        # Санитайзим имена учителей, чтобы они совпадали с основным списком учителей
-        df_days_off['TeacherName'] = df_days_off['TeacherName'].str.strip().apply(_sanitize_lp_name)
-    days_off = df_days_off.groupby('TeacherName')['DayName'].apply(set).to_dict() if not df_days_off.empty else {}
-    # pprint (days_off)
-    # return
+    query="""
+        select t.name_eng as teacher,dw.day_of_week
+        from input_teacher_days_off tdof
+             inner join input_teachers t
+                        on tdof.teacher_id = t.id
+                            and tdof.version_id = t.version_id
+             inner join input_days_of_week dw 
+                        on tdof.day_of_week_id = dw.id
+        where tdof.version_id = %s
+    """
+    days_off_data = db.fetch_all(query, (version_id,))
+    days_off: Dict[str, Set[str]] = {}
+    if days_off_data:
+        df_days_off = pd.DataFrame(days_off_data)
+        if not df_days_off.empty:
+            days_off = df_days_off.groupby('teacher')['day_of_week'].apply(set).to_dict()
+
+    pprint(days_off)
+    return
 
     # Жесткие запреты на слоты для классов
     # forbidden_slots = {('5A', 'Mon', 1), ('5A', 'Tue', 2)}
