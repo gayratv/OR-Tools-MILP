@@ -41,27 +41,23 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
             print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой список. Ошибка: {e}")
             return []
 
-    # def get_dict(view_name: str, key_cols: list, value_col: str, print_dict: bool = False) -> dict:
-    def get_dict(view_name: str, key_cols: list, value_col: str, value_is_numeric: bool = False,
+    def get_dict(sql_query: str, key_cols: list, value_col: str,
+                 value_is_numeric: bool = False,
                  print_dict: bool = False) -> dict:
 
         """Читает представление и возвращает как словарь { (ключи): значение }."""
         try:
-            df = pd.read_sql(f"SELECT * FROM {view_name}", engine)
+            data = db.fetch_all(sql_query, (version_id,))
+            if not data:
+                return {}
+
+            df = pd.DataFrame(data)
             if df.empty:
                 return {}
 
-            # Очищаем и санитайзим все строковые столбцы.
-            # Это касается и ключей, и строковых значений будущего словаря.
-            for col in df.columns:
-                if df[col].dtype == 'object':
-                    df[col] = df[col].str.strip().apply(_sanitize_lp_name)
-
-            # Явное преобразование столбца со значениями в числовой, а затем в целый тип.
-            # Это решает проблему с float (например, 2.0 вместо 2)
             if value_is_numeric:
                 # Явное преобразование столбца со значениями в числовой, а затем в целый тип.
-                # Это решает проблему с float (например, 2.0 вместо 2).
+                # Это решает проблему с float (например, 2.0 вместо 2). используем pandas
                 df[value_col] = pd.to_numeric(df[value_col], errors='coerce').fillna(0).astype(int)
 
             # Устанавливаем колонки-ключи как индекс и преобразуем оставшуюся колонку в словарь
@@ -69,9 +65,8 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
             if print_dict:
                 pprint(dict1)
             return dict1
-
         except Exception as e:
-            print(f"ВНИМАНИЕ: Не удалось загрузить {view_name}. Возвращен пустой словарь. Ошибка: {e}")
+            print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой словарь. Ошибка: {e}")
             return {}
 
     def get_class_info_list(sql_query: str, version_id : int) -> List[ClassInfo]:
@@ -122,7 +117,7 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
                      INNER JOIN input_subjects s
                                 ON s.id = ps.paired_subject_id
                                     AND ps.version_id = s.version_id
-            WHERE ps.version_id = %s \
+            WHERE ps.version_id = %s 
             """
 
     paired_subjects = set(get_list(query, "name_eng",version_id))
@@ -131,7 +126,17 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
 
     # 2. Словари (учебные планы, назначения)
     # plan_hours = {("5A", "math"): 2, ("5B", "math"): 2, ...}
-    plan_hours = get_dict("vНагрузка_по_классам", ["класс_eng", "предмет_eng"], "Hours", value_is_numeric=True)
+    query="""
+        select cl.name_eng as class, sbjct.name_eng as subject, ta.weekly_hours, sbjct.is_split_subject
+            from input_teacher_assignments ta
+             inner join input_classes cl on
+                cl.id = ta.class_id and ta.version_id = cl.version_id
+             inner join input_subjects sbjct on
+                sbjct.id = ta.subject_id and ta.version_id = sbjct.version_id
+            where ta.version_id = %s
+                and sbjct.is_split_subject = false
+    """
+    plan_hours = get_dict(query, key_cols=["class", "subject"], value_col="weekly_hours", value_is_numeric=True)
     # pprint(plan_hours)
     # return
 
