@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from mysql.connector import pooling, Error
 from mysql.connector.errors import InterfaceError, OperationalError, DatabaseError
 import logging, time, random
-from config.db import DB_CONFIG
+from config.db import DB_CONFIG, DB_CONFIG_OTHER_PARAMS
 
 # ----------------------------------------------------------
 # ЛОГИРОВАНИЕ
@@ -34,7 +34,6 @@ class Database:
         max_backoff: float = 2.0,    # сек
         retry_writes: bool = False,  # безопаснее держать False
         # Профайлинг
-        slow_query_ms: int = 200,    # логировать запросы дольше N мс
         log_sql: bool = True,        # логировать текст SQL в профайлинге
 
     ) -> None:
@@ -57,7 +56,7 @@ class Database:
         self._retry_writes = retry_writes
 
         # profiling config
-        self._slow_query_ms = slow_query_ms
+        self._slow_query_ms = DB_CONFIG_OTHER_PARAMS["slow_query_ms"]
         self._log_sql = log_sql
 
     # ------------------------ ВНУТРЕННЕЕ ------------------------

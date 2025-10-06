@@ -233,21 +233,32 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
         if not df_days_off.empty:
             days_off = df_days_off.groupby('teacher')['day_of_week'].apply(set).to_dict()
 
-    pprint(days_off)
-    return
+    # pprint(days_off)
+    # return
 
     # Жесткие запреты на слоты для классов
     # forbidden_slots = {('5A', 'Mon', 1), ('5A', 'Tue', 2)}
-    df_forbidden = pd.read_sql("SELECT * FROM v_forbidden_slots", engine)
-    if not df_forbidden.empty:
-        # Санитайзим имена классов
-        class_col_name = df_forbidden.columns[0]  # Предполагаем, что первый столбец - имя класса
-        if df_forbidden[class_col_name].dtype == 'object':
-            df_forbidden[class_col_name] = df_forbidden[class_col_name].str.strip().apply(_sanitize_lp_name)
-    forbidden_slots = {(rec[0], rec[1], int(rec[2])) for rec in df_forbidden.to_records(index=False)}
+    query="""
+    select ic.name_eng as class,idow.day_of_week,icfs.slot_id from
+     input_class_forbidden_slots icfs
+        inner join input_classes ic
+                 on icfs.class_id=ic.id and icfs.version_id=ic.version_id
+        inner join input_calculated_years icy
+                 on ic.training_year=icy.training_year and ic.version_id=icy.version_id
+        inner join input_days_of_week idow
+                 on idow.id=icfs.day_of_week_id
+        where icfs.version_id = %s
+    """
+    # df_forbidden = pd.read_sql("SELECT * FROM v_forbidden_slots", engine)
+    forbidden_slots_data = db.fetch_all(query, (version_id,))
+    # forbidden_slots = {('5A', 'Mon', 1), ('5A', 'Tue', 2)}
+    forbidden_slots: Set = set()
+    if forbidden_slots_data:
+        df_forbidden = pd.DataFrame(forbidden_slots_data)
+        forbidden_slots = {(row['class'], row['day_of_week'], int(row['slot_id'])) for index, row in df_forbidden.iterrows()}
 
-    # pprint(forbidden_slots)
-    # return
+    pprint(forbidden_slots)
+    return
 
     # Веса для предпочтений
     # class_slot_weight = {("5A", "Fri", 7): 10.0, ("5A", "Fri", 6): 5.0}

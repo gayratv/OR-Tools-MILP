@@ -16,4 +16,9 @@ DB_CONFIG = {
     "ssl_cert": os.path.join(MYSQL_DIR, "client-cert.pem"),
     "ssl_key": os.path.join(MYSQL_DIR, "client-key.pem"),
     "ssl_verify_cert": True,
+
+}
+
+DB_CONFIG_OTHER_PARAMS = {
+    "slow_query_ms": 300, # логировать запросы дольше N мс
 }
