@@ -6,6 +6,7 @@ from mysql_io.sql_connector_pool import Database
 
 db = Database()
 
+
 def _sanitize_lp_name(name: str) -> str:
     """
     Заменяет символы в строке, которые могут вызвать проблемы в LP-файлах,
@@ -18,29 +19,31 @@ def _sanitize_lp_name(name: str) -> str:
     return re.sub(r'[\\s/.():\\-]+', '_', name)
 
 
-def load_data_from_sql() -> InputData:
+def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     """
     Подключается к базе данных MS Access, загружает все необходимые данные
     из предопределенных представлений (v*) и возвращает заполненный объект InputData.
     """
 
-
     # --- Вспомогательные функции для чистоты кода ---
 
-    def get_list(view_name: str, column_name: str) -> list:
+    def get_list(sql_query: str, column_name: str,version_id : int) -> list:
         """Читает один столбец из представления и возвращает как Python list."""
         try:
-            df = pd.read_sql(f"SELECT {column_name} FROM {view_name}", engine)
+            df = db.fetch_all(sql_query, (version_id,))
+            return [d['name_eng'] for d in df]
             # Очищаем строки от лишних пробелов и санитайзим для LP-формата.
-            return df[column_name].str.strip().apply(_sanitize_lp_name).tolist()
+            # return df[column_name].str.strip().apply(_sanitize_lp_name).tolist()
+            # return df
 
 
         except Exception as e:
-            print(f"ВНИМАНИЕ: Не удалось загрузить {view_name}. Возвращен пустой список. Ошибка: {e}")
+            print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой список. Ошибка: {e}")
             return []
 
     # def get_dict(view_name: str, key_cols: list, value_col: str, print_dict: bool = False) -> dict:
-    def get_dict(view_name: str, key_cols: list, value_col: str, value_is_numeric: bool = False, print_dict: bool = False) -> dict:
+    def get_dict(view_name: str, key_cols: list, value_col: str, value_is_numeric: bool = False,
+                 print_dict: bool = False) -> dict:
 
         """Читает представление и возвращает как словарь { (ключи): значение }."""
         try:
@@ -71,29 +74,28 @@ def load_data_from_sql() -> InputData:
             print(f"ВНИМАНИЕ: Не удалось загрузить {view_name}. Возвращен пустой словарь. Ошибка: {e}")
             return {}
 
-    def get_class_info_list(view_name: str) -> List[ClassInfo]:
+    def get_class_info_list(sql_query: str, version_id : int) -> List[ClassInfo]:
         """Читает представление и возвращает список объектов ClassInfo."""
         try:
-            df = pd.read_sql(f"SELECT * FROM {view_name}", engine)
-            if df.empty:
-                return []
+            df = db.fetch_all(sql_query, (version_id,))
 
-            return [ClassInfo(name=row['класс_eng'], grade=int(row['grade'])) for _, row in df.iterrows()]
+            return [ClassInfo(name=row['name_eng'], grade=int(row['grade'])) for row in df]
         except Exception as e:
-            print(f"ВНИМАНИЕ: Не удалось загрузить {view_name}. Возвращен пустой список ClassInfo. Ошибка: {e}")
+            print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой список ClassInfo. Ошибка: {e}")
             return []
 
     # --- Загрузка данных из ваших представлений в Access ---
     # Предполагается, что вы создали представления с именами vClasses, vSubjects и т.д.
 
     # 1. Списки
-    classes = get_class_info_list("vCLASS")
-    print(classes)
-    return
-
+    classes = get_class_info_list("select name_eng, training_year as grade from input_classes where version_id = %s", version_id)
+    # print(classes)
+    # return
 
     # subjects = ["math", "cs", "eng", "labor", "history"]
-    subjects = get_list("vSubject_all", "предмет_eng")
+    subjects = get_list("select name_eng from input_subjects where version_id = %s", "name_eng",version_id)
+    print(subjects)
+    return
 
 
     # teachers = ["Ivanov E K ", "Petrov", "Sidorov", "Nikolaev", "Smirnov", "Voloshin"]
@@ -107,25 +109,25 @@ def load_data_from_sql() -> InputData:
 
     # 2. Словари (учебные планы, назначения)
     # plan_hours = {("5A", "math"): 2, ("5B", "math"): 2, ...}
-    plan_hours = get_dict("vНагрузка_по_классам", ["класс_eng", "предмет_eng"], "Hours",value_is_numeric=True)
+    plan_hours = get_dict("vНагрузка_по_классам", ["класс_eng", "предмет_eng"], "Hours", value_is_numeric=True)
     # pprint(plan_hours)
     # return
 
     # subgroup_plan_hours = {("5A", "eng", 1): 2, ("5A", "eng", 2): 2, ...}
-    subgroup_plan_hours = get_dict("v_subgroup_plan_hours", ["класс_eng", "предмет_eng", "ПОДГРУППА Idgg"], "Hours",value_is_numeric=True)
+    subgroup_plan_hours = get_dict("v_subgroup_plan_hours", ["класс_eng", "предмет_eng", "ПОДГРУППА Idgg"], "Hours",
+                                   value_is_numeric=True)
     # pprint(subgroup_plan_hours)
     # return
-
 
     # assigned_teacher = {("5A", "math"): "Ivanov E K ", ...}
     assigned_teacher = get_dict("v_assigned_teacher", ["класс_eng", "предмет_eng"], "teacher")
     # pprint(assigned_teacher)
 
     # subgroup_assigned_teacher = {("5A", "eng", 1): "Sidorov", ...}
-    subgroup_assigned_teacher = get_dict("v_subgroup_assigned_teacher", ["класс_eng", "предмет_eng", "ПОДГРУППА Idgg"], "teacher",)
+    subgroup_assigned_teacher = get_dict("v_subgroup_assigned_teacher", ["класс_eng", "предмет_eng", "ПОДГРУППА Idgg"],
+                                         "teacher", )
     # pprint(subgroup_assigned_teacher)
     # return
-
 
     # 3. Более сложные структуры
     # days_off = {"Petrov": {"Mon", "Tue"}}
@@ -142,7 +144,7 @@ def load_data_from_sql() -> InputData:
     df_forbidden = pd.read_sql("SELECT * FROM v_forbidden_slots", engine)
     if not df_forbidden.empty:
         # Санитайзим имена классов
-        class_col_name = df_forbidden.columns[0] # Предполагаем, что первый столбец - имя класса
+        class_col_name = df_forbidden.columns[0]  # Предполагаем, что первый столбец - имя класса
         if df_forbidden[class_col_name].dtype == 'object':
             df_forbidden[class_col_name] = df_forbidden[class_col_name].str.strip().apply(_sanitize_lp_name)
     forbidden_slots = {(rec[0], rec[1], int(rec[2])) for rec in df_forbidden.to_records(index=False)}
@@ -150,22 +152,24 @@ def load_data_from_sql() -> InputData:
     # pprint(forbidden_slots)
     # return
 
-
     # Веса для предпочтений
     # class_slot_weight = {("5A", "Fri", 7): 10.0, ("5A", "Fri", 6): 5.0}
     # Штраф или бонус за назначение урока классу 'c' в конкретный день 'd' и период 'p'.
-    class_slot_weight = get_dict("v_class_slot_weight", ["ClassName", "day_of_week", "slot"], "weight",value_is_numeric=True)
+    class_slot_weight = get_dict("v_class_slot_weight", ["ClassName", "day_of_week", "slot"], "weight",
+                                 value_is_numeric=True)
     # pprint(class_slot_weight)
     # return
 
     #       Штраф или бонус за назначение урока учителю 't' в конкретный день 'd' и период 'p'.
     # teacher_slot_weight = {("Petrov", "Tue", 1): 8.0}
-    teacher_slot_weight = get_dict("v_teacher_slot_weight", ["TeacherName", "day_of_week", "slot"], "weight",value_is_numeric=True)
+    teacher_slot_weight = get_dict("v_teacher_slot_weight", ["TeacherName", "day_of_week", "slot"], "weight",
+                                   value_is_numeric=True)
     # pprint(teacher_slot_weight)
     # return
 
     # class_subject_day_weight = {("5B", "math", "Mon"): 6.0}
-    class_subject_day_weight = get_dict("v_class_subject_day_weight", ["ClassName", "SubjectName", "day_of_week"], "weight",value_is_numeric=True)
+    class_subject_day_weight = get_dict("v_class_subject_day_weight", ["ClassName", "SubjectName", "day_of_week"],
+                                        "weight", value_is_numeric=True)
 
     # Совместимость пар
     # compatible_pairs = {('cs', 'eng')}
@@ -261,10 +265,11 @@ def load_data_from_sql() -> InputData:
                     group.set_index('subject')['max_days'].astype(int).to_dict()
                 )
     except Exception as e:
-        print(f"ВНИМАНИЕ: Не удалось загрузить v_grade_subject_max_consecutive_days. Возвращен пустой словарь. Ошибка: {e}")
+        print(
+            f"ВНИМАНИЕ: Не удалось загрузить v_grade_subject_max_consecutive_days. Возвращен пустой словарь. Ошибка: {e}")
     # pprint(grade_subject_max_consecutive_days)
     # return
-    
+
     # must_sync_split_subjects
     # Набор сплит-предметов, которые должны вестись синхронно у всех подгрупп.
     # must_sync_split_subjects = {"labor"}
@@ -284,7 +289,6 @@ def load_data_from_sql() -> InputData:
 
     except Exception as e:
         print(f"ВНИМАНИЕ: Не удалось загрузить словари для отображения (display maps). Ошибка: {e}")
-
 
     # --- Сборка и возврат объекта InputData ---
     return InputData(
@@ -323,19 +327,16 @@ def load_display_maps(db_path: str) -> Dict[str, Dict[str, str]]:
     # Оставлена для обратной совместимости, если где-то вызывается.
     if not db_path:
         return {}
-    return {} # Возвращаем пустой словарь, чтобы не сломать старые вызовы
+    return {}  # Возвращаем пустой словарь, чтобы не сломать старые вызовы
 
 
 if __name__ == '__main__':
     from pprint import pprint
 
-    # Путь к базе данных для тестового запуска
-    db_path_for_test = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3-new-calculation.accdb"
-    # db_path_for_test = r"F:/_prg/python/OR-Tools-MILP/src/db/rasp3.accdb"
 
-    print(f"--- Запускаем тестовую загрузку данных из {db_path_for_test} ---")
-    data_from_db = load_data_from_access(db_path_for_test)
+    print(f"--- Запускаем за загрузку данных из SQL ---")
+    data_from_db = load_data_from_sql(user_id=1, version_id=1)
 
-    print("\n--- Результат: загруженный объект InputData ---")
-    # Используем pprint для красивого вывода dataclass
-    pprint(data_from_db)
+    # print("\n--- Результат: загруженный объект InputData ---")
+    # # Используем pprint для красивого вывода dataclass
+    # pprint(data_from_db)
