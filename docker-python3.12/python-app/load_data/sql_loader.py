@@ -94,18 +94,40 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
 
     # subjects = ["math", "cs", "eng", "labor", "history"]
     subjects = get_list("select name_eng from input_subjects where version_id = %s", "name_eng",version_id)
-    print(subjects)
-    return
+    # print(subjects)
+    # return
 
 
     # teachers = ["Ivanov E K ", "Petrov", "Sidorov", "Nikolaev", "Smirnov", "Voloshin"]
-    teachers = get_list("vTeacher", "teacher")
+    teachers = get_list("select name_eng from input_teachers where version_id = %s", "name_eng",version_id)
+    # print(teachers)
+    # return
+
 
     # split_subjects = {"eng", "cs", "labor"}
-    split_subjects = set(get_list("vSubject_split", "предмет_eng"))
+    split_subjects = set(get_list("select name_eng from input_subjects where version_id=%s and is_split_subject=true", "name_eng",version_id))
+    # print(split_subjects)
+    # return
 
     # paired_subjects = {"labor"}
-    paired_subjects = set(get_list("vPaired_subjects", "предмет_eng"))
+    # select s.name_eng
+    # from input_paired_subjects ps
+    #          inner join
+    #      input_subjects s
+    #      on s.id = ps.paired_subject_id and ps.version_id = s.version_id
+    # where ps.version_id = 1
+    query = """
+            SELECT s.name_eng
+            FROM input_paired_subjects ps
+                     INNER JOIN input_subjects s
+                                ON s.id = ps.paired_subject_id
+                                    AND ps.version_id = s.version_id
+            WHERE ps.version_id = %s \
+            """
+
+    paired_subjects = set(get_list(query, "name_eng",version_id))
+    # print(paired_subjects)
+    # return
 
     # 2. Словари (учебные планы, назначения)
     # plan_hours = {("5A", "math"): 2, ("5B", "math"): 2, ...}
