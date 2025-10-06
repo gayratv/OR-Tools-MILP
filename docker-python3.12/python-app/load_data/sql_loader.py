@@ -326,9 +326,9 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
 
     # days=["Mon", "Tue", "Wed", "Thu", "Fri"]
     query="""
-    
+        select day_of_week from input_days_of_week
     """
-    days = get_list("сп_days_of_week", "day_of_week")
+    days = get_list(query, "day_of_week")
     # pprint(days)
     # return
 
