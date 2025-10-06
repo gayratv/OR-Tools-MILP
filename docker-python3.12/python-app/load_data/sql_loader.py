@@ -276,15 +276,22 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     """
     class_slot_weight = get_dict(query, ["class", "day_of_week", "slot_id"], "weight",
                                  value_is_numeric=True)
-    pprint(class_slot_weight)
-    return
+    # pprint(class_slot_weight)
+    # return
 
     #       Штраф или бонус за назначение урока учителю 't' в конкретный день 'd' и период 'p'.
     # teacher_slot_weight = {("Petrov", "Tue", 1): 8.0}
-    teacher_slot_weight = get_dict("v_teacher_slot_weight", ["TeacherName", "day_of_week", "slot"], "weight",
+    query="""
+        select t.name_eng as teacher,dw.day_of_week,tsw.slot_id,tsw.weight from
+            input_teacher_slot_weight tsw
+            inner join input_teachers t on t.id=tsw.teacher_id and t.version_id=tsw.version_id
+            inner join input_days_of_week dw on dw.id=tsw.day_of_week_id
+        where tsw.version_id = %s
+    """
+    teacher_slot_weight = get_dict(query, ["teacher", "day_of_week", "slot_id"], "weight",
                                    value_is_numeric=True)
-    # pprint(teacher_slot_weight)
-    # return
+    pprint(teacher_slot_weight)
+    return
 
     # class_subject_day_weight = {("5B", "math", "Mon"): 6.0}
     class_subject_day_weight = get_dict("v_class_subject_day_weight", ["ClassName", "SubjectName", "day_of_week"],
