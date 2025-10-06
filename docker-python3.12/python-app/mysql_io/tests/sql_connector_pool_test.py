@@ -49,9 +49,33 @@ def get_class_info_list(sql_query: str, version_id : int) :
             print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой список ClassInfo. Ошибка: {e}")
             return []
 
-version_id=1
-classes = get_class_info_list("select name_eng, training_year as grade from input_classes where version_id = %s", version_id)
-pprint(classes)
+def test_classes():
+    version_id=1
+    classes = get_class_info_list("select name_eng, training_year as grade from input_classes where version_id = %s", version_id)
+    pprint(classes)
+
+def test2():
+    version_id=1
+    query="""
+            select name_eng as english_name from input_subjects
+            where name="Иностранный язык"
+            and version_id=%s
+    
+        """
+    english_subject_name=db.fetch_one(query,(version_id,))
+    print ("english_subject_name ",english_subject_name)
+
+
+test2()
+
+
+
+
+
+
+
+
+
 
 
 # Политика ретраев (важно)
