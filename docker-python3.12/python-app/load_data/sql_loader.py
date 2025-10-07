@@ -27,14 +27,11 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
 
     # --- Вспомогательные функции для чистоты кода ---
 
-    def get_list(sql_query: str, column_name: str,version_id : int) -> list:
+    def get_list(sql_query: str, column_name: str) -> list:
         """Читает один столбец из представления и возвращает как Python list."""
         try:
             df = db.fetch_all(sql_query, (version_id,))
-            return [d['name_eng'] for d in df]
-            # Очищаем строки от лишних пробелов и санитайзим для LP-формата.
-            # return df[column_name].str.strip().apply(_sanitize_lp_name).tolist()
-            # return df
+            return [d[column_name] for d in df]
 
 
         except Exception as e:
@@ -88,19 +85,19 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     # return
 
     # subjects = ["math", "cs", "eng", "labor", "history"]
-    subjects = get_list("select name_eng from input_subjects where version_id = %s", "name_eng",version_id)
+    subjects = get_list("select name_eng from input_subjects where version_id = %s", "name_eng")
     # print(subjects)
     # return
 
 
     # teachers = ["Ivanov E K ", "Petrov", "Sidorov", "Nikolaev", "Smirnov", "Voloshin"]
-    teachers = get_list("select name_eng from input_teachers where version_id = %s", "name_eng",version_id)
+    teachers = get_list("select name_eng from input_teachers where version_id = %s", "name_eng")
     # print(teachers)
     # return
 
 
     # split_subjects = {"eng", "cs", "labor"}
-    split_subjects = set(get_list("select name_eng from input_subjects where version_id=%s and is_split_subject=true", "name_eng",version_id))
+    split_subjects = set(get_list("select name_eng from input_subjects where version_id=%s and is_split_subject=true", "name_eng"))
     # print(split_subjects)
     # return
 
@@ -120,7 +117,7 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
             WHERE ps.version_id = %s 
             """
 
-    paired_subjects = set(get_list(query, "name_eng",version_id))
+    paired_subjects = set(get_list(query, "name_eng"))
     # print(paired_subjects)
     # return
 
@@ -328,11 +325,22 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     query="""
         select day_of_week from input_days_of_week
     """
-    days = get_list(query, "day_of_week")
-    # pprint(days)
-    # return
+    df = db.fetch_all(query)
+    days= [d["day_of_week"] for d in df]
+    # print(days)
 
-    english_subject_name = "Eng"
+
+    # TODO: подумать как извлечь Eng
+    # english_subject_name = "Eng"
+    query="""
+        select name_eng as english_name from input_subjects
+        where name="Иностранный язык"
+        and version_id=%s
+
+    """
+    english_subject_name=db.fetch_one(query,(version_id,))["english_name"]
+    # print("english_subject_name ",english_subject_name)
+    # return
 
     # Явные запреты слотов у преподавателей: teacher -> [(day, period), ...]
     # учитель не работает в этот день и слот
@@ -340,21 +348,29 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     #     "Petrov": [("Tue", 1)],
     #     "Nikolaev": [("Thu", 7)],
     # }
+    #  SELECT * FROM v_teacher_forbidden_slots"
+    query="""
+        select t.name_eng as teacher,dw.day_of_week,tfs.slot_id from
+            input_teacher_forbidden_slots tfs
+            inner join input_teachers t on tfs.teacher_id=t.id and tfs.version_id=t.version_id
+            inner join input_days_of_week dw on tfs.day_of_week_id=dw.id
+        where tfs.version_id=%s
+    """
     teacher_forbidden_slots: Dict[str, list] = {}
     try:
-        df_teacher_forbidden = pd.read_sql("SELECT * FROM v_teacher_forbidden_slots", engine)
-        if not df_teacher_forbidden.empty:
+        teacher_forbidden_data = db.fetch_all(query, (version_id,))
+        if teacher_forbidden_data:
+            # Преобразуем список словарей в DataFrame
+            df_teacher_forbidden = pd.DataFrame(teacher_forbidden_data)
             # Группируем по учителю и собираем кортежи (день, слот) в список
-            teacher_forbidden_slots = (
-                df_teacher_forbidden.groupby('teacher')[['DayName', 'slot']]
-                .apply(lambda x: [tuple(y) for y in x.to_numpy()], include_groups=False)
-                .to_dict()
-            )
+            # Имена столбцов 'day_of_week' и 'slot_id' взяты из SQL-запроса
+            teacher_forbidden_slots = df_teacher_forbidden.groupby('teacher')[['day_of_week', 'slot_id']] \
+                .apply(lambda g: [tuple(x) for x in g.to_numpy()], include_groups=False).to_dict()
     except Exception as e:
-        print(f"ВНИМАНИЕ: Не удалось загрузить v_teacher_forbidden_slots. Возвращен пустой словарь. Ошибка: {e}")
+        print(f"ВНИМАНИЕ: Не удалось загрузить запреты слотов для учителей. Возвращен пустой словарь. Ошибка: {e}")
 
-    # pprint(teacher_forbidden_slots)
-    # return
+    pprint(teacher_forbidden_slots)
+    return
 
     # Максимальное число уроков в день по параллели, например {2: 4, 3: 5, 4: 5}
     # grade_max_lessons_per_day=  {2: 4, 3: 5, 4: 5}
