@@ -479,6 +479,7 @@ def load_data_from_sql( version_id: int) -> InputData:
     # --- Словари для красивого отображения в отчетах ---
     display_subject_names: Dict[str, str] = {}
     display_teacher_names: Dict[str, str] = {}
+    display_class_names: Dict[str, str] = {}
     try:
         # subject_map_df = pd.read_sql('SELECT "предмет_eng", "предмет" FROM "з_excel_предметы"', engine)
         query = """
@@ -499,6 +500,13 @@ def load_data_from_sql( version_id: int) -> InputData:
         if teacher_map_data:
             teacher_map_df = pd.DataFrame(teacher_map_data)
             display_teacher_names = teacher_map_df.set_index('name_eng')['full_name'].to_dict()
+
+        query = "select name,name_eng from input_classes where version_id=%s"
+
+        class_map_data = db.fetch_all(query, (version_id,))
+        if class_map_data:
+            class_map_df = pd.DataFrame(class_map_data)
+            display_class_names = class_map_df.set_index('name_eng')['name'].to_dict()
  
     except Exception as e:
         print(f"ВНИМАНИЕ: Не удалось загрузить словари для отображения (display maps). Ошибка: {e}")
@@ -526,7 +534,8 @@ def load_data_from_sql( version_id: int) -> InputData:
         grade_subject_max_consecutive_days=grade_subject_max_consecutive_days,
         must_sync_split_subjects=must_sync_split_subjects,
         display_subject_names=display_subject_names,
-        display_teacher_names=display_teacher_names
+        display_teacher_names=display_teacher_names,
+        display_class_names=display_class_names
     )
 
 

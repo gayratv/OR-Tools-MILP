@@ -36,8 +36,8 @@ from ortools.sat.python import cp_model
 from data_types.input_data import InputData, OptimizationGoals
 from input_data.optimization_weights import OptimizationWeights, get_default_optimization_weights
 from input_data.rasp_data import create_manual_data
-from load_data.access_loader import load_data_from_access
-from milp_equations.rasp_data_generated import create_timetable_data
+# from load_data.access_loader import load_data_from_access
+from milp_equations.rasp_data_generated2 import create_timetable_data
 from utils.print_schedule import get_solution_maps, export_full_schedule_to_excel, print_schedule_to_console
 from milp_equations.teacher_windows_opus import add_teacher_window_optimization_span
 from utils.put_to_bucket import upload_file_to_s3
@@ -829,7 +829,7 @@ if __name__ == '__main__':
 
     if data_source == 'db':
         print("--- Источник данных: MS Access DB ---")
-        loaded_data = load_data_from_access(db_path_str)
+        # loaded_data = load_data_from_access(db_path_str)
     elif data_source == 'generated':
         print("--- Источник данных: сгенерированный файл (rasp_data_generated.py) ---")
         loaded_data = create_timetable_data()

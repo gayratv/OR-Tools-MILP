@@ -189,6 +189,7 @@ class InputData:
     # 'техническое_имя' -> 'полное_имя_для_отчета'
     display_subject_names: Dict[str, str] = field(default_factory=dict)
     display_teacher_names: Dict[str, str] = field(default_factory=dict)
+    display_class_names  : Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
