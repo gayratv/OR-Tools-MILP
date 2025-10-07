@@ -76,6 +76,23 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
             print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой список ClassInfo. Ошибка: {e}")
             return []
 
+    def get_grouped_dict(sql_query: str, group_by_col: str, value_col: str) -> Dict[int, Set[str]]:
+        """
+        Читает представление, группирует по одному столбцу и собирает значения
+        из другого столбца в множество. Возвращает словарь {ключ: {значение1, значение2}}.
+        """
+        try:
+            data = db.fetch_all(sql_query, (version_id,))
+            if not data:
+                return {}
+
+            df = pd.DataFrame(data)
+            # Группируем по `group_by_col` и собираем значения из `value_col` в множество (set)
+            return df.groupby(group_by_col)[value_col].apply(set).to_dict()
+        except Exception as e:
+            print(f"ВНИМАНИЕ: Не удалось загрузить и сгруппировать {sql_query}. Возвращен пустой словарь. Ошибка: {e}")
+            return {}
+
     # --- Загрузка данных из ваших представлений в Access ---
     # Предполагается, что вы создали представления с именами vClasses, vSubjects и т.д.
 
@@ -369,30 +386,39 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     except Exception as e:
         print(f"ВНИМАНИЕ: Не удалось загрузить запреты слотов для учителей. Возвращен пустой словарь. Ошибка: {e}")
 
-    pprint(teacher_forbidden_slots)
-    return
+    # pprint(teacher_forbidden_slots)
+    # return
 
     # Максимальное число уроков в день по параллели, например {2: 4, 3: 5, 4: 5}
     # grade_max_lessons_per_day=  {2: 4, 3: 5, 4: 5}
+
+    query="""
+    select grade_id,max_lessons_per_day from
+             input_grade_daily_lesson_limits
+    where version_id=%s
+
+    """
     grade_max_lessons_per_day = get_dict(
-        "сп_макс_уроков_в_день",
-        key_cols=["grade"],
+        query,
+        key_cols=["grade_id"],
         value_col="max_lessons_per_day",
         value_is_numeric=True)
+
     # pprint(grade_max_lessons_per_day)
     # return
 
     # subjects_not_last_lesson={5: {"math"}, 7: {"math", "physics"}}
-    subjects_not_last_lesson: Dict[int, set] = {}
-    try:
-        df_not_last = pd.read_sql("SELECT * FROM v_subjects_not_last_lesson", engine)
-        if not df_not_last.empty:
-            # Группируем по параллели (grade) и собираем предметы в множество (set)
-            subjects_not_last_lesson = df_not_last.groupby('grade')['subject'].apply(set).to_dict()
-    except Exception as e:
-        print(f"ВНИМАНИЕ: Не удалось загрузить v_subjects_not_last_lesson. Возвращен пустой словарь. Ошибка: {e}")
-    # pprint(subjects_not_last_lesson)
-    # return
+    query = """
+        SELECT s.name_eng AS subject, ll.grade
+        FROM input_subjects_not_last_lesson ll
+        INNER JOIN input_subjects s
+            ON s.id = ll.subject_id AND s.version_id = ll.version_id
+        WHERE ll.version_id = %s
+    """
+    subjects_not_last_lesson = get_grouped_dict(query, group_by_col='grade', value_col='subject')
+
+    pprint(subjects_not_last_lesson)
+    return
 
     # elementary_english_periods
     # Разрешённые номера уроков для английского в начальной школе. Пример: {2, 3, 4}.
