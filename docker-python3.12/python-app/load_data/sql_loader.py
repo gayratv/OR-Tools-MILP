@@ -435,8 +435,8 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
             elementary_english_periods = {int(row['slot_id']) for row in result}
     except Exception as e:
         print(f"ВНИМАНИЕ: Не удалось загрузить v_elementary_english_periods. Возвращен пустой набор. Ошибка: {e}")
-    pprint(elementary_english_periods)
-    return
+    # pprint(elementary_english_periods)
+    # return
 
     # grade_subject_max_consecutive_days
     # Ограничения по максимальному числу подряд идущих дней, когда у параллели может быть один и тот же предмет. Пример: {3: {"PE": 2}}.
@@ -445,18 +445,24 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     try:
         # Предполагается, что существует представление 'v_grade_subject_max_consecutive_days'
         # со столбцами 'grade', 'subject', 'max_days'.
-        df_max_days = pd.read_sql("SELECT * FROM v_grade_subject_max_consecutive_days", engine)
-        if not df_max_days.empty:
+        query="""
+        select s.name_eng as subject,md.grade,md.max_days from input_grade_subject_max_consecutive_days md
+        inner join input_subjects s on s.version_id=md.version_id and s.id=md.subject_id
+        where md.version_id=%s
+        """
+        # df_max_days = pd.read_sql("SELECT * FROM v_grade_subject_max_consecutive_days", engine)
+        data = db.fetch_all(query, (version_id,))
+        if data:
+            df_max_days = pd.DataFrame(data)
             # Группируем по 'grade', а затем для каждой группы создаем вложенный словарь {subject: max_days}
-            for grade, group in df_max_days.groupby('grade'):
-                grade_subject_max_consecutive_days[int(grade)] = (
-                    group.set_index('subject')['max_days'].astype(int).to_dict()
-                )
+            grade_subject_max_consecutive_days = df_max_days.groupby('grade').apply(
+                lambda x: x.set_index('subject')['max_days'].astype(int).to_dict()
+            ).to_dict()
     except Exception as e:
         print(
             f"ВНИМАНИЕ: Не удалось загрузить v_grade_subject_max_consecutive_days. Возвращен пустой словарь. Ошибка: {e}")
-    # pprint(grade_subject_max_consecutive_days)
-    # return
+    pprint(grade_subject_max_consecutive_days)
+    return
 
     # must_sync_split_subjects
     # Набор сплит-предметов, которые должны вестись синхронно у всех подгрупп.
