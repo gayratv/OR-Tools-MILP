@@ -1,25 +1,24 @@
 import pandas as pd
 from data_types.input_data import InputData, ClassInfo
 from typing import Dict, Set, List, Tuple
-import re
 from mysql_io.sql_connector_pool import Database
 
 db = Database()
 
 
-def _sanitize_lp_name(name: str) -> str:
-    """
-    Заменяет символы в строке, которые могут вызвать проблемы в LP-файлах,
-    на безопасные для создания валидного идентификатора.
-    """
-    if not isinstance(name, str):
-        return str(name)
-    # Заменяем последовательности пробелов и других проблемных символов на один '_'.
-    # Это помогает избежать ошибок парсинга в решателях вроде HiGHS.
-    return re.sub(r'[\\s/.():\\-]+', '_', name)
+# def _sanitize_lp_name(name: str) -> str:
+#     """
+#     Заменяет символы в строке, которые могут вызвать проблемы в LP-файлах,
+#     на безопасные для создания валидного идентификатора.
+#     """
+#     if not isinstance(name, str):
+#         return str(name)
+#     # Заменяем последовательности пробелов и других проблемных символов на один '_'.
+#     # Это помогает избежать ошибок парсинга в решателях вроде HiGHS.
+#     return re.sub(r'[\\s/.():\\-]+', '_', name)
 
 
-def load_data_from_sql(user_id: int, version_id: int) -> InputData:
+def load_data_from_sql( version_id: int) -> InputData:
     """
     Подключается к базе данных MS Access, загружает все необходимые данные
     из предопределенных представлений (v*) и возвращает заполненный объект InputData.
@@ -30,12 +29,12 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     def get_list(sql_query: str, column_name: str) -> list:
         """Читает один столбец из представления и возвращает как Python list."""
         try:
-            df = db.fetch_all(sql_query, (version_id,))
-            return [d[column_name] for d in df]
+            df1 = db.fetch_all(sql_query, (version_id,))
+            return [d[column_name] for d in df1]
 
 
-        except Exception as e:
-            print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой список. Ошибка: {e}")
+        except Exception as e1:
+            print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой список. Ошибка: {e1}")
             return []
 
     def get_dict(sql_query: str, key_cols: list, value_col: str,
@@ -44,36 +43,36 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
 
         """Читает представление и возвращает как словарь { (ключи): значение }."""
         try:
-            data = db.fetch_all(sql_query, (version_id,))
-            if not data:
+            data_get_dict = db.fetch_all(sql_query, (version_id,))
+            if not data_get_dict:
                 return {}
 
-            df = pd.DataFrame(data)
-            if df.empty:
+            df2 = pd.DataFrame(data_get_dict)
+            if df2.empty:
                 return {}
 
             if value_is_numeric:
                 # Явное преобразование столбца со значениями в числовой, а затем в целый тип.
                 # Это решает проблему с float (например, 2.0 вместо 2). используем pandas
-                df[value_col] = pd.to_numeric(df[value_col], errors='coerce').fillna(0).astype(int)
+                df2[value_col] = pd.to_numeric(df2[value_col], errors='coerce').fillna(0).astype(int)
 
             # Устанавливаем колонки-ключи как индекс и преобразуем оставшуюся колонку в словарь
-            dict1 = df.set_index(key_cols)[value_col].to_dict()
+            dict1 = df2.set_index(key_cols)[value_col].to_dict()
             if print_dict:
                 pprint(dict1)
             return dict1
-        except Exception as e:
-            print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой словарь. Ошибка: {e}")
+        except Exception as e2:
+            print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой словарь. Ошибка: {e2}")
             return {}
 
-    def get_class_info_list(sql_query: str, version_id : int) -> List[ClassInfo]:
+    def get_class_info_list(sql_query: str ) -> List[ClassInfo]:
         """Читает представление и возвращает список объектов ClassInfo."""
         try:
-            df = db.fetch_all(sql_query, (version_id,))
+            df3 = db.fetch_all(sql_query, (version_id,))
 
-            return [ClassInfo(name=row['name_eng'], grade=int(row['grade'])) for row in df]
-        except Exception as e:
-            print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой список ClassInfo. Ошибка: {e}")
+            return [ClassInfo(name=row['name_eng'], grade=int(row['grade'])) for row in df3]
+        except Exception as e4:
+            print(f"ВНИМАНИЕ: Не удалось загрузить {sql_query}. Возвращен пустой список ClassInfo. Ошибка: {e4}")
             return []
 
     def get_grouped_dict(sql_query: str, group_by_col: str, value_col: str) -> Dict[int, Set[str]]:
@@ -82,22 +81,22 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
         из другого столбца в множество. Возвращает словарь {ключ: {значение1, значение2}}.
         """
         try:
-            data = db.fetch_all(sql_query, (version_id,))
-            if not data:
+            data_get_grouped_dict = db.fetch_all(sql_query, (version_id,))
+            if not data_get_grouped_dict:
                 return {}
 
-            df = pd.DataFrame(data)
+            df5 = pd.DataFrame(data_get_grouped_dict)
             # Группируем по `group_by_col` и собираем значения из `value_col` в множество (set)
-            return df.groupby(group_by_col)[value_col].apply(set).to_dict()
-        except Exception as e:
-            print(f"ВНИМАНИЕ: Не удалось загрузить и сгруппировать {sql_query}. Возвращен пустой словарь. Ошибка: {e}")
+            return df5.groupby(group_by_col)[value_col].apply(set).to_dict()
+        except Exception as e5:
+            print(f"ВНИМАНИЕ: Не удалось загрузить и сгруппировать {sql_query}. Возвращен пустой словарь. Ошибка: {e5}")
             return {}
 
     # --- Загрузка данных из ваших представлений в Access ---
     # Предполагается, что вы создали представления с именами vClasses, vSubjects и т.д.
 
     # 1. Списки
-    classes = get_class_info_list("select name_eng, training_year as grade from input_classes where version_id = %s", version_id)
+    classes = get_class_info_list("select name_eng, training_year as grade from input_classes where version_id = %s" )
     # print(classes)
     # return
 
@@ -266,10 +265,9 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     # df_forbidden = pd.read_sql("SELECT * FROM v_forbidden_slots", engine)
     forbidden_slots_data = db.fetch_all(query, (version_id,))
     # forbidden_slots = {('5A', 'Mon', 1), ('5A', 'Tue', 2)}
-    forbidden_slots: Set = set()
+    forbidden_slots: Set[Tuple[str, str, int]] = set()
     if forbidden_slots_data:
-        df_forbidden = pd.DataFrame(forbidden_slots_data)
-        forbidden_slots = {(row['class'], row['day_of_week'], int(row['slot_id'])) for index, row in df_forbidden.iterrows()}
+        forbidden_slots = {(row['class'], row['day_of_week'], int(row['slot_id'])) for row in forbidden_slots_data}
 
     # pprint(forbidden_slots)
     # return
@@ -351,7 +349,7 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     # english_subject_name = "Eng"
     query="""
         select name_eng as english_name from input_subjects
-        where name="Иностранный язык"
+        where name='Иностранный язык'
         and version_id=%s
 
     """
@@ -373,16 +371,13 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
             inner join input_days_of_week dw on tfs.day_of_week_id=dw.id
         where tfs.version_id=%s
     """
-    teacher_forbidden_slots: Dict[str, list] = {}
+    teacher_forbidden_slots: Dict[str, List[Tuple[str, int]]] = {}
     try:
         teacher_forbidden_data = db.fetch_all(query, (version_id,))
         if teacher_forbidden_data:
-            # Преобразуем список словарей в DataFrame
-            df_teacher_forbidden = pd.DataFrame(teacher_forbidden_data)
-            # Группируем по учителю и собираем кортежи (день, слот) в список
-            # Имена столбцов 'day_of_week' и 'slot_id' взяты из SQL-запроса
-            teacher_forbidden_slots = df_teacher_forbidden.groupby('teacher')[['day_of_week', 'slot_id']] \
-                .apply(lambda g: [tuple(x) for x in g.to_numpy()], include_groups=False).to_dict()
+            for row in teacher_forbidden_data:
+                teacher_forbidden_slots.setdefault(row['teacher'], []).append((row['day_of_week'], int(row['slot_id'])))
+
     except Exception as e:
         print(f"ВНИМАНИЕ: Не удалось загрузить запреты слотов для учителей. Возвращен пустой словарь. Ошибка: {e}")
 
@@ -535,7 +530,7 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     )
 
 
-def load_display_maps(db_path: str) -> Dict[str, Dict[str, str]]:
+def load_display_maps() -> Dict[str, Dict[str, str]]:
 
     return {}  # Возвращаем пустой словарь, чтобы не сломать старые вызовы
 
@@ -545,7 +540,7 @@ if __name__ == '__main__':
 
 
     print(f"--- Запускаем за загрузку данных из SQL ---")
-    data_from_db = load_data_from_sql(user_id=1, version_id=1)
+    data_from_db = load_data_from_sql( version_id=1)
 
     # print("\n--- Результат: загруженный объект InputData ---")
     # # Используем pprint для красивого вывода dataclass
