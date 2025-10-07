@@ -417,24 +417,26 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     """
     subjects_not_last_lesson = get_grouped_dict(query, group_by_col='grade', value_col='subject')
 
-    pprint(subjects_not_last_lesson)
-    return
+    # pprint(subjects_not_last_lesson)
+    # return
 
     # elementary_english_periods
     # Разрешённые номера уроков для английского в начальной школе. Пример: {2, 3, 4}.
 
     elementary_english_periods: Set[int] = set()
+    query = """
+        select slot_id from input_allowed_english_slots_elementary
+            where version_id=%s
+    """
     try:
-        # Предполагается, что существует представление 'v_elementary_english_periods'
-        # со столбцом 'period_number', содержащим разрешенные номера уроков.
-        df_elem_eng_periods = pd.read_sql("SELECT period_number FROM elementary_english_periods", engine)
-        if not df_elem_eng_periods.empty:
-            # Преобразуем столбец в набор целых чисел
-            elementary_english_periods = set(df_elem_eng_periods['period_number'].astype(int).tolist())
+        result = db.fetch_all(query, (version_id,))
+        if result:
+            # Преобразуем список словарей в набор целых чисел
+            elementary_english_periods = {int(row['slot_id']) for row in result}
     except Exception as e:
         print(f"ВНИМАНИЕ: Не удалось загрузить v_elementary_english_periods. Возвращен пустой набор. Ошибка: {e}")
-    # pprint(elementary_english_periods)
-    # return
+    pprint(elementary_english_periods)
+    return
 
     # grade_subject_max_consecutive_days
     # Ограничения по максимальному числу подряд идущих дней, когда у параллели может быть один и тот же предмет. Пример: {3: {"PE": 2}}.
