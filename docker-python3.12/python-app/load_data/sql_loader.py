@@ -439,7 +439,9 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     # return
 
     # grade_subject_max_consecutive_days
-    # Ограничения по максимальному числу подряд идущих дней, когда у параллели может быть один и тот же предмет. Пример: {3: {"PE": 2}}.
+    # Ограничения по максимальному числу подряд идущих дней, когда у параллели может быть один и тот же предмет.
+    # Пример:  {5: {"PE": 2, "eng": 2}}
+
 
     grade_subject_max_consecutive_days: Dict[int, Dict[str, int]] = {}
     try:
@@ -456,20 +458,28 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
             df_max_days = pd.DataFrame(data)
             # Группируем по 'grade', а затем для каждой группы создаем вложенный словарь {subject: max_days}
             grade_subject_max_consecutive_days = df_max_days.groupby('grade').apply(
-                lambda x: x.set_index('subject')['max_days'].astype(int).to_dict()
+                lambda x: x.set_index('subject')['max_days'].astype(int).to_dict(),
+                include_groups=False
             ).to_dict()
     except Exception as e:
         print(
             f"ВНИМАНИЕ: Не удалось загрузить v_grade_subject_max_consecutive_days. Возвращен пустой словарь. Ошибка: {e}")
-    pprint(grade_subject_max_consecutive_days)
-    return
+    # pprint(grade_subject_max_consecutive_days)
+    # return
 
     # must_sync_split_subjects
     # Набор сплит-предметов, которые должны вестись синхронно у всех подгрупп.
     # must_sync_split_subjects = {"labor"}
-    must_sync_split_subjects = set(get_list("v_must_sync_split_subjects", "subject_name"))
-    # pprint(must_sync_split_subjects)
-    # return
+    # must_sync_split_subjects = set(get_list("v_must_sync_split_subjects", "subject_name"))
+    query="""
+    select s.name_eng as subject  from input_synchronized_split_subjects ss
+    inner join input_subjects s on s.version_id=ss.version_id and s.id=ss.subject_id
+    where ss.version_id=%s
+    """
+    must_sync_split_subjects = set(get_list(query, "subject"))
+
+    pprint(must_sync_split_subjects)
+    return
 
     # --- Словари для красивого отображения в отчетах ---
     display_subject_names: Dict[str, str] = {}
