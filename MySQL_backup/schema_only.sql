@@ -38,7 +38,7 @@ CREATE TABLE `calc_results` (
   PRIMARY KEY (`id`),
   KEY `fk_calculation_results_job` (`job_id`),
   CONSTRAINT `fk_calculation_results_job` FOREIGN KEY (`job_id`) REFERENCES `core_jobs` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -61,7 +61,7 @@ CREATE TABLE `calc_schedule_details` (
   PRIMARY KEY (`id`),
   KEY `job_id` (`job_id`),
   CONSTRAINT `calc_schedule_details_ibfk_1` FOREIGN KEY (`job_id`) REFERENCES `core_jobs` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4759 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6325 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -246,7 +246,7 @@ DROP TABLE IF EXISTS `input_classes`;
 CREATE TABLE `input_classes` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(30) DEFAULT (concat(_utf8mb4'class',to_base64(random_bytes(5)))),
-  `name_eng` varchar(255),
+  `name_eng` varchar(255) DEFAULT (uuid()),
   `training_year` int DEFAULT NULL,
   `version_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -414,7 +414,7 @@ DROP TABLE IF EXISTS `input_subjects`;
 CREATE TABLE `input_subjects` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
-  `name_eng` varchar(255) DEFAULT (concat(_utf8mb4'subj_',to_base64(random_bytes(5)))),
+  `name_eng` varchar(255) DEFAULT (uuid()),
   `is_split_subject` bit(1) DEFAULT NULL,
   `version_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -572,7 +572,7 @@ CREATE TABLE `input_teachers` (
   `id` int NOT NULL AUTO_INCREMENT,
   `subject_group_id` int DEFAULT NULL,
   `full_name` varchar(255) DEFAULT NULL,
-  `name_eng` varchar(100) NOT NULL DEFAULT (concat(_utf8mb4'teach',to_base64(random_bytes(5)))),
+  `name_eng` varchar(100) NOT NULL DEFAULT (uuid()),
   `version_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `teachers_name_eng` (`name_eng`,`version_id`),
@@ -641,4 +641,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-07 13:26:37
+-- Dump completed on 2025-10-07 17:55:39

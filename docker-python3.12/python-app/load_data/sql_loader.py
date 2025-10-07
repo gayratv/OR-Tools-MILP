@@ -92,8 +92,9 @@ def load_data_from_sql( version_id: int) -> InputData:
             print(f"ВНИМАНИЕ: Не удалось загрузить и сгруппировать {sql_query}. Возвращен пустой словарь. Ошибка: {e5}")
             return {}
 
-    # --- Загрузка данных из ваших представлений в Access ---
-    # Предполагается, что вы создали представления с именами vClasses, vSubjects и т.д.
+    print(f"update_name_eng_all")
+    # вместо uuid() в name_eng появятся осмысленные значения
+    db.execute("call update_name_eng_all()")
 
     # 1. Списки
     classes = get_class_info_list("select name_eng, training_year as grade from input_classes where version_id = %s" )
