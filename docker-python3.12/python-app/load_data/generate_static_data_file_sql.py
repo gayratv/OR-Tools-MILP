@@ -121,7 +121,8 @@ def create_timetable_data() -> InputData:
         grade_subject_max_consecutive_days=grade_subject_max_consecutive_days,
         must_sync_split_subjects=must_sync_split_subjects,
         display_subject_names=display_subject_names,
-        display_teacher_names=display_teacher_names
+        display_teacher_names=display_teacher_names,
+        display_class_names=display_class_names
     )
 """
     return function_code

@@ -789,6 +789,7 @@ def build_and_solve_with_or_tools(
         display_maps = {
             "subject_names": data.display_subject_names,
             "teacher_names": data.display_teacher_names,
+            "class_names": data.display_class_names,
         }
         solution_maps = get_solution_maps(data, final_maps, is_pulp=False)
 

@@ -1,3 +1,4 @@
+
 from data_types.input_data import InputData, ClassInfo
 
 # ====================================================================
@@ -884,6 +885,37 @@ def create_timetable_data() -> InputData:
     'teacher_6': 'Колганов И.Л',
     'teacher_8': 'Солостовская М.А',
     'teacher_9': 'Лоскутов А.С'}
+    display_class_names = {   'class_10_10': '10 а',
+    'class_10_11': '10 б',
+    'class_11_12': '11 а',
+    'class_11_13': '11 б',
+    'class_2_21': '2 а',
+    'class_2_22': '2 б',
+    'class_2_23': '2 в',
+    'class_3_24': '3 а',
+    'class_3_25': '3 б',
+    'class_3_26': '3 в',
+    'class_3_27': '3 г',
+    'class_4_28': '4 а',
+    'class_4_29': '4 б',
+    'class_4_30': '4 в',
+    'class_4_31': '4 г',
+    'class_5_1': '5 а',
+    'class_5_14': '5 в',
+    'class_5_15': '5 г',
+    'class_5_2': '5 б',
+    'class_6_16': '6 в',
+    'class_6_3': '6 а',
+    'class_6_4': '6 б',
+    'class_7_17': '7 МК',
+    'class_7_18': '7 в',
+    'class_7_5': '7 а',
+    'class_8_19': '8 в',
+    'class_8_6': '8 а',
+    'class_8_7': '8 б',
+    'class_9_20': '9 б',
+    'class_9_8': '9 а',
+    'class_9_9': '9 в'}
 
     return InputData(
         days=days,
@@ -912,5 +944,6 @@ def create_timetable_data() -> InputData:
         grade_subject_max_consecutive_days=grade_subject_max_consecutive_days,
         must_sync_split_subjects=must_sync_split_subjects,
         display_subject_names=display_subject_names,
-        display_teacher_names=display_teacher_names
+        display_teacher_names=display_teacher_names,
+        display_class_names=display_class_names
     )

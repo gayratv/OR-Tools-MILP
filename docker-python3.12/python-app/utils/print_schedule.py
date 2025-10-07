@@ -16,7 +16,6 @@ from input_data.optimization_weights import OptimizationWeights
 # если нужны данные:
 
 
-
 def _val(var: Any) -> float:
     """Универсальная функция для получения значения переменной (pulp или число)."""
     if isinstance(var, pulp.LpVariable):
@@ -109,12 +108,16 @@ def export_full_schedule_to_excel(
     display_maps = display_maps or {}
     subject_names = display_maps.get("subject_names", {})
     teacher_names = display_maps.get("teacher_names", {})
+    class_names = display_maps.get("class_names", {})
 
     def get_subject_name(s_id):
         return subject_names.get(s_id, s_id)
 
     def get_teacher_name(t_id):
-        return teacher_names.get(t_id, t_id)
+        return teacher_names.get(t_id, t_id) 
+        
+    def get_class_name(t_id):
+        return class_names.get(t_id, t_id)
 
     wb = openpyxl.Workbook()
     bold_font = Font(bold=True)
@@ -127,7 +130,8 @@ def export_full_schedule_to_excel(
     ws_classes = wb.active
     ws_classes.title = "Классы_расписание"
     for c in class_names_list:
-        ws_classes.append([f"Класс {c}"])
+        
+        ws_classes.append([f"Класс {get_class_name(c)}"])
         ws_classes.cell(ws_classes.max_row, 1).font = bold_font
         header = ["День"] + [f"Урок {p}" for p in data.periods]
         ws_classes.append(header)
@@ -180,7 +184,7 @@ def export_full_schedule_to_excel(
                     if tt != t:
                         continue
                     if x_sol.get((c, s, d, p), 0) > 0.5:
-                        cell_text = f"{c}-{get_subject_name(s)}"
+                        cell_text = f"{get_class_name(c)}-{get_subject_name(s)}"
                         break
                 # split
                 if cell_text is None:
@@ -189,7 +193,7 @@ def export_full_schedule_to_excel(
                         if tt != t:
                             continue
                         if z_sol.get((c, s, g, d, p), 0) > 0.5:
-                            pieces.append(f"{c}-{get_subject_name(s)}[g{g}]")
+                            pieces.append(f"{get_class_name(c)}-{get_subject_name(s)}[g{g}]")
                     if pieces:
                         cell_text = " + ".join(pieces)
                 row.append(cell_text or "—")
@@ -235,7 +239,7 @@ def export_full_schedule_to_excel(
         if avg > 0 and any(abs(v - avg) > 0.3 * avg for v in per_day.values()):
             warnings.append("Перекос")
 
-        row = [c, total, f"{avg:.1f}"] + [per_day[d] for d in data.days] + [", ".join(warnings)]
+        row = [get_class_name(c), total, f"{avg:.1f}"] + [per_day[d] for d in data.days] + [", ".join(warnings)]
         ws_summary.append(row)
 
     # --- Сводка по учителям ---
