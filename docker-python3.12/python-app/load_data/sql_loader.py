@@ -542,6 +542,5 @@ if __name__ == '__main__':
     print(f"--- Запускаем за загрузку данных из SQL ---")
     data_from_db = load_data_from_sql( version_id=1)
 
-    # print("\n--- Результат: загруженный объект InputData ---")
-    # # Используем pprint для красивого вывода dataclass
-    # pprint(data_from_db)
+    print("\n--- Результат: загруженный объект InputData ---")
+    pprint(data_from_db)

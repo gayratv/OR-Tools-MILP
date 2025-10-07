@@ -132,6 +132,23 @@ CREATE TABLE `core_versions` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `input_allowed_english_slots_elementary`
+--
+
+DROP TABLE IF EXISTS `input_allowed_english_slots_elementary`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `input_allowed_english_slots_elementary` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `slot_id` int DEFAULT NULL,
+  `version_id` int DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `input_allowed_english_slots_elementary_core_versions_id_fk` (`version_id`),
+  CONSTRAINT `input_allowed_english_slots_elementary_core_versions_id_fk` FOREIGN KEY (`version_id`) REFERENCES `core_versions` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `input_calculated_years`
 --
 
@@ -183,7 +200,7 @@ CREATE TABLE `input_class_slot_weight` (
   `class_id` int DEFAULT NULL,
   `day_of_week` int DEFAULT NULL,
   `slot_id` int DEFAULT NULL,
-  `weight` double DEFAULT NULL,
+  `weight` int DEFAULT NULL,
   `version_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `input_class_slot_weight_pk` (`class_id`,`day_of_week`,`slot_id`,`version_id`),
@@ -205,7 +222,7 @@ CREATE TABLE `input_class_subject_day_weight` (
   `class_id` int DEFAULT NULL,
   `subject_id` int DEFAULT NULL,
   `day_of_week_id` int DEFAULT NULL,
-  `weight` double DEFAULT NULL,
+  `weight` int DEFAULT NULL,
   `version_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `input_class_subject_day_weight_pk` (`class_id`,`day_of_week_id`,`subject_id`,`version_id`),
@@ -532,7 +549,7 @@ CREATE TABLE `input_teacher_slot_weight` (
   `teacher_id` int DEFAULT NULL,
   `day_of_week_id` int DEFAULT NULL,
   `slot_id` int DEFAULT NULL,
-  `weight` double DEFAULT NULL,
+  `weight` int DEFAULT NULL,
   `version_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `input_teacher_slot_weight_pk` (`teacher_id`,`day_of_week_id`,`slot_id`,`version_id`),
@@ -624,4 +641,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-05 21:07:00
+-- Dump completed on 2025-10-07 13:26:37
