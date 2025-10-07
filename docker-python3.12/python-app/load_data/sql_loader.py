@@ -478,19 +478,33 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
     """
     must_sync_split_subjects = set(get_list(query, "subject"))
 
-    pprint(must_sync_split_subjects)
-    return
+    # pprint(must_sync_split_subjects)
+    # return
 
     # --- Словари для красивого отображения в отчетах ---
     display_subject_names: Dict[str, str] = {}
     display_teacher_names: Dict[str, str] = {}
     try:
-        subject_map_df = pd.read_sql('SELECT "предмет_eng", "предмет" FROM "з_excel_предметы"', engine)
-        display_subject_names = subject_map_df.set_index('предмет_eng')['предмет'].to_dict()
-
-        teacher_map_df = pd.read_sql('SELECT "teacher", "FAMIO" FROM "з_excel_учителя"', engine)
-        display_teacher_names = teacher_map_df.set_index('teacher')['FAMIO'].to_dict()
-
+        # subject_map_df = pd.read_sql('SELECT "предмет_eng", "предмет" FROM "з_excel_предметы"', engine)
+        query = """
+        select name, name_eng from input_subjects
+        where version_id=%s
+        """
+        subject_map_data = db.fetch_all(query, (version_id,))
+        if subject_map_data:
+            subject_map_df = pd.DataFrame(subject_map_data)
+            display_subject_names = subject_map_df.set_index('name_eng')['name'].to_dict()
+ 
+        # teacher_map_df = pd.read_sql('SELECT "teacher", "FAMIO" FROM "з_excel_учителя"', engine)
+        query = """
+            select name_eng,full_name from input_teachers
+            where version_id=%s        
+        """
+        teacher_map_data = db.fetch_all(query, (version_id,))
+        if teacher_map_data:
+            teacher_map_df = pd.DataFrame(teacher_map_data)
+            display_teacher_names = teacher_map_df.set_index('name_eng')['full_name'].to_dict()
+ 
     except Exception as e:
         print(f"ВНИМАНИЕ: Не удалось загрузить словари для отображения (display maps). Ошибка: {e}")
 
@@ -522,15 +536,7 @@ def load_data_from_sql(user_id: int, version_id: int) -> InputData:
 
 
 def load_display_maps(db_path: str) -> Dict[str, Dict[str, str]]:
-    """
-    Загружает из базы данных словари для сопоставления
-    технических (английских) названий с полными (русскими) для отчетов.
-    """
-    # Эта функция больше не нужна, так как ее логика перенесена в load_data_from_access
-    # и данные теперь являются частью объекта InputData.
-    # Оставлена для обратной совместимости, если где-то вызывается.
-    if not db_path:
-        return {}
+
     return {}  # Возвращаем пустой словарь, чтобы не сломать старые вызовы
 
 
