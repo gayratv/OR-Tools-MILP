@@ -33,6 +33,7 @@ def generate_function_string(data: InputData) -> str:
     must_sync_split_subjects_str = pprint.pformat(data.must_sync_split_subjects, indent=4, width=120)
     display_subject_names_str = pprint.pformat(data.display_subject_names, indent=4, width=120)
     display_teacher_names_str = pprint.pformat(data.display_teacher_names, indent=4, width=120)
+    display_class_names_str = pprint.pformat(data.display_class_names, indent=4, width=120)
 
     # Собираем итоговый код функции в виде многострочной f-строки
     function_code = f"""
@@ -91,6 +92,7 @@ def create_timetable_data() -> InputData:
     # --- Словари для отображения ---
     display_subject_names = {display_subject_names_str}
     display_teacher_names = {display_teacher_names_str}
+    display_class_names = {display_class_names_str}
 
     return InputData(
         days=days,
