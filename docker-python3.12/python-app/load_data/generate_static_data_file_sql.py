@@ -45,10 +45,10 @@ from data_types.input_data import InputData, ClassInfo
 # ====================================================================
 
 def create_timetable_data() -> InputData:
-    \"\"\"
-    Создает объект InputData со статичными данными,
-    сгенерированными из базы данных.
-    \"\"\"
+    
+    # Создает объект InputData со статичными данными,
+    # сгенерированными из базы данных.
+    
     days = {data.days}
     periods = {data.periods}
     classes = {data.classes}
@@ -133,6 +133,7 @@ if __name__ == '__main__':
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(current_dir, '..'))
     output_file_path = os.path.join(project_root, 'milp_equations','rasp_data_generated2.py')
+
 
     print(f"--- Загружаем данные из SQL ---")
     data_from_db = load_data_from_sql(1)

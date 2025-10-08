@@ -1,0 +1,96 @@
+
+/mnt/f/_prg/python/OR-Tools-MILP/SQL_certs
+set -a
+source .env
+set +a
+
+echo $MYSQL_USER
+echo $MYSQL_PASSWORD
+
+================= СЕРТФИКАТЫ MySQL
+./make-mysql-certs.sh
+./make-mysql-client-certs.sh
+
+=================
+Скопируйте ca.pem на клиентскую машину (например, в ~/.mysql/ca.pem) и подключайтесь:
+rm -r ~/.mysql
+mkdir -p ~/.mysql
+
+scp -i ~/.ssh/beget/id_ed25519 \
+    root@217.12.38.229:/docker-compose-full/mysql/certs/{client-key.pem,client-cert.pem,ca.pem} \
+    ~/.mysql/
+
+chmod 600 ~/.mysql/client-key.pem
+chmod 644 ~/.mysql/{client-cert.pem,ca.pem}
+=================
+
+
+docker compose up -d --build
+docker compose down
+docker compose down && docker compose up -d
+docker compose restart mysql
+
+
+MYSQL установка ==========
+sudo apt update
+sudo apt upgrade
+
+sudo apt install mysql-client
+
+========================
+
+chmod 600 ~/.my.cnf
+
+# Попытка подключения
+
+mysql --login-path=root  \
+      -e "SELECT user, host, ssl_type, ssl_cipher, x509_issuer, x509_subject FROM mysql.user WHERE user IN ('appuser', 'root');"
+
+mysql --login-path=root  \
+    -e "ALTER USER 'appuser'@'%' REQUIRE X509;"
+
+
+
+-+-+- ЗАШИФРОВАТЬ пароль
+mysql_config_editor remove --login-path=appuser
+mysql_config_editor remove --login-path=root
+mysql_config_editor print --all
+
+
+-+-+--+-+--+-+--+-+--+-+--+-+--+-+--+-+-
+--defaults-group-suffix - данные берутся из файла ~./my.cnf из секции [clientappuser]
+--login-path=appuser - пароль в зашифрованном виде лежит в  .mylogin.cnf
+-+-+--+-+--+-+--+-+--+-+--+-+--+-+--+-+-
+
+-+-+--+-+ Установить пароль
+
+== Соединение с mysql
+mysql_config_editor set --login-path=appuser \
+  --user=appuser \
+  --password
+
+mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "SELECT 1;"
+
+
+docker compose down
+docker volume rm mysql8_certs_dbdata_sql_certs
+docker compose up -d --build
+
+ls -l /certs
+
+mysql \
+  -h 127.0.0.1 \
+  -P 3391 \
+  -u appuser \
+  -p \
+  --ssl-ca=/mnt/f/_prg/python/OR-Tools-MILP/SQL_certs/mysql/certs/ca.pem \
+  --ssl-cert=/mnt/f/_prg/python/OR-Tools-MILP/SQL_certs/mysql/certs/client-cert.pem \
+  --ssl-key=/mnt/f/_prg/python/OR-Tools-MILP/SQL_certs/mysql/certs/client-key.pem \
+  school_sheduller \
+  -e "SELECT 1;"
+
+========================
+openssl s_client -connect 127.0.0.1:3391 -starttls mysql -showcerts \
+-CAfile /mnt/f/_prg/python/OR-Tools-MILP/SQL_certs/mysql/certs/ca.pem
+
+docker logs mysql8_certs

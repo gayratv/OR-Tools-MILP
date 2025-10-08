@@ -1,0 +1,108 @@
+#cloud-config
+# Этот файл используется cloud-init для настройки ВМ после первого запуска.
+datasource:
+  Ec2:
+    strict_id: false
+ssh_pwauth: no
+users:
+  - name: yc-user
+    groups: [ 'sudo', 'docker' ]
+    shell: /bin/bash
+    sudo: [ 'ALL=(ALL) NOPASSWD:ALL' ]
+    ssh_authorized_keys:
+      - $SSH_PUBLIC_KEY
+
+
+#    ssh_authorized_keys: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMsT2ARMza/hqHGe2QqSAPTlUhh3yUimuVAXXjqsuLlm root@SOLIDWORKS2022
+
+
+
+package_update: true
+#package_upgrade: true
+
+packages:
+  - git
+  - mc
+  - curl
+
+write_files:
+  - path: "/usr/local/etc/yc-install.sh"
+    owner: yc-user:yc-user
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+
+      # CLI
+      echo "Installing Yandex Cloud CLI"
+      curl \
+        --silent \
+        --show-error \
+        --location \
+        https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+      VM_ID=$(curl --silent http://169.254.169.254/latest/meta-data/instance-id)
+      
+      # Переходим в домашнюю директорию пользователя, чтобы все последующие команды
+      # выполнялись в ней и имели права на запись файлов (например, key.json).
+      cd /home/yc-user
+      
+      # Save YC params
+      echo "Saving YC params to the ~/.bashrc"
+      # Экранируем $HOME, чтобы он раскрылся во время выполнения скрипта от имени yc-user,
+      # а не во время создания файла от имени root.
+      cat << EOF >> /home/yc-user/.bashrc
+        export PATH="/home/yc-user/yandex-cloud/bin:\$PATH"
+        export YC_CLI_VM_ID="${VM_ID:-unknown}"
+      EOF
+      
+      # Явно обновляем PATH для текущей сессии скрипта.
+      # Это надежнее, чем `source` в cloud-init.
+      export PATH="/home/yc-user/yandex-cloud/bin:$PATH"
+
+      echo "SETTING YC +++++++++++++++++++++"
+
+      yc iam key create \
+        --service-account-name sc-scheduller-srv-acc \
+        --output key.json \
+        --folder-id b1gbgjv35qvro3lmgaci
+      
+      yc config profile create default
+      yc config set service-account-key key.json
+      yc config set cloud-id b1gib03pgvqrrfvhl3kb
+      yc config set folder-id b1gbgjv35qvro3lmgaci
+
+    defer: true
+
+#  - path: "/home/yc-user/yandex-cloud/bin/delete-docker-curl.sh"
+#    owner: yc-user:yc-user
+#    permissions: "0755"
+#    content: |
+#      #!/bin/bash
+#        # Скрипт для удаления ВМ в Yandex Cloud
+#        # Имя ВМ берём из метаданных GCP
+#
+#        # Получаем имя инстанса
+#        VM_NAME=$(curl -s -H "Metadata-Flavor: Google" \
+#          "http://169.254.169.254/computeMetadata/v1/instance/name")
+#
+#        # Проверяем успешность запроса
+#        if [[ -z "$VM_NAME" ]]; then
+#          echo "Ошибка: не удалось получить имя инстанса через YC CLI." >&2
+#          exit 1
+#        fi
+#
+#        echo "Запрос на удаление текущей ВМ с ID: $VM_NAME" >&2
+#
+#        yc compute instance delete --name "$VM_NAME"
+#    defer: true
+runcmd:
+  - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
+  - 'curl -L -o /home/yc-user/yandex-cloud/bin/wait_for_files.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/docker-python3.12/scripts/wait_for_files.sh'
+  - 'curl -L -o /home/yc-user/yandex-cloud/bin/stop-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/docker-python3.12/scripts/stop-curl.sh'
+  - 'curl -L -o /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/docker-python3.12/scripts/delete-docker-curl.sh'
+  # 4. Делаем скрипт исполняемым для всех пользователей
+  - 'chmod +x /home/yc-user/yandex-cloud/bin/*.sh'
+
+
+  # 3. Скачиваем скрипт самоудаления сразу в /usr/local/bin
+#  - 'curl -L -o /usr/local/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'
+#  - 'curl -L -o /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'

@@ -1,0 +1,26 @@
+# Папка, которую нужно исключить
+responce/
+output/
+
+# --- Общие рекомендации ---
+
+# Файлы и папки Git
+.git
+.gitignore
+
+# Файлы Docker (не нужны внутри самого образа)
+Dockerfile
+Dockerfile-yandex
+.dockerignore
+
+.env
+
+# Кэш и виртуальные окружения Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Файлы IDE
+.idea/
+.vscode/

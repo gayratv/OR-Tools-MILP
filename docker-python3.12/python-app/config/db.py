@@ -1,7 +1,7 @@
 import os
 from config import MYSQL_DIR
 
-print("os.environ.get(MYSQL_EXTERNAL_PORT ) ",os.environ.get("MYSQL_EXTERNAL_PORT" ))
+# print("os.environ.get(MYSQL_EXTERNAL_PORT ) ",os.environ.get("MYSQL_EXTERNAL_PORT" ))
 
 # Конфигурация SSL (TLS)
 DB_CONFIG = {

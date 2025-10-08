@@ -7,16 +7,16 @@ from data_types.input_data import InputData, ClassInfo
 # ====================================================================
 
 def create_timetable_data() -> InputData:
-    """
-    Создает объект InputData со статичными данными,
-    сгенерированными из базы данных.
-    """
+    
+    # Создает объект InputData со статичными данными,
+    # сгенерированными из базы данных.
+    
     days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
     periods = [1, 2, 3, 4, 5, 6, 7, 8]
     classes = [ClassInfo(name='class_5_1', grade=5), ClassInfo(name='class_5_2', grade=5), ClassInfo(name='class_6_3', grade=6), ClassInfo(name='class_6_4', grade=6), ClassInfo(name='class_7_5', grade=7), ClassInfo(name='class_8_6', grade=8), ClassInfo(name='class_8_7', grade=8), ClassInfo(name='class_9_8', grade=9), ClassInfo(name='class_9_9', grade=9), ClassInfo(name='class_10_10', grade=10), ClassInfo(name='class_10_11', grade=10), ClassInfo(name='class_11_12', grade=11), ClassInfo(name='class_11_13', grade=11), ClassInfo(name='class_5_14', grade=5), ClassInfo(name='class_5_15', grade=5), ClassInfo(name='class_6_16', grade=6), ClassInfo(name='class_7_17', grade=7), ClassInfo(name='class_7_18', grade=7), ClassInfo(name='class_8_19', grade=8), ClassInfo(name='class_9_20', grade=9), ClassInfo(name='class_2_21', grade=2), ClassInfo(name='class_2_22', grade=2), ClassInfo(name='class_2_23', grade=2), ClassInfo(name='class_3_24', grade=3), ClassInfo(name='class_3_25', grade=3), ClassInfo(name='class_3_26', grade=3), ClassInfo(name='class_3_27', grade=3), ClassInfo(name='class_4_28', grade=4), ClassInfo(name='class_4_29', grade=4), ClassInfo(name='class_4_30', grade=4), ClassInfo(name='class_4_31', grade=4)]
     subjects = ['subject_1', 'subject_2', 'subject_3', 'subject_4', 'subject_5', 'subject_6', 'subject_7', 'subject_8', 'subject_9', 'subject_10', 'subject_11', 'subject_12', 'subject_13', 'subject_14', 'subject_15', 'subject_16', 'subject_17', 'subject_18', 'subject_19', 'subject_20', 'subject_21', 'subject_22', 'subject_23', 'subject_24', 'subject_25', 'subject_26', 'subject_27', 'subject_28', 'subject_29', 'subject_30', 'subject_31', 'subject_32']
     teachers = ['teacher_1', 'teacher_2', 'teacher_3', 'teacher_4', 'teacher_5', 'teacher_6', 'teacher_8', 'teacher_9', 'teacher_10', 'teacher_11', 'teacher_12', 'teacher_13', 'teacher_14', 'teacher_15', 'teacher_16', 'teacher_17', 'teacher_18', 'teacher_19', 'teacher_20', 'teacher_21', 'teacher_23', 'teacher_24', 'teacher_25', 'teacher_26', 'teacher_27', 'teacher_28', 'teacher_29', 'teacher_30', 'teacher_31', 'teacher_32', 'teacher_33', 'teacher_34', 'teacher_35', 'teacher_36', 'teacher_37', 'teacher_38', 'teacher_39', 'teacher_40', 'teacher_41', 'teacher_42', 'teacher_43']
-    split_subjects = {'subject_21', 'subject_13', 'subject_10'}
+    split_subjects = {'subject_10', 'subject_21', 'subject_13'}
     subgroup_ids = [1, 2]
 
     # --- Учебные планы ---
