@@ -49,7 +49,6 @@ chmod 600 ~/.my.cnf
 
 # Попытка подключения
 
-
 mysql --login-path=root  \
       -e "SELECT user, host, ssl_type, ssl_cipher, x509_issuer, x509_subject FROM mysql.user WHERE user IN ('appuser', 'root');"
 
@@ -60,31 +59,44 @@ mysql --login-path=root  \
 
 -+-+- ЗАШИФРОВАТЬ пароль
 mysql_config_editor remove --login-path=appuser
-
-mysql_config_editor set --login-path=appuser \
-  --host=uroktime.store \
-  --port=45321 \
-  --user=appuser \
-  --password
-
-mysql_config_editor set --login-path=root \
-  --host=uroktime.store \
-  --port=45321 \
-  --user=root \
-  --password
-
+mysql_config_editor remove --login-path=root
 mysql_config_editor print --all
 
 
+-+-+--+-+--+-+--+-+--+-+--+-+--+-+--+-+-
+--defaults-group-suffix - данные берутся из файла ~./my.cnf из секции [clientappuser]
+--login-path=appuser - пароль в зашифрованном виде лежит в  .mylogin.cnf
+-+-+--+-+--+-+--+-+--+-+--+-+--+-+--+-+-
+
+-+-+--+-+ Установить пароль
+
+== Соединение с mysql
+mysql_config_editor set --login-path=appuser \
+  --user=appuser \
+  --password
+
 mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "SELECT 1;"
-mysql --login-path=root  school_sheduller -e "SELECT 1;"
 
 
-### не дает подключиться потому что другая сеть
+docker compose down
+docker volume rm mysql8_certs_dbdata_sql_certs
+docker compose up -d --build
+
+ls -l /certs
+
 mysql \
-  -h uroktime.store \
-  -P 45321 \
-  -u appuser_rw \
-  -ppass1 \
+  -h 127.0.0.1 \
+  -P 3391 \
+  -u appuser \
+  -p \
+  --ssl-ca=/mnt/f/_prg/python/OR-Tools-MILP/SQL_certs/mysql/certs/ca.pem \
+  --ssl-cert=/mnt/f/_prg/python/OR-Tools-MILP/SQL_certs/mysql/certs/client-cert.pem \
+  --ssl-key=/mnt/f/_prg/python/OR-Tools-MILP/SQL_certs/mysql/certs/client-key.pem \
   school_sheduller \
   -e "SELECT 1;"
+
+========================
+openssl s_client -connect 127.0.0.1:3391 -starttls mysql -showcerts \
+-CAfile /mnt/f/_prg/python/OR-Tools-MILP/SQL_certs/mysql/certs/ca.pem
+
+docker logs mysql8_certs

@@ -24,7 +24,7 @@ import itertools
 import sys
 from typing import Dict,  Hashable, Tuple, List,  Union
 from pathlib import Path
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
 # Add project root to path to allow absolute imports
 sys.path.insert(0, str(Path(__file__).parent.absolute()))
@@ -817,8 +817,8 @@ def build_and_solve_with_or_tools(
 
 if __name__ == '__main__':
     # Загружаем переменные окружения из файла .env в дочерней директории 'responce'
-    dotenv_path = Path(__file__).parent / 'responce/.env'
-    load_dotenv(dotenv_path=dotenv_path)
+    # dotenv_path = Path(__file__).parent / 'responce/.env'
+    # load_dotenv(dotenv_path=dotenv_path)
 
 
     # Источник данных: 'db' | 'generated' | 'manual'

@@ -2,7 +2,7 @@ import boto3
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
 # Глобальная переменная для кэширования S3 клиента (Singleton pattern)
 _s3_client = None
@@ -83,7 +83,7 @@ def upload_file_to_s3(local_file_path: Path, s3_object_key: str = None) -> bool:
 if __name__ == "__main__":
     # При прямом запуске, мы сами отвечаем за загрузку .env
     dotenv_path = Path(__file__).parent / 'responce/.env'
-    load_dotenv(dotenv_path=dotenv_path)
+    # load_dotenv(dotenv_path=dotenv_path)
 
     try:
         # Пример использования функции: загрузка самого себя

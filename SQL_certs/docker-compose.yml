@@ -2,28 +2,18 @@ name: mysql8_certs
 
 services:
   db:
-    image: mysql:8.4
+    # Собираем образ из Dockerfile в текущей директории
+    build: .
     container_name: mysql8_certs
-    restart: unless-stopped
     env_file: [.env]
     ports:
       - "3391:3306"
     volumes:
+      # ОСТАВЛЯЕМ ТОЛЬКО ЭТОТ ТОМ для хранения данных базы.
+      # Все остальное теперь встроено в образ.
       - type: volume
         source: dbdata_sql_certs
         target: /var/lib/mysql
-      - type: bind
-        source: ./mysql/conf.d
-        target: /etc/mysql/conf.d
-        read_only: true
-      - type: bind
-        source: ./mysql/init
-        target: /docker-entrypoint-initdb.d
-        read_only: true
-      - type: bind
-        source: ./mysql/certs
-        target: /certs
-        read_only: true
 
     ulimits:
       nofile:

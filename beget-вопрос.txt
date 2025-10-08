@@ -1,0 +1,28 @@
+ssh -i ~/.ssh/beget/id_ed25519 root@uroktime.store
+
+ssh -i ~/.ssh/beget/id_ed25519 root@217.12.38.229
+
+
+
+use school_sheduller;
+SET profiling = 1;
+
+SELECT s.name_eng FROM input_paired_subjects ps
+INNER JOIN input_subjects s ON s.id = ps.paired_subject_id AND ps.version_id = s.version_id
+WHERE ps.version_id = 1;
+
+
+SHOW PROFILES;
+SHOW PROFILE FOR QUERY 1;
+
+=======================
+
+SET @start = NOW(6);
+
+SELECT s.name_eng FROM input_paired_subjects ps
+INNER JOIN input_subjects s ON s.id = ps.paired_subject_id AND ps.version_id = s.version_id
+WHERE ps.version_id = 1;
+
+SET @end = NOW(6);
+
+SELECT TIMESTAMPDIFF(MICROSECOND, @start, @end) / 1000 AS 'execution_ms';

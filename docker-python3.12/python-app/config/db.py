@@ -1,10 +1,12 @@
 import os
 from config import MYSQL_DIR
 
+print("os.environ.get(MYSQL_EXTERNAL_PORT ) ",os.environ.get("MYSQL_EXTERNAL_PORT" ))
+
 # Конфигурация SSL (TLS)
 DB_CONFIG = {
-    "host": os.environ.get("DOMAIN", "appuser"),
-    "port": int(os.environ.get("MYSQL_EXTERNAL_PORT", 45321)),
+    "host": os.environ.get("DOMAIN"),
+    "port": int(os.environ.get("MYSQL_EXTERNAL_PORT" )),
     "user": os.environ.get("MYSQL_USER", "appuser"),
     "password": os.environ.get("MYSQL_PASSWORD"),  # ← пароль из .env
     "database": os.environ.get("MYSQL_DATABASE", "school_sheduller"),

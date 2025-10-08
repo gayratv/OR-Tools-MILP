@@ -3,8 +3,8 @@ set -euo pipefail
 
 # chmod +x make-mysql-client-certs.sh, затем запустите.
 
-export DOMAIN="uroktime.store"
-export IP_ADDR="localhost"
+export DOMAIN="localhost"
+export IP_ADDR="127.0.0.1"
 export OUTDIR="mysql/certs"
 
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_certs
@@ -30,6 +30,10 @@ EOF
 # 4) Подписываем CSR клиентский тем же CA
 openssl x509 -req -in client.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial \
   -out client-cert.pem -days "$DAYS" -extfile client-ext.cnf
+
+echo ">> Устанавливаю права доступа..."
+chmod 600 client-key.pem
+chmod 644 client-cert.pem
 
 # Итоговые файлы:
 #  - client-key.pem   (приватный ключ клиента)
