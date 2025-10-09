@@ -46,6 +46,11 @@ need() { command -v "$1" >/dev/null 2>&1 || { echo "Требуется '$1'." >&
 need yc
 need jq
 
+echo "Получение секретов из Yandex Lockbox..."
+# Получаем секреты и создаем .env файл для docker-compose
+#yc lockbox secret get --name school-scheduler-app-secrets --format=json | jq -r '.entries[] | .key + "=" + .text_value' > .env
+#echo "Файл .env создан."
+
 echo "Создание ВМ: name=${VM_NAME}, platform=${PLATFORM}, cores=${CORES}, mem=${MEMORY}GB, disk=${DISK_SIZE}GB" >&2
 
 # -------- Чтение SSH ключа -------------------------------------------
@@ -81,6 +86,7 @@ VM_EXTERNAL_IP=$(jq -r 'first(.network_interfaces[].primary_v4_address.one_to_on
 
 export VM_EXTERNAL_IP
 
+
 echo "----------------------------------------"
 echo "VM создана:"
 jq -r '.id as $id
@@ -94,7 +100,7 @@ echo "Экспортировано: VM_EXTERNAL_IP=${VM_EXTERNAL_IP}"
 
 
 # Общее время в секундах
-TOTAL_SECONDS=5
+TOTAL_SECONDS=20
 
 echo "Запускаю таймер на $TOTAL_SECONDS секунд..."
 # Цикл для обратного отсчета

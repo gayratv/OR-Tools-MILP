@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Настройки
-DAYS="${DAYS:-825}"
-OUTDIR="/app/mysql/certs"
+readonly DAYS="${DAYS:-825}"
+readonly OUTDIR="/certs"
 
 mkdir -p "$OUTDIR"
 cd "$OUTDIR"
@@ -39,8 +39,8 @@ else
   echo ">> Использую существующие клиентские сертификаты."
 fi
 
-# Получаем текущий IP
-CURRENT_IP=$(curl -s ifconfig.co)
+# Получаем IP из переменной окружения, если она есть, иначе пытаемся определить через curl
+CURRENT_IP="${VM_EXTERNAL_IP:-$(curl -s ifconfig.co)}"
 echo ">> Текущий внешний IP: $CURRENT_IP"
 
 # Удаляем старые серверные сертификаты (если есть)
@@ -75,12 +75,6 @@ openssl x509 -req -in server.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial \
 
 rm -f server.csr san.cnf
 cd - > /dev/null # Возвращаемся в исходную директорию
-# Устанавливаем владельца на сертификаты
-chown -R mysql:mysql "$OUTDIR" && \
-# Устанавливаем права на ключи
-chmod 600 "$OUTDIR"/*-key.pem && \
-# Устанавливаем права на публичные сертификаты
-chmod 644 "$OUTDIR"/*-cert.pem "$OUTDIR"/ca.pem
 
 echo
 echo "==== Серверные сертификаты обновлены! ==="

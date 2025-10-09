@@ -1,25 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
+echo "--- Starting container entrypoint ---"
 
-# Переходим в директорию yc, установленную для root
-cd /root/yandex-cloud
-
-yc iam key create \
-        --service-account-name sc-scheduller-srv-acc \
-        --output key.json \
-        --folder-id b1gbgjv35qvro3lmgaci
-
-yc config profile create default
-yc config set service-account-key key.json
-yc config set cloud-id b1gib03pgvqrrfvhl3kb
-yc config set folder-id b1gbgjv35qvro3lmgaci
-
-cd /app
-yc-secrets-get.sh
-set -a
-source .env
-set +a
+echo "--- Generating SSL certificates ---"
 make-mysql-certs-full.sh
 
-## Эта команда будет удерживать контейнер в рабочем состоянии
-tail -f /dev/null
+echo "--- Setting permissions for certificates ---"
+# Устанавливаем правильного владельца и права на сгенерированные сертификаты
+chown -R mysql:mysql /certs
+chmod 600 /certs/*-key.pem
+chmod 644 /certs/*-cert.pem /certs/ca.pem
+
+echo "--- Permissions set. Handing over to MySQL daemon ---"
+
+# Передаем управление стандартной точке входа образа mysql.
+# mysqld будет запущен с правильными параметрами, включая --ssl-ca, --ssl-cert, --ssl-key,
+# так как мы их указали в my.cnf.
+exec docker-entrypoint.sh mysqld

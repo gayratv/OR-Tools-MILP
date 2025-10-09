@@ -6,13 +6,16 @@ services:
     build: .
     container_name: mysql8_yand_certs
     env_file: [.env]
+    environment:
+      # Эта переменная будет установлена в create-yandex-docker-compose.sh
+      - VM_EXTERNAL_IP
     ports:
       - "3398:3306"
     volumes:
       # ОСТАВЛЯЕМ ТОЛЬКО ЭТОТ ТОМ для хранения данных базы.
       # Все остальное теперь встроено в образ.
       - type: volume
-        source: dbdata_sql_certs
+        source: dbdata_yandex_sql_certs
         target: /var/lib/mysql
 
     ulimits:

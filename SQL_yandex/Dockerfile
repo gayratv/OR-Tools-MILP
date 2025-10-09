@@ -1,18 +1,7 @@
 FROM mysql:8.4
 
 # Устанавливаем необходимые утилиты
-RUN microdnf install -y \
-        bash \
-        curl \
-        mc \
-        jq \
-    && microdnf clean all
-
-# Устанавливаем Yandex Cloud CLI
-RUN curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
-
-# Добавляем yc и скрипты в PATH. Скрипты будут скопированы в /app
-ENV PATH="/root/yandex-cloud/bin:/app:${PATH}"
+RUN microdnf install -y bash curl && microdnf clean all
 
 # Копируем файл конфигурации
 COPY ./mysql/conf.d/my.cnf /etc/mysql/conf.d/my.cnf
@@ -20,9 +9,6 @@ COPY ./mysql/conf.d/my.cnf /etc/mysql/conf.d/my.cnf
 # Копируем скрипты инициализации
 COPY ./mysql/init/ /docker-entrypoint-initdb.d/
 
-
-# Создаем директорию для сертификатов, которые будут сгенерированы при запуске
-RUN mkdir -p /certs
 
 # Устанавливаем правильного владельца и права доступа.
 RUN chown mysql:mysql /etc/mysql/conf.d/my.cnf && \
@@ -39,8 +25,7 @@ RUN chown mysql:mysql /etc/mysql/conf.d/my.cnf && \
 
 # Копируем скрипты в рабочую директорию и делаем их исполняемыми
 WORKDIR /app
-COPY *.sh .
-RUN chmod +x *.sh
+COPY --chmod=0755 *.sh ./
 
 # Указываем точку входа
 ENTRYPOINT ["/app/entrypoint.sh"]

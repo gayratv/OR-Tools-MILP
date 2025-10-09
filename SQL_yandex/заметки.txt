@@ -1,2 +1,19 @@
-VM_EXTERNAL_IP=158.160.112.212
-ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.112.212
+cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex
+./create-yandex-docker-compose.sh mysql8_4
+
+
+export VM_EXTERNAL_IP=84.201.132.127
+ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
+
+echo $SECONDS
+docker image ls -a
+docker ps
+
+echo $SECONDS && docker image ls -a && docker ps -a
+
+
+docker compose up -d --build
+docker compose down
+
+# Подключитесь к ВМ по SSH и выполните:
+docker image ls -a
