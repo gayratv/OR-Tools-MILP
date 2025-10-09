@@ -17,13 +17,27 @@ users:
 runcmd:
   - [ bash, -lc, |
       set -euo pipefail
+
       APP_DIR="/opt/app"
       BIN_DIR="$APP_DIR/bin"
-      install -d -m 0755 "$BIN_DIR"
+      install -d -m 0755 "$BIN_DIR" "$APP_DIR" "$APP_DIR/assets" "$APP_DIR/config"
 
-      # единственная ссылка, которую грузим здесь:
-      URL_SETUP="https://raw.githubusercontent.com/<owner>/<repo>/<ref>/scripts/setup-compose.sh"
+      # --- ENV для setup-compose.sh (можно править здесь) ---
+      BASE_GIT_URL="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/SQL_yandex_primitive/scripts"
+      export URL_COMPOSE="$BASE_GIT_URL/docker-compose.yml"
+      export URL_DOCKERFILE="$BASE_GIT_URL//Dockerfile"
+      export URL_WAIT="$BASE_GIT_URL/wait_for_files.sh"
+# --- где лежит setup-скрипт ---
+      exportURL_SETUP="$BASE_GIT_URL/setup-compose.sh"
 
+      # поведение (по умолчанию ничего не ждём и контейнеры не запускаем)
+      export WAIT_ENABLED=0       # 1 — включить ожидание файлов через wait_for_files.sh
+      export WAIT_TIMEOUT=600
+      export WAIT_MIN_SIZE=1
+      export WAIT_STABLE=3
+      export RUN_COMPOSE=0        # 1 — запустить docker compose build && up -d
+
+      
       echo "==> Download setup-compose.sh"
       curl -fsSL -o "$BIN_DIR/setup-compose.sh" "$URL_SETUP"
       chmod +x "$BIN_DIR/setup-compose.sh"
@@ -31,3 +45,4 @@ runcmd:
       echo "==> Run setup-compose.sh"
       "$BIN_DIR/setup-compose.sh"
     ]
+    
