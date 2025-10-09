@@ -36,13 +36,12 @@ docker-compose logs db
 
 ========================
 
-export VM_NAME=mysql8_2
-export VM_EXTERNAL_IP=84.201.135.210
+export VM_NAME=mysql8_1
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive
 source ./create-yandex-docker-compose.sh "$VM_NAME"
 
 
-export VM_EXTERNAL_IP=84.201.135.210
+export VM_EXTERNAL_IP=158.160.34.136
 ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
 
 yc compute instance update \
@@ -53,3 +52,9 @@ yc compute instance update \
 
 ssh -i ~/.ssh/ya-cloud/priv -o IdentitiesOnly=yes yc-user@$VM_EXTERNAL_IP
 
+
+===============
+# на ВМ (через консоль, если нужна диагностика)
+sudo cat /home/yc-user/.ssh/authorized_keys
+sudo tail -n 200 /var/log/cloud-init-output.log
+cloud-init status --long

@@ -34,6 +34,7 @@ RESP=$(
     --public-ip \
     --service-account-name sc-scheduller-srv-acc \
     --metadata-from-file user-data=cloud-init-compose.yaml \
+    --metadata "ssh-keys=yc-user:$(cat "$HOME/.ssh/ya-cloud/priv.pub")" \
     --metadata secret_id=e6qdqbmm78930tvi4kdj \
     --format json \
     --container-image alpine:3 \

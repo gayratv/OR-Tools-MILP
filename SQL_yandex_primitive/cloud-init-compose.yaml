@@ -11,11 +11,9 @@ users:
     groups: [sudo, docker]
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     shell: /bin/bash
-    ssh_authorized_keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMsT2ARMza/hqHGe2QqSAPTlUhh3yUimuVAXXjqsuLlm root@SOLIDWORKS2022
 
 runcmd:
-  - [ bash, -lc, |
+  - |
       set -euo pipefail
 
       APP_DIR="/opt/app"
@@ -43,5 +41,3 @@ runcmd:
 
       echo "==> Run setup-compose.sh"
       "$BIN_DIR/setup-compose.sh"
-    ]
-    
