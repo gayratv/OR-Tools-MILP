@@ -1,8 +1,8 @@
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive
-./create-yandex-docker-compose.sh mysql8_2
+source ./create-yandex-docker-compose.sh mysql8_4
 
-
-export VM_EXTERNAL_IP=89.169.141.115
+echo $VM_EXTERNAL_IP
+export VM_EXTERNAL_IP=62.84.119.144
 ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
 
 echo $SECONDS
@@ -18,15 +18,17 @@ docker compose down
 # Подключитесь к ВМ по SSH и выполните:
 docker image ls -a
 
+=========================
+логи работы cloud init
+
+docker-compose logs db
+
+
 
 ==========================
 Происходит следующее:
-1.
-Архивация контекста: Утилита yc не просто отправляет один файл docker-compose.yml. Она определяет директорию, в которой находится этот файл, и архивирует всё её содержимое. Этот архив называется "контекстом сборки" (build context).
-2.
-Отправка в облако: Этот архив (со всеми вашими файлами: Dockerfile, entrypoint.sh, make-mysql-certs-full.sh и, что самое важное, .env) отправляется в Yandex Cloud.
-3.
-Запуск на ВМ: На создаваемой виртуальной машине Yandex Cloud распаковывает этот архив и запускает docker-compose.
-4.
-Использование .env: docker-compose на ВМ видит директиву env_file: [.env] в вашем docker-compose.yml, находит рядом файл .env (который приехал в том же архиве) и использует его для установки переменных окружения в запускаемом контейнере.
+1. Архивация контекста: Утилита yc не просто отправляет один файл docker-compose.yml. Она определяет директорию, в которой находится этот файл, и архивирует всё её содержимое. Этот архив называется "контекстом сборки" (build context).
+2. Отправка в облако: Этот архив (со всеми вашими файлами: Dockerfile, entrypoint.sh, make-mysql-certs-full.sh и, что самое важное, .env) отправляется в Yandex Cloud.
+3. Запуск на ВМ: На создаваемой виртуальной машине Yandex Cloud распаковывает этот архив и запускает docker-compose.
+4. Использование .env: docker-compose на ВМ видит директиву env_file: [.env] в вашем docker-compose.yml, находит рядом файл .env (который приехал в том же архиве) и использует его для установки переменных окружения в запускаемом контейнере.
 Таким образом, .env файл передается неявно, как часть общего архива с файлами проекта.

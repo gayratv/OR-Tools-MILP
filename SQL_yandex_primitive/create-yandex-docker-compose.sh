@@ -1,68 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# -------------------------------------------------------------------
-# create-docker.sh
-# Создаёт ВМ в Yandex Cloud и экспортирует внешний IP в VM_EXTERNAL_IP.
-#
-# Упрощённый ввод платформы:
-#   std  → standard-v3   (по умолчанию)
-#   hf   → highfreq-v4a
-#
-# Примеры:
-#   ./create-docker.sh myvm std
-#   ./create-docker.sh myvm hf 4 16 50
-# -------------------------------------------------------------------
-
-# ./ya-cloud/create-docker.sh gayrat-docker1 16 4 50 std
-# ./ya-cloud/create-docker.sh gayrat-docker3 std 2 2 20
-# ./ya-cloud/create-docker.sh gayrat-docker1 hf 80 80 30
-
-
-# -------- Параметры с дефолтами --------------------------------------
 VM_NAME=${1:-"mysql8"}
-
-# Платформа: std / hf
 PLATFORM_KEY=${2:-"std"}
-
-# Остальные параметры
 CORES=${3:-2}
-MEMORY=${4:-2}     # ГБ
-DISK_SIZE=${5:-20} # ГБ
+MEMORY=${4:-2}
+DISK_SIZE=${5:-20}
 
-# -------- Маппинг платформы ------------------------------------------
 case "$PLATFORM_KEY" in
   std|s|standard) PLATFORM="standard-v3" ;;
   hf|h|highfreq)  PLATFORM="highfreq-v4a" ;;
-  *)
-    echo "Неизвестная платформа: $PLATFORM_KEY" >&2
-    echo "Допустимые: std (standard-v3), hf (highfreq-v4a)" >&2
-    exit 1
-    ;;
+  *) echo "Неизвестная платформа: $PLATFORM_KEY" >&2; exit 1 ;;
 esac
 
-# -------- Проверки окружения -----------------------------------------
 need() { command -v "$1" >/dev/null 2>&1 || { echo "Требуется '$1'." >&2; exit 1; }; }
 need yc
 need jq
 
-echo "Получение секретов из Yandex Lockbox..."
-# Получаем секреты и создаем .env файл для docker-compose
-#yc lockbox secret get --name school-scheduler-app-secrets --format=json | jq -r '.entries[] | .key + "=" + .text_value' > .env
-#echo "Файл .env создан."
-
-echo "Создание ВМ: name=${VM_NAME}, platform=${PLATFORM}, cores=${CORES}, mem=${MEMORY}GB, disk=${DISK_SIZE}GB" >&2
-
-# -------- Чтение SSH ключа -------------------------------------------
 SSH_PUBLIC_KEY_PATH="$HOME/.ssh/ya-cloud/priv.pub"
-if [[ ! -f "$SSH_PUBLIC_KEY_PATH" ]]; then
-    echo "Ошибка: Публичный SSH ключ не найден по пути: $SSH_PUBLIC_KEY_PATH" >&2
-    exit 1
-fi
-export SSH_PUBLIC_KEY=$(cat "$SSH_PUBLIC_KEY_PATH")
-# echo $SSH_PUBLIC_KEY
+[[ -f "$SSH_PUBLIC_KEY_PATH" ]] || { echo "Нет ключа $SSH_PUBLIC_KEY_PATH"; exit 1; }
 
-
+echo "Создаю ВМ $VM_NAME ($PLATFORM ${CORES}CPU/${MEMORY}GB/$DISK_SIZE GB)..."
 
 RESP=$(
   yc compute instance create-with-container \
@@ -77,42 +35,13 @@ RESP=$(
     --service-account-name sc-scheduller-srv-acc \
     --docker-compose-file docker-compose.yml \
     --metadata-from-file user-data=cloud-init-compose.yaml \
-    --metadata ssh-public-key="${SSH_PUBLIC_KEY}" \
-    --format json \
+    --metadata SECRET_ID=e6qdqbmm78930tvi4kdj \
+    --format json
 )
 
-# -------- Парсинг JSON ------------------------------------------------
 VM_EXTERNAL_IP=$(jq -r 'first(.network_interfaces[].primary_v4_address.one_to_one_nat.address // empty)' <<< "$RESP")
-
 export VM_EXTERNAL_IP
 
-
 echo "----------------------------------------"
-echo "VM создана:"
-jq -r '.id as $id
-       | "  ID:        \($id)\n  Name:      " + .name
-       + "\n  Status:    " + .status
-       + "\n  FQDN:      " + (.fqdn // "")
-       + "\n  Internal:  " + (first(.network_interfaces[].primary_v4_address.address // empty) // "")
-       + "\n  External:  " + (first(.network_interfaces[].primary_v4_address.one_to_one_nat.address // empty) // "")' <<< "$RESP"
+echo "ВМ создана, внешний IP: $VM_EXTERNAL_IP"
 echo "----------------------------------------"
-echo "Экспортировано: VM_EXTERNAL_IP=${VM_EXTERNAL_IP}"
-
-
-# Общее время в секундах
-TOTAL_SECONDS=20
-
-echo "Запускаю таймер на $TOTAL_SECONDS секунд..."
-# Цикл для обратного отсчета
-for (( i=$TOTAL_SECONDS; i>0; i-- )); do
-    # Выводим оставшееся время в ту же строку
-    # Используем printf для надежной обработки \r (возврат каретки)
-    printf "Осталось: %s секунд...  \r" "$i"
-    sleep 1
-done
-
-# Очищаем строку с таймером и переходим на новую
-echo "                                \r"
-
-# Выводим финальное сообщение
-echo "Прошло $TOTAL_SECONDS секунд!"

@@ -1,80 +1,99 @@
 #cloud-config
-# Этот файл используется cloud-init для настройки ВМ после первого запуска.
-datasource:
-  Ec2:
-    strict_id: false
-ssh_pwauth: no
+package_update: false
+packages:
+  - curl
+  - jq
+  - ca-certificates
+
 users:
   - name: yc-user
-    groups: [ 'sudo', 'docker' ]
+    groups: [sudo, docker]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     shell: /bin/bash
-    sudo: [ 'ALL=(ALL) NOPASSWD:ALL' ]
     ssh_authorized_keys:
-      - $SSH_PUBLIC_KEY
-
-
-#    ssh_authorized_keys: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMsT2ARMza/hqHGe2QqSAPTlUhh3yUimuVAXXjqsuLlm root@SOLIDWORKS2022
-
-
-
-package_update: true
-#package_upgrade: true
-
-packages:
-  - git
-  - mc
-  - curl
-
-write_files:
-  - path: "/usr/local/etc/yc-install.sh"
-    owner: yc-user:yc-user
-    permissions: "0755"
-    content: |
-      #!/bin/bash
-
-      # CLI
-      echo "Installing Yandex Cloud CLI"
-      curl \
-        --silent \
-        --show-error \
-        --location \
-        https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-      VM_ID=$(curl --silent http://169.254.169.254/latest/meta-data/instance-id)
-      
-      # Переходим в домашнюю директорию пользователя, чтобы все последующие команды
-      # выполнялись в ней и имели права на запись файлов (например, key.json).
-      cd /home/yc-user
-      
-      # Save YC params
-      echo "Saving YC params to the ~/.bashrc"
-      # Экранируем $HOME, чтобы он раскрылся во время выполнения скрипта от имени yc-user,
-      # а не во время создания файла от имени root.
-      cat << EOF >> /home/yc-user/.bashrc
-        export PATH="/home/yc-user/yandex-cloud/bin:\$PATH"
-        export YC_CLI_VM_ID="${VM_ID:-unknown}"
-      EOF
-      
-      # Явно обновляем PATH для текущей сессии скрипта.
-      # Это надежнее, чем `source` в cloud-init.
-      export PATH="/home/yc-user/yandex-cloud/bin:$PATH"
-
-      echo "SETTING YC +++++++++++++++++++++"
-
-      yc iam key create \
-        --service-account-name sc-scheduller-srv-acc \
-        --output key.json \
-        --folder-id b1gbgjv35qvro3lmgaci
-      
-      yc config profile create default
-      yc config set service-account-key key.json
-      yc config set cloud-id b1gib03pgvqrrfvhl3kb
-      yc config set folder-id b1gbgjv35qvro3lmgaci
-
-    defer: true
-
+      # ⬇️ ВСТАВЬ СВОЙ ПУБЛИЧНЫЙ SSH-КЛЮЧ:
+      - ssh-ed25519 AAAA...your_pubkey... host
 
 runcmd:
-  - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
-  # 4. Делаем скрипт исполняемым для всех пользователей
-  - 'chmod +x /home/yc-user/yandex-cloud/bin/*.sh'
+  - [ bash, -lc, |
+      set -euo pipefail
 
+      APP_DIR="/opt/app"
+      BIN_DIR="$APP_DIR/bin"
+      mkdir -p "$BIN_DIR"
+
+      # ---------- ТУТ ВСТАВЛЯЕШЬ СВОИ ССЫЛКИ ----------
+      # Примеры (замени на свои):
+      URL_COMPOSE="https://raw.githubusercontent.com/<owner>/<repo>/<ref>/deploy/docker-compose.yml"
+      URL_DOCKERFILE="https://raw.githubusercontent.com/<owner>/<repo>/<ref>/deploy/Dockerfile"
+      URL_WAIT_FOR_FILES="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/docker-python3.12/scripts/wait_for_files.sh"
+      # Добавляй любые другие файлы:
+      # URL_SOME_BIG_FILE="https://raw.githubusercontent.com/<owner>/<repo>/<ref>/path/to/big.file"
+      # -------------------------------------------------
+
+      # Ассоциативный массив: что и куда скачать
+      declare -A FILES=(
+        ["$APP_DIR/docker-compose.yml"]="$URL_COMPOSE"
+        ["$APP_DIR/Dockerfile"]="$URL_DOCKERFILE"
+        ["$BIN_DIR/wait_for_files.sh"]="$URL_WAIT_FOR_FILES"
+        # ["$APP_DIR/your-big.file"]="$URL_SOME_BIG_FILE"
+      )
+
+      echo "==> Downloading files from repo..."
+      for dst in "${!FILES[@]}"; do
+        url="${FILES[$dst]}"
+        echo " -> $dst"
+        install -d -m 0755 "$(dirname "$dst")"
+        curl -fsSL -o "$dst" "$url"
+      done
+
+      # права на исполняемые
+      chmod +x "$BIN_DIR/"*.sh 2>/dev/null || true
+
+      # ---------- .env из Lockbox ----------
+      echo "==> Fetching .env from Lockbox"
+      IMDS="http://169.254.169.254/computeMetadata/v1"
+      secret_id="$(curl -fsS -H 'Metadata-Flavor: Google' "$IMDS/instance/attributes/SECRET_ID")"
+      if [[ -z "${secret_id:-}" ]]; then
+        echo "ERROR: instance metadata SECRET_ID is empty" >&2
+        exit 1
+      fi
+
+      iam_token="$(curl -fsS -H 'Metadata-Flavor: Google' \
+        "$IMDS/instance/service-accounts/default/token" | jq -r .access_token)"
+
+      payload_json="$(curl -fsS -H "Authorization: Bearer ${iam_token}" \
+        "https://payload.lockbox.api.cloud.yandex.net/lockbox/v1/secrets/${secret_id}/payload")"
+
+      ENV_FILE="$APP_DIR/.env"
+      BIN_SEC_DIR="$APP_DIR/.secrets-bin"
+      mkdir -p "$BIN_SEC_DIR"
+
+      # Текстовые значения → .env
+      {
+        echo "# generated from Lockbox $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+        echo "$payload_json" | jq -r '.entries[]? | select(.textValue != null) | "\(.key)=\(.textValue)"'
+      } > "$ENV_FILE"
+      chmod 600 "$ENV_FILE"
+
+      # Бинарные (если есть) → в каталог
+      echo "$payload_json" \
+        | jq -c '.entries[]? | select(.binaryValue != null) | {key, value: .binaryValue}' \
+        | while read -r line; do
+            k="$(echo "$line" | jq -r '.key')"
+            v_b64="$(echo "$line" | jq -r '.value')"
+            out="$BIN_SEC_DIR/$k"
+            echo " -> writing $out"
+            echo "$v_b64" | base64 --decode > "$out"
+            chmod 600 "$out"
+          done
+
+      # ---------- Build & Up ----------
+      echo "==> docker compose build && up -d"
+      cd "$APP_DIR"
+      docker compose config >/dev/null
+      docker compose build
+      docker compose up -d
+
+      echo "==> Done."
+    ]
