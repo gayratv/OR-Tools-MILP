@@ -1,5 +1,0 @@
-
-services:
-  calculator-prod:
-    container_name: python-solver
-    image: gayrat/python-app-yandex:latest

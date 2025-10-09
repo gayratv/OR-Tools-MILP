@@ -7,47 +7,16 @@ set +a
 echo $MYSQL_USER
 echo $MYSQL_PASSWORD
 
-================= СЕРТФИКАТЫ MySQL
-./make-mysql-certs.sh
-./make-mysql-client-certs.sh
-
-=================
-Скопируйте ca.pem на клиентскую машину (например, в ~/.mysql/ca.pem) и подключайтесь:
-rm -r ~/.mysql
-mkdir -p ~/.mysql
 
 scp -i ~/.ssh/beget/id_ed25519 \
     root@217.12.38.229:/docker-compose-full/mysql/certs/{client-key.pem,client-cert.pem,ca.pem} \
     ~/.mysql/
-
-chmod 600 ~/.mysql/client-key.pem
-chmod 644 ~/.mysql/{client-cert.pem,ca.pem}
-=================
 
 
 docker compose up -d --build
 docker compose down
 docker compose down && docker compose up -d
 docker compose restart mysql
-
-
-MYSQL установка ==========
-sudo apt update
-sudo apt upgrade
-
-sudo apt install mysql-client
-
-========================
-
-chmod 600 ~/.my.cnf
-
-# Попытка подключения
-
-mysql --login-path=root  \
-      -e "SELECT user, host, ssl_type, ssl_cipher, x509_issuer, x509_subject FROM mysql.user WHERE user IN ('appuser', 'root');"
-
-mysql --login-path=root  \
-    -e "ALTER USER 'appuser'@'%' REQUIRE X509;"
 
 
 

@@ -72,37 +72,9 @@ write_files:
 
     defer: true
 
-#  - path: "/home/yc-user/yandex-cloud/bin/delete-docker-curl.sh"
-#    owner: yc-user:yc-user
-#    permissions: "0755"
-#    content: |
-#      #!/bin/bash
-#        # Скрипт для удаления ВМ в Yandex Cloud
-#        # Имя ВМ берём из метаданных GCP
-#
-#        # Получаем имя инстанса
-#        VM_NAME=$(curl -s -H "Metadata-Flavor: Google" \
-#          "http://169.254.169.254/computeMetadata/v1/instance/name")
-#
-#        # Проверяем успешность запроса
-#        if [[ -z "$VM_NAME" ]]; then
-#          echo "Ошибка: не удалось получить имя инстанса через YC CLI." >&2
-#          exit 1
-#        fi
-#
-#        echo "Запрос на удаление текущей ВМ с ID: $VM_NAME" >&2
-#
-#        yc compute instance delete --name "$VM_NAME"
-#    defer: true
+
 runcmd:
   - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
-  - 'curl -L -o /home/yc-user/yandex-cloud/bin/wait_for_files.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/docker-python3.12/scripts/wait_for_files.sh'
-  - 'curl -L -o /home/yc-user/yandex-cloud/bin/stop-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/docker-python3.12/scripts/stop-curl.sh'
-  - 'curl -L -o /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/docker-python3.12/scripts/delete-docker-curl.sh'
   # 4. Делаем скрипт исполняемым для всех пользователей
   - 'chmod +x /home/yc-user/yandex-cloud/bin/*.sh'
 
-
-  # 3. Скачиваем скрипт самоудаления сразу в /usr/local/bin
-#  - 'curl -L -o /usr/local/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'
-#  - 'curl -L -o /home/yc-user/yandex-cloud/bin/delete-docker-curl.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/ya-cloud/delete-docker-curl.sh'

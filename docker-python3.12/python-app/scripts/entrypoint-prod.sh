@@ -14,6 +14,8 @@ yc config set service-account-key key.json
 yc config set cloud-id b1gib03pgvqrrfvhl3kb
 yc config set folder-id b1gbgjv35qvro3lmgaci
 
+#yc-secrets-get.sh
+
 cd /home/appuser/app
 mkdir -p /home/appuser/app/output
 python schedule_calculator.py

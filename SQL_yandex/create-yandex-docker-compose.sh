@@ -20,7 +20,7 @@ set -euo pipefail
 
 
 # -------- Параметры с дефолтами --------------------------------------
-VM_NAME=${1:-"gayrat-docker1"}
+VM_NAME=${1:-"mysql8"}
 
 # Платформа: std / hf
 PLATFORM_KEY=${2:-"std"}
@@ -70,7 +70,7 @@ RESP=$(
     --create-boot-disk size=$DISK_SIZE \
     --public-ip \
     --service-account-name sc-scheduller-srv-acc \
-    --docker-compose-file docker-compose-yandex.yml \
+    --docker-compose-file docker-compose.yml \
     --metadata-from-file user-data=cloud-init-compose.yaml \
     --metadata ssh-public-key="${SSH_PUBLIC_KEY}" \
     --format json \
@@ -94,7 +94,7 @@ echo "Экспортировано: VM_EXTERNAL_IP=${VM_EXTERNAL_IP}"
 
 
 # Общее время в секундах
-TOTAL_SECONDS=95
+TOTAL_SECONDS=5
 
 echo "Запускаю таймер на $TOTAL_SECONDS секунд..."
 # Цикл для обратного отсчета

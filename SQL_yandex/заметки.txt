@@ -1,0 +1,2 @@
+VM_EXTERNAL_IP=158.160.112.212
+ssh -i ~/.ssh/ya-cloud/priv yc-user@158.160.112.212

@@ -1,8 +1,8 @@
-#!/bin/sh
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-cd /home/appuser/yandex-cloud
-export PATH="/home/appuser/yandex-cloud/bin:$PATH"
+# Переходим в директорию yc, установленную для root
+cd /root/yandex-cloud
 
 yc iam key create \
         --service-account-name sc-scheduller-srv-acc \
@@ -15,7 +15,11 @@ yc config set cloud-id b1gib03pgvqrrfvhl3kb
 yc config set folder-id b1gbgjv35qvro3lmgaci
 
 cd /app
+yc-secrets-get.sh
+set -a
+source .env
+set +a
 make-mysql-certs-full.sh
 
 ## Эта команда будет удерживать контейнер в рабочем состоянии
-#tail -f /dev/null
+tail -f /dev/null
