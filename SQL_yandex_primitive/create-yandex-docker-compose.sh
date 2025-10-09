@@ -33,10 +33,13 @@ RESP=$(
     --create-boot-disk size=$DISK_SIZE \
     --public-ip \
     --service-account-name sc-scheduller-srv-acc \
-    --docker-compose-file docker-compose.yml \
     --metadata-from-file user-data=cloud-init-compose.yaml \
-    --metadata SECRET_ID=e6qdqbmm78930tvi4kdj \
-    --format json
+    --metadata secret_id=e6qdqbmm78930tvi4kdj \
+    --format json \
+    --container-image alpine:3 \
+    --container-command sh \
+    --container-arg -c \
+    --container-arg "sleep infinity"
 )
 
 VM_EXTERNAL_IP=$(jq -r 'first(.network_interfaces[].primary_v4_address.one_to_one_nat.address // empty)' <<< "$RESP")

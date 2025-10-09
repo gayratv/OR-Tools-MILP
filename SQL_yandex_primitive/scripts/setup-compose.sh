@@ -76,10 +76,11 @@ safe_get() {
 # ---------------------- Получить SECRET_ID (опционально) ----------------------
 log "получаю SECRET_ID из метадаты ВМ (если есть)"
 IMDS="http://169.254.169.254/computeMetadata/v1"
-SECRET_ID="$(curl -fsS -H 'Metadata-Flavor: Google' "$IMDS/instance/attributes/SECRET_ID" || true)"
+SECRET_ID="$(curl -fsS -H 'Metadata-Flavor: Google' "$IMDS/instance/attributes/secret_id" || true)"
 if [[ -z "${SECRET_ID:-}" ]]; then
   warn "SECRET_ID отсутствует в метадате; шаг Lockbox будет пропущен"
 fi
+echo "SECRET_ID: $SECRET_ID"
 
 # ---------------------- Скачиваем helper: wait_for_files.sh ----------------------
 if [[ -n "$URL_WAIT" ]]; then
@@ -94,8 +95,6 @@ log "скачиваю файлы приложения (если заданы URL
 declare -A FILES=()
 [[ -n "$URL_COMPOSE"    ]] && FILES["$APP_DIR/docker-compose.yml"]="$URL_COMPOSE"
 [[ -n "$URL_DOCKERFILE" ]] && FILES["$APP_DIR/Dockerfile"]="$URL_DOCKERFILE"
-[[ -n "$URL_MODEL"      ]] && FILES["$ASSETS_DIR/big_model.bin"]="$URL_MODEL"
-[[ -n "$URL_APP_CFG"    ]] && FILES["$APP_DIR/config/app.yaml"]="$URL_APP_CFG"
 
 if (( ${#FILES[@]} > 0 )); then
   for dst in "${!FILES[@]}"; do

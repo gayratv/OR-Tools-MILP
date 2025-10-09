@@ -1,8 +1,8 @@
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive
-source ./create-yandex-docker-compose.sh mysql8_4
+source ./create-yandex-docker-compose.sh mysql8_5
 
 echo $VM_EXTERNAL_IP
-export VM_EXTERNAL_IP=62.84.119.144
+export VM_EXTERNAL_IP=158.160.124.159
 ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
 
 echo $SECONDS
