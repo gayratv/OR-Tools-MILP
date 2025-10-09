@@ -27,8 +27,7 @@ runcmd:
       export URL_COMPOSE="$BASE_GIT_URL/docker-compose.yml"
       export URL_DOCKERFILE="$BASE_GIT_URL//Dockerfile"
       export URL_WAIT="$BASE_GIT_URL/wait_for_files.sh"
-# --- где лежит setup-скрипт ---
-      exportURL_SETUP="$BASE_GIT_URL/setup-compose.sh"
+      export URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
 
       # поведение (по умолчанию ничего не ждём и контейнеры не запускаем)
       export WAIT_ENABLED=0       # 1 — включить ожидание файлов через wait_for_files.sh

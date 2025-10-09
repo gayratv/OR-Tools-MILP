@@ -32,3 +32,24 @@ docker-compose logs db
 3. Запуск на ВМ: На создаваемой виртуальной машине Yandex Cloud распаковывает этот архив и запускает docker-compose.
 4. Использование .env: docker-compose на ВМ видит директиву env_file: [.env] в вашем docker-compose.yml, находит рядом файл .env (который приехал в том же архиве) и использует его для установки переменных окружения в запускаемом контейнере.
 Таким образом, .env файл передается неявно, как часть общего архива с файлами проекта.
+
+
+========================
+
+export VM_NAME=mysql8_2
+export VM_EXTERNAL_IP=84.201.135.210
+cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive
+source ./create-yandex-docker-compose.sh "$VM_NAME"
+
+
+export VM_EXTERNAL_IP=84.201.135.210
+ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
+
+yc compute instance update \
+  --name "$VM_NAME" \
+  --metadata "ssh-keys=yc-user:$(ssh-keygen -y -f ~/.ssh/ya-cloud/priv)"
+
+
+
+ssh -i ~/.ssh/ya-cloud/priv -o IdentitiesOnly=yes yc-user@$VM_EXTERNAL_IP
+
