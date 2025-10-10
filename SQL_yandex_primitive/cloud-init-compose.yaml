@@ -23,9 +23,11 @@ write_files:
       APP_DIR="/opt/app"
       BIN_DIR="$APP_DIR/bin"
       
-      mkdir -p "$BIN_DIR" "$APP_DIR/assets" "$APP_DIR/config"
+      #      mkdir -p "$BIN_DIR" "$APP_DIR/assets" "$APP_DIR/config"
       
-      install -d -m 0755 "$BIN_DIR" "$APP_DIR" "$APP_DIR/assets" "$APP_DIR/config"
+      #      install -d -m 0755 "$BIN_DIR" "$APP_DIR" "$APP_DIR/assets" "$APP_DIR/config"
+      sudo install -d -m 0755 /opt/app /opt/app/bin /opt/app/assets /opt/app/config
+      sudo chown -R yc-user:yc-user /opt/app
 
       # ==== ENV для setup-compose.sh ====
       BASE_GIT_URL="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/SQL_yandex_primitive/scripts"
@@ -42,7 +44,10 @@ write_files:
       export RUN_COMPOSE=0
 
       echo "==> Download setup-compose.sh"
-      curl -fsSL -o "$BIN_DIR/setup-compose.sh" "$URL_SETUP"
+      # curl -fsSL -o "$BIN_DIR/setup-compose.sh" "$URL_SETUP"
+      # сетевые загрузки — с ретраями (защитит и от rate limit у raw.githubusercontent.com)
+      curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh "$URL_SETUP"
+      # chmod +x /opt/app/bin/setup-compose.sh
       chmod +x "$BIN_DIR/setup-compose.sh"
 
       echo "==> Run setup-compose.sh"

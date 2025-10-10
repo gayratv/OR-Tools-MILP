@@ -36,17 +36,17 @@ docker-compose logs db
 
 ========================
 
-export VM_NAME=mysql8_1
+export VM_NAME=mysql8_2
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive
 source ./create-yandex-docker-compose.sh "$VM_NAME"
 
 
-export VM_EXTERNAL_IP=89.169.140.159
+export VM_EXTERNAL_IP=89.169.132.233
 ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
 
 
-export VM_NAME=mysql8_1
-export VM_EXTERNAL_IP=89.169.140.159
+export VM_NAME=mysql8_2
+export VM_EXTERNAL_IP=89.169.132.233
 yc compute instance update \
   --name "$VM_NAME" \
   --metadata "ssh-keys=yc-user:$(ssh-keygen -y -f ~/.ssh/ya-cloud/priv)"
@@ -61,3 +61,14 @@ ssh -i ~/.ssh/ya-cloud/priv -o IdentitiesOnly=yes yc-user@$VM_EXTERNAL_IP
 sudo cat /home/yc-user/.ssh/authorized_keys
 sudo tail -n 200 /var/log/cloud-init-output.log
 cloud-init status --long
+
+
+sudo tail -n 200 /var/log/cloud-init-output.log
+sudo tail -n 200 /var/log/cloud-init.log
+
+ls -l /usr/local/bin/bootstrap-setup.sh
+head -n 50 /usr/local/bin/bootstrap-setup.sh
+
+sudo su -l yc-user -c 'bash -x /usr/local/bin/bootstrap-setup.sh' \
+  | tee /home/yc-user/bootstrap-setup.manual.log
+echo ${PIPESTATUS[@]}   # убедиться, что код возврата = 0
