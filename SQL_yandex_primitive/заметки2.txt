@@ -1,0 +1,40 @@
+export VM_NAME=mysql8_1
+cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive
+source ./create-yandex-docker-compose.sh "$VM_NAME"
+
+yc compute instance update \
+  --name "$VM_NAME" \
+  --metadata "ssh-keys=yc-user:$(ssh-keygen -y -f ~/.ssh/ya-cloud/priv)"
+
+export VM_EXTERNAL_IP=84.201.157.8
+echo $SECONDS && ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
+
++72 сек
+
+
+
+===============
+# на ВМ (через консоль, если нужна диагностика)
+sudo cat /home/yc-user/.ssh/authorized_keys
+sudo tail -n 200 /var/log/cloud-init-output.log
+cloud-init status --long
+
+echo "OK: $BASH_VERSION"
+
+sudo tail -n 200 /var/log/cloud-init-output.log
+sudo tail -n 200 /var/log/cloud-init.log
+ls /home/yc-user/bootstrap-setup.log
+
+tail -n 200 /home/yc-user/bootstrap-setup.log
+
+ls -l /usr/local/bin/bootstrap-setup.sh
+head -n 50 /usr/local/bin/bootstrap-setup.sh
+
+URL_SETUP="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/SQL_yandex_primitive/scripts/setup-compose.sh"
+URL_SETUP="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts/setup-compose.sh"
+curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh "$URL_SETUP"
+ls /opt/app/bin/setup-compose.sh
+
+BASE_GIT_URL=https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts
+URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
+curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh "$URL_SETUP"

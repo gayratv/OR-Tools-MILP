@@ -15,6 +15,7 @@ users:
 
 write_files:
   - path: /usr/local/bin/bootstrap-setup.sh
+    owner: yc-user:yc-user
     permissions: "0755"
     content: |
       #!/usr/bin/env bash
@@ -23,59 +24,26 @@ write_files:
 
       APP_DIR="/opt/app"
       BIN_DIR="$APP_DIR/bin"
-      
-      #      mkdir -p "$BIN_DIR" "$APP_DIR/assets" "$APP_DIR/config"
-      
-      #      install -d -m 0755 "$BIN_DIR" "$APP_DIR" "$APP_DIR/assets" "$APP_DIR/config"
-      sudo install -d -m 0755 /opt/app /opt/app/bin /opt/app/assets /opt/app/config
-      sudo chown -R yc-user:yc-user "$APP_DIR"
 
-      # ==== ENV для setup-compose.sh ====
       BASE_GIT_URL=https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts
-      export URL_COMPOSE="$BASE_GIT_URL/docker-compose.yml"
-      export URL_DOCKERFILE="$BASE_GIT_URL/Dockerfile"
-      export URL_WAIT="$BASE_GIT_URL/wait_for_files.sh"
-      export URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
-
-      # Поведение: ничего не ждём и контейнеры не запускаем
-      export WAIT_ENABLED=0
-      export WAIT_TIMEOUT=600
-      export WAIT_MIN_SIZE=1
-      export WAIT_STABLE=3
-      export RUN_COMPOSE=0
+      URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
 
       echo "==> Download setup-compose.sh"
-      # curl -fsSL -o "$BIN_DIR/setup-compose.sh" "$URL_SETUP"
       # сетевые загрузки — с ретраями (защитит и от rate limit у raw.githubusercontent.com)
       
-      sanitize() { tr -d '\r'; }
-      BASE_GIT_URL="$(printf '%s' "${BASE_GIT_URL:-}" | sanitize)"
-      URL_SETUP="$(printf '%s' "${URL_SETUP:-}" | sanitize)"
-      
       curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh "$URL_SETUP"
+      
       echo "==> Download setup-compose.sh ЗАВЕРШЕН"
-      # chmod +x /opt/app/bin/setup-compose.sh
       chmod +x "$BIN_DIR/setup-compose.sh"
-
-      echo "==> Run setup-compose.sh"
-      "$BIN_DIR/setup-compose.sh"
 
     defer: true
 
 runcmd:
   # 1) Подготовить системные каталоги под приложение
-  - [ bash, -lc, "install -d -m 0755 /opt/app /opt/app/bin /opt/app/assets /opt/app/config" ]
+  - [ bash, -lc, "install -d -m 0755 -o yc-user /opt/app /opt/app/bin /opt/app/assets /opt/app/config" ]
   - [ bash, -lc, "chown -R yc-user:yc-user /opt/app" ]
-    # 3) Гарантировать, что yc-user в группе docker (на случай, если users: не сработал)
   - [ bash, -lc, "id -nG yc-user | grep -qw docker || usermod -aG docker yc-user" ]
-#  - [ bash, -lc, "systemctl is-active --quiet docker || systemctl start docker" ]
-#  - [ su, yc-user, -c, "/usr/local/bin/bootstrap-setup.sh" ]
-   # 5) Запустить основной скрипт ОТ ИМЕНИ yc-user с логированием в его $HOME
-#  - [ bash, -lc, "sudo -u yc-user -H bash -lc '/usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log'" ]
-#  -код возврата конвейера set -o pipefail; - без tee
-  - [ bash, -lc, "sudo -u yc-user -H bash -lc 'set -o pipefail; /usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log; exit ${PIPESTATUS[0]}'" ]
-
-
+#  - [ bash, -lc, "sudo -u yc-user -H bash -lc 'set -o pipefail; /usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log; exit ${PIPESTATUS[0]}'" ]
 
 
 # === Диагностика на всякий случай в конец (не критично, но помогает в отладке) ===
