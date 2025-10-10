@@ -118,7 +118,7 @@ echo "URL_COMPOSE=<$URL_COMPOSE>"
 echo "URL_DOCKERFILE=<$URL_DOCKERFILE>"
 echo "count FILES=${#FILES[@]}"
 
-set -x  # временно, для трассировки
+#set -x  # временно, для трассировки
 
 if (( ${#FILES[@]} > 0 )); then
   for dst in "${!FILES[@]}"; do

@@ -6,7 +6,7 @@ yc compute instance update \
   --name "$VM_NAME" \
   --metadata "ssh-keys=yc-user:$(ssh-keygen -y -f ~/.ssh/ya-cloud/priv)"
 
-export VM_EXTERNAL_IP=158.160.126.43
+export VM_EXTERNAL_IP=89.169.152.72
 echo $SECONDS && ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
 
 +72 сек
@@ -26,20 +26,10 @@ sudo tail -n 200 /var/log/cloud-init.log
 ls /home/yc-user/bootstrap-setup.log
 cat /home/yc-user/bootstrap-setup.log
 
+ls -l /usr/local/bin/bootstrap-setup.sh
 tail -n 200 /home/yc-user/bootstrap-setup.log
 
-ls -l /usr/local/bin/bootstrap-setup.sh
-head -n 50 /usr/local/bin/bootstrap-setup.sh
-
-
-URL_SETUP="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/SQL_yandex_primitive/scripts/setup-compose.sh"
-URL_SETUP="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts/setup-compose.sh"
-curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh "$URL_SETUP"
-ls /opt/app/bin/setup-compose.sh
-
-BASE_GIT_URL=https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts
-URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
-curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh "$URL_SETUP"
 
 
  /opt/app/bin/setup-compose.sh
+ cat /opt/app/.env
