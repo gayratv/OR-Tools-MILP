@@ -22,6 +22,9 @@ write_files:
 
       APP_DIR="/opt/app"
       BIN_DIR="$APP_DIR/bin"
+      
+      mkdir -p "$BIN_DIR" "$APP_DIR/assets" "$APP_DIR/config"
+      
       install -d -m 0755 "$BIN_DIR" "$APP_DIR" "$APP_DIR/assets" "$APP_DIR/config"
 
       # ==== ENV для setup-compose.sh ====
