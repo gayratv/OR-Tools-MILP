@@ -29,20 +29,36 @@ APP_DIR="/opt/app"
 BIN_DIR="$APP_DIR/bin"
 ASSETS_DIR="$APP_DIR/assets"
 SECBIN_DIR="$APP_DIR/.secrets-bin"
-mkdir -p "$BIN_DIR" "$ASSETS_DIR" "$SECBIN_DIR" "$APP_DIR/config"
+#mkdir -p "$BIN_DIR" "$ASSETS_DIR" "$SECBIN_DIR" "$APP_DIR/config"
+install -d -m 0755 -o yc-user "$BIN_DIR" "$ASSETS_DIR" "$SECBIN_DIR" "$APP_DIR/config"
 
-# URLs можно задать заранее через env (cloud-init), иначе оставь пустыми — ничего страшного
-URL_WAIT="${URL_WAIT:-}"                 # напр.: https://raw.githubusercontent.com/<owner>/<repo>/<ref>/scripts/wait_for_files.sh
-URL_COMPOSE="${URL_COMPOSE:-}"           # напр.: https://raw.githubusercontent.com/<owner>/<repo>/<ref>/deploy/docker-compose.yml
-URL_DOCKERFILE="${URL_DOCKERFILE:-}"     # напр.: https://raw.githubusercontent.com/<owner>/<repo>/<ref>/deploy/Dockerfile
-URL_MODEL="${URL_MODEL:-}"               # опционально (большой бинарник)
-URL_APP_CFG="${URL_APP_CFG:-}"           # опционально (конфиг)
+## URLs можно задать заранее через env (cloud-init), иначе оставь пустыми — ничего страшного
+#URL_WAIT="${URL_WAIT:-}"                 # напр.: https://raw.githubusercontent.com/<owner>/<repo>/<ref>/scripts/wait_for_files.sh
+#URL_COMPOSE="${URL_COMPOSE:-}"           # напр.: https://raw.githubusercontent.com/<owner>/<repo>/<ref>/deploy/docker-compose.yml
+#URL_DOCKERFILE="${URL_DOCKERFILE:-}"     # напр.: https://raw.githubusercontent.com/<owner>/<repo>/<ref>/deploy/Dockerfile
+#URL_MODEL="${URL_MODEL:-}"               # опционально (большой бинарник)
+#URL_APP_CFG="${URL_APP_CFG:-}"           # опционально (конфиг)
+#
+## Ожидание файлов (по умолчанию выключено)
+#WAIT_ENABLED="${WAIT_ENABLED:-0}"
+#WAIT_TIMEOUT="${WAIT_TIMEOUT:-600}"
+#WAIT_MIN_SIZE="${WAIT_MIN_SIZE:-1}"
+#WAIT_STABLE="${WAIT_STABLE:-3}"
 
-# Ожидание файлов (по умолчанию выключено)
-WAIT_ENABLED="${WAIT_ENABLED:-0}"
-WAIT_TIMEOUT="${WAIT_TIMEOUT:-600}"
-WAIT_MIN_SIZE="${WAIT_MIN_SIZE:-1}"
-WAIT_STABLE="${WAIT_STABLE:-3}"
+# ==== ENV для setup-compose.sh ====
+BASE_GIT_URL=https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts
+export URL_COMPOSE="$BASE_GIT_URL/docker-compose.yml"
+export URL_DOCKERFILE="$BASE_GIT_URL/Dockerfile"
+export URL_WAIT="$BASE_GIT_URL/wait_for_files.sh"
+export URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
+
+# Поведение: ничего не ждём и контейнеры не запускаем
+export WAIT_ENABLED=1
+export WAIT_TIMEOUT=600
+export WAIT_MIN_SIZE=1
+export WAIT_STABLE=3
+export RUN_COMPOSE=0
+
 
 # Запуск compose (по умолчанию выключен, т.к. ты пока не хочешь стартовать контейнер)
 RUN_COMPOSE="${RUN_COMPOSE:-0}"
@@ -64,8 +80,9 @@ safe_get() {
     return 0
   fi
   log "скачиваю $url → $dst"
-  install -d -m 0755 "$(dirname "$dst")"
-  if curl -fsSL -o "$dst" "$url"; then
+  install -d -m 0755  -o yc-user  "$(dirname "$dst")"
+
+  if curl -fsSL  --retry 5 --retry-all-errors -o "$dst" "$url"; then
     return 0
   else
     warn "не удалось скачать $url"
@@ -96,6 +113,13 @@ declare -A FILES=()
 [[ -n "$URL_COMPOSE"    ]] && FILES["$APP_DIR/docker-compose.yml"]="$URL_COMPOSE"
 [[ -n "$URL_DOCKERFILE" ]] && FILES["$APP_DIR/Dockerfile"]="$URL_DOCKERFILE"
 
+echo "BASH_VERSION $BASH_VERSION"
+echo "URL_COMPOSE=<$URL_COMPOSE>"
+echo "URL_DOCKERFILE=<$URL_DOCKERFILE>"
+echo "count FILES=${#FILES[@]}"
+
+set -x  # временно, для трассировки
+
 if (( ${#FILES[@]} > 0 )); then
   for dst in "${!FILES[@]}"; do
     url="${FILES[$dst]}"
@@ -104,6 +128,7 @@ if (( ${#FILES[@]} > 0 )); then
 else
   log "FILES пуст — скачивать нечего"
 fi
+
 
 # ---------------------- .env из Lockbox (если SECRET_ID есть) ----------------------
 ENV_FILE="$APP_DIR/.env"
