@@ -2,16 +2,53 @@
 # Скрипт для загрузки всех файлов из локальной папки в Yandex Object Storage
 # с сохранением поддиректорий и префикса ключа
 
-# Проверка аргументов
-if [ "$#" -ne 3 ]; then
-    echo "Использование: $0 <bucket_name> <local_folder> <key_prefix>"
-    echo "Пример: $0 mysql8-asset-files /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex/mysql mysql"
+# Функция для вывода справки
+usage() {
+    echo "Использование: $0 [опции]"
+    echo "  -b, --bucket <name>    Имя бакета в Yandex Object Storage"
+    echo "  -f, --folder <path>    Локальная папка с файлами для загрузки"
+    echo "  -p, --prefix <prefix>  Префикс ключа (путь) в бакете"
+    echo "  -h, --help             Показать эту справку"
+    echo ""
+    echo "Пример: $0 --bucket mysql8-asset-files --folder /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex/mysql --prefix mysql"
     exit 1
+}
+
+# Парсинг аргументов командной строки
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        -b|--bucket)
+        BUCKET_NAME="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -f|--folder)
+        LOCAL_FOLDER="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -p|--prefix)
+        KEY_PREFIX="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -h|--help)
+        usage
+        ;;
+        *)
+        echo "Неизвестный параметр: $1"
+        usage
+        ;;
+    esac
+done
+
+# Проверка, что все обязательные аргументы предоставлены
+if [ -z "${BUCKET_NAME}" ] || [ -z "${LOCAL_FOLDER}" ] || [ -z "${KEY_PREFIX}" ]; then
+    echo "Ошибка: не все обязательные параметры указаны."
+    usage
 fi
 
-BUCKET_NAME="$1"
-LOCAL_FOLDER="$2"
-KEY_PREFIX="$3"
 
 # Проверка, что папка существует
 if [ ! -d "$LOCAL_FOLDER" ]; then

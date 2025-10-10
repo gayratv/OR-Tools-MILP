@@ -16,3 +16,14 @@ yc storage s3 cp \
 yc storage s3 cp \
   s3://mysql8-asset-files/mysql/conf.d/my.cnf \
   /mnt/f/_prg/python/OR-Tools-MILP/_temp
+
+=========
+./upload_to_yandex_s3.sh \
+    --bucket mysql8-asset-files \
+    --folder /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex/mysql \
+    --prefix mysql
+
+./download_from_yandex_s3.sh \
+    --bucket mysql8-asset-files \
+    --folder /mnt/f/_prg/python/OR-Tools-MILP/_temp \
+    --prefix mysql
