@@ -2,6 +2,7 @@
 package_update: false
 packages:
   - curl
+  - bash
   - jq
   - mc
   - ca-certificates
@@ -12,32 +13,39 @@ users:
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     shell: /bin/bash
 
-runcmd:
-  - |
+write_files:
+  - path: /usr/local/bin/bootstrap-setup.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
       set -euo pipefail
 
       APP_DIR="/opt/app"
       BIN_DIR="$APP_DIR/bin"
       install -d -m 0755 "$BIN_DIR" "$APP_DIR" "$APP_DIR/assets" "$APP_DIR/config"
 
-      # --- ENV для setup-compose.sh (можно править здесь) ---
+      # ==== ENV для setup-compose.sh ====
       BASE_GIT_URL="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/SQL_yandex_primitive/scripts"
       export URL_COMPOSE="$BASE_GIT_URL/docker-compose.yml"
-      export URL_DOCKERFILE="$BASE_GIT_URL//Dockerfile"
+      export URL_DOCKERFILE="$BASE_GIT_URL/Dockerfile"
       export URL_WAIT="$BASE_GIT_URL/wait_for_files.sh"
       export URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
 
-      # поведение (по умолчанию ничего не ждём и контейнеры не запускаем)
-      export WAIT_ENABLED=0       # 1 — включить ожидание файлов через wait_for_files.sh
+      # Поведение: ничего не ждём и контейнеры не запускаем
+      export WAIT_ENABLED=0
       export WAIT_TIMEOUT=600
       export WAIT_MIN_SIZE=1
       export WAIT_STABLE=3
-      export RUN_COMPOSE=0        # 1 — запустить docker compose build && up -d
+      export RUN_COMPOSE=0
 
-      
       echo "==> Download setup-compose.sh"
       curl -fsSL -o "$BIN_DIR/setup-compose.sh" "$URL_SETUP"
       chmod +x "$BIN_DIR/setup-compose.sh"
 
       echo "==> Run setup-compose.sh"
       "$BIN_DIR/setup-compose.sh"
+
+    defer: true
+
+runcmd:
+  - [ su, yc-user, -c, "/usr/local/bin/bootstrap-setup.sh" ]

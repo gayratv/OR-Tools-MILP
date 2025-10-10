@@ -41,9 +41,12 @@ cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive
 source ./create-yandex-docker-compose.sh "$VM_NAME"
 
 
-export VM_EXTERNAL_IP=158.160.34.136
+export VM_EXTERNAL_IP=89.169.140.159
 ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
 
+
+export VM_NAME=mysql8_1
+export VM_EXTERNAL_IP=89.169.140.159
 yc compute instance update \
   --name "$VM_NAME" \
   --metadata "ssh-keys=yc-user:$(ssh-keygen -y -f ~/.ssh/ya-cloud/priv)"
