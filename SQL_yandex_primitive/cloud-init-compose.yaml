@@ -56,4 +56,22 @@ write_files:
     defer: true
 
 runcmd:
-  - [ su, yc-user, -c, "/usr/local/bin/bootstrap-setup.sh" ]
+  # 1) Подготовить системные каталоги под приложение
+  - [ bash, -lc, "install -d -m 0755 /opt/app /opt/app/bin /opt/app/assets /opt/app/config" ]
+  - [ bash, -lc, "chown -R yc-user:yc-user /opt/app" ]
+    # 3) Гарантировать, что yc-user в группе docker (на случай, если users: не сработал)
+  - [ bash, -lc, "id -nG yc-user | grep -qw docker || usermod -aG docker yc-user" ]
+#  - [ bash, -lc, "systemctl is-active --quiet docker || systemctl start docker" ]
+#  - [ su, yc-user, -c, "/usr/local/bin/bootstrap-setup.sh" ]
+   # 5) Запустить основной скрипт ОТ ИМЕНИ yc-user с логированием в его $HOME
+#  - [ bash, -lc, "sudo -u yc-user -H bash -lc '/usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log'" ]
+#  -код возврата конвейера set -o pipefail; - без tee
+  - [ bash, -lc, "sudo -u yc-user -H bash -lc 'set -o pipefail; /usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log'" ]
+
+
+
+# === Диагностика на всякий случай в конец (не критично, но помогает в отладке) ===
+final_message: |
+  Cloud-init завершил работу. Проверьте логи:
+    - /var/log/cloud-init-output.log
+    - /home/yc-user/bootstrap-setup.log

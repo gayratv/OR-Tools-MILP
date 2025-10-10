@@ -36,17 +36,17 @@ docker-compose logs db
 
 ========================
 
-export VM_NAME=mysql8_2
+export VM_NAME=mysql8_3
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive
 source ./create-yandex-docker-compose.sh "$VM_NAME"
 
 
-export VM_EXTERNAL_IP=89.169.132.233
+export VM_EXTERNAL_IP=51.250.93.189
 ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
 
 
-export VM_NAME=mysql8_2
-export VM_EXTERNAL_IP=89.169.132.233
+export VM_NAME=mysql8_3
+export VM_EXTERNAL_IP=51.250.93.189
 yc compute instance update \
   --name "$VM_NAME" \
   --metadata "ssh-keys=yc-user:$(ssh-keygen -y -f ~/.ssh/ya-cloud/priv)"
@@ -62,6 +62,7 @@ sudo cat /home/yc-user/.ssh/authorized_keys
 sudo tail -n 200 /var/log/cloud-init-output.log
 cloud-init status --long
 
+echo "OK: $BASH_VERSION"
 
 sudo tail -n 200 /var/log/cloud-init-output.log
 sudo tail -n 200 /var/log/cloud-init.log
@@ -72,3 +73,19 @@ head -n 50 /usr/local/bin/bootstrap-setup.sh
 sudo su -l yc-user -c 'bash -x /usr/local/bin/bootstrap-setup.sh' \
   | tee /home/yc-user/bootstrap-setup.manual.log
 echo ${PIPESTATUS[@]}   # убедиться, что код возврата = 0
+
+=================
+ # 2) Установить Docker CE (вариант для Ubuntu/Debian). Для других дистрибутивов замените этот блок.
+  - [ bash, -lc, "if ! command -v docker >/dev/null 2>&1; then \
+        install -m 0755 -d /etc/apt/keyrings && \
+        curl -fsSL --retry 5 --retry-all-errors https://download.docker.com/linux/ubuntu/gpg \
+          -o /etc/apt/keyrings/docker.asc && \
+        chmod a+r /etc/apt/keyrings/docker.asc && \
+        . /etc/os-release && \
+        echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+             https://download.docker.com/linux/ubuntu $$VERSION_CODENAME stable\" \
+             > /etc/apt/sources.list.d/docker.list && \
+        apt-get update -y && \
+        apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
+        systemctl enable --now docker; \
+      fi" ]
