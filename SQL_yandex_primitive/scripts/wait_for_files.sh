@@ -195,23 +195,23 @@ if (( ${#REAL_FILES[@]} > 0 )); then
   mapfile -t REAL_FILES < <(printf "%s\n" "${REAL_FILES[@]}" | awk 'NF' | sort -u)
 fi
 
-if [[ -n "$CHMOD_MODE" && ${#REAL_FILES[@]} -gt 0 ]]; then
-  log "chmod ${CHMOD_MODE} для ${#REAL_FILES[@]} файла(ов)"
-  chmod "$CHMOD_MODE" "${REAL_FILES[@]}"
-fi
+#if [[ -n "$CHMOD_MODE" && ${#REAL_FILES[@]} -gt 0 ]]; then
+#  log "chmod ${CHMOD_MODE} для ${#REAL_FILES[@]} файла(ов)"
+#  chmod "$CHMOD_MODE" "${REAL_FILES[@]}"
+#fi
+#
+#if [[ -n "$CHOWN_SPEC" && ${#REAL_FILES[@]} -gt 0 ]]; then
+#  log "chown ${CHOWN_SPEC} для ${#REAL_FILES[@]} файла(ов)"
+#  chown "$CHOWN_SPEC" "${REAL_FILES[@]}"
+#fi
 
-if [[ -n "$CHOWN_SPEC" && ${#REAL_FILES[@]} -gt 0 ]]; then
-  log "chown ${CHOWN_SPEC} для ${#REAL_FILES[@]} файла(ов)"
-  chown "$CHOWN_SPEC" "${REAL_FILES[@]}"
-fi
-
-if [[ -n "$EXEC_CMD" && ${#REAL_FILES[@]} -gt 0 ]]; then
-  for f in "${REAL_FILES[@]}"; do
-    # Подставляем {} на путь
-    cmd="${EXEC_CMD//\{\}/$f}"
-    log "exec: $cmd"
-    bash -lc "$cmd"
-  done
-fi
+#if [[ -n "$EXEC_CMD" && ${#REAL_FILES[@]} -gt 0 ]]; then
+#  for f in "${REAL_FILES[@]}"; do
+#    # Подставляем {} на путь
+#    cmd="${EXEC_CMD//\{\}/$f}"
+#    log "exec: $cmd"
+#    bash -lc "$cmd"
+#  done
+#fi
 
 exit 0

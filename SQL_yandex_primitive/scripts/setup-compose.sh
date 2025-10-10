@@ -54,7 +54,7 @@ export URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
 
 # Поведение: ничего не ждём и контейнеры не запускаем
 export WAIT_ENABLED=1
-export WAIT_TIMEOUT=600
+export WAIT_TIMEOUT=60
 export WAIT_MIN_SIZE=1
 export WAIT_STABLE=3
 export RUN_COMPOSE=0
@@ -169,12 +169,15 @@ else
 fi
 
 # ---------------------- (Опционально) Ожидание файлов ----------------------
+# -p "$ASSETS_DIR/*.bin"
+
 if [[ "${WAIT_ENABLED}" == "1" && -x "$BIN_DIR/wait_for_files.sh" ]]; then
   log "ожидаю готовности файлов (timeout=${WAIT_TIMEOUT}s, min_size=${WAIT_MIN_SIZE}B, stable=${WAIT_STABLE}s)"
   # Пример ожидания: .env и любые большие бинарники
   "$BIN_DIR/wait_for_files.sh" \
     -f "$ENV_FILE" \
-    -p "$ASSETS_DIR/*.bin" \
+    -f "$APP_DIR/docker-compose.yml" \
+    -f "$APP_DIR/Dockerfile" \
     --min-size "${WAIT_MIN_SIZE}" \
     --stable "${WAIT_STABLE}" \
     --timeout "${WAIT_TIMEOUT}" || warn "ожидание завершилось неуспешно"
