@@ -36,12 +36,12 @@ docker-compose logs db
 
 ========================
 
-export VM_NAME=mysql8_3
+export VM_NAME=mysql8_1
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive
 source ./create-yandex-docker-compose.sh "$VM_NAME"
 
 
-export VM_EXTERNAL_IP=51.250.93.189
+export VM_EXTERNAL_IP=51.250.14.212
 ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
 
 
@@ -89,3 +89,8 @@ echo ${PIPESTATUS[@]}   # убедиться, что код возврата = 0
         apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
         systemctl enable --now docker; \
       fi" ]
+
+
+URL_SETUP="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/SQL_yandex_primitive/scripts/setup-compose.sh"
+URL_SETUP="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts/setup-compose.sh"
+curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh "$URL_SETUP"
