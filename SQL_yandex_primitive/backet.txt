@@ -1,0 +1,18 @@
+yc storage bucket list
+
+FROM=/mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex
+yc storage s3 cp \
+  ${FROM}/mysql/conf.d/my.cnf \
+  s3://mysql8-asset-files/mysql/conf.d/my.cnf
+
+
+yc storage s3api get-object --help
+yc storage bucket list
+
+yc storage s3 cp \
+  s3://<имя_бакета>/<ключ_объекта> \
+  <путь_для_скачивания>
+
+yc storage s3 cp \
+  s3://mysql8-asset-files/mysql/conf.d/my.cnf \
+  /mnt/f/_prg/python/OR-Tools-MILP/_temp
