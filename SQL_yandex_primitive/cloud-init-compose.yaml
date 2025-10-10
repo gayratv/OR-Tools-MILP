@@ -19,6 +19,7 @@ write_files:
     content: |
       #!/usr/bin/env bash
       set -euo pipefail
+      set -x  # временно, чтобы видеть каждую команду
 
       APP_DIR="/opt/app"
       BIN_DIR="$APP_DIR/bin"
@@ -27,7 +28,7 @@ write_files:
       
       #      install -d -m 0755 "$BIN_DIR" "$APP_DIR" "$APP_DIR/assets" "$APP_DIR/config"
       sudo install -d -m 0755 /opt/app /opt/app/bin /opt/app/assets /opt/app/config
-      sudo chown -R yc-user:yc-user /opt/app
+      sudo chown -R yc-user:yc-user "$APP_DIR"
 
       # ==== ENV для setup-compose.sh ====
       BASE_GIT_URL=https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts
@@ -46,6 +47,11 @@ write_files:
       echo "==> Download setup-compose.sh"
       # curl -fsSL -o "$BIN_DIR/setup-compose.sh" "$URL_SETUP"
       # сетевые загрузки — с ретраями (защитит и от rate limit у raw.githubusercontent.com)
+      
+      sanitize() { tr -d '\r'; }
+      BASE_GIT_URL="$(printf '%s' "${BASE_GIT_URL:-}" | sanitize)"
+      URL_SETUP="$(printf '%s' "${URL_SETUP:-}" | sanitize)"
+      
       curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh "$URL_SETUP"
       echo "==> Download setup-compose.sh ЗАВЕРШЕН"
       # chmod +x /opt/app/bin/setup-compose.sh
@@ -67,7 +73,8 @@ runcmd:
    # 5) Запустить основной скрипт ОТ ИМЕНИ yc-user с логированием в его $HOME
 #  - [ bash, -lc, "sudo -u yc-user -H bash -lc '/usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log'" ]
 #  -код возврата конвейера set -o pipefail; - без tee
-  - [ bash, -lc, "sudo -u yc-user -H bash -lc 'set -o pipefail; /usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log'" ]
+  - [ bash, -lc, "sudo -u yc-user -H bash -lc 'set -o pipefail; /usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log; exit ${PIPESTATUS[0]}'" ]
+
 
 
 

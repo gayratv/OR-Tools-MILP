@@ -36,13 +36,15 @@ docker-compose logs db
 
 ========================
 
-export VM_NAME=mysql8_1
+export VM_NAME=mysql8_4
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive
 source ./create-yandex-docker-compose.sh "$VM_NAME"
 
 
-export VM_EXTERNAL_IP=51.250.14.212
-ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
+export VM_EXTERNAL_IP=51.250.0.89
+echo $SECONDS && ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
+
++72 сек
 
 
 export VM_NAME=mysql8_3
@@ -93,4 +95,9 @@ echo ${PIPESTATUS[@]}   # убедиться, что код возврата = 0
 
 URL_SETUP="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/refs/heads/main/SQL_yandex_primitive/scripts/setup-compose.sh"
 URL_SETUP="https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts/setup-compose.sh"
+curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh "$URL_SETUP"
+ls /opt/app/bin/setup-compose.sh
+
+BASE_GIT_URL=https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts
+URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
 curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh "$URL_SETUP"
