@@ -1,0 +1,49 @@
+yc compute instance delete --name mysql8_1
+export VM_NAME=mysql8_2
+cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
+source ./create-yandex-docker-compose2.sh "$VM_NAME"
+
+
+
+export VM_EXTERNAL_IP=158.160.97.216
+echo $SECONDS && ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
+
+ls -la /app/scripts
+ls -la /app/SQL_yandex_primitive2/scripts
+ls  /app/
+/app/scripts/wd.sh
+ls /app/SQL_yandex_primitive2/docker_assets_primitive
+
+/app/scripts/download_from_yandex_s3.sh --bucket mysql8-asset-files --folder /app --prefix SQL_yandex_primitive2
+
+cat /var/log/runcmd-debug.log
+tail -n 200 /var/log/cloud-init-output.log
+cat /var/lib/cloud/instance/cloud-config.txt
+cat /etc/sudoers.d/90-cloud-init-user
+ls /home/yc-user
+
+
+========
+# Стереть кэш cloud-init и логи, затем ребут
+sudo cloud-init clean --logs
+sudo reboot
+=========
+
+
+tail -n 200 /var/log/cloud-init-output.log
+sudo tail -n 200 /var/log/cloud-init.log
+cloud-init status --long
+sudo cloud-init analyze show
+
+sudo journalctl -u cloud-init
+sudo journalctl -u cloud-init-local
+
+
+echo "OK: $BASH_VERSION"
+
+
+cat /home/yc-user/bootstrap-setup.log
+
+ =======
+ https://cloudinit.readthedocs.io/en/latest/
+ Cloud-init documentation

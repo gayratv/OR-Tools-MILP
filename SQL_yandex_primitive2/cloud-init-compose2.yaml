@@ -14,27 +14,6 @@ users:
     shell: /bin/bash
 
 write_files:
-  - path: /usr/local/bin/bootstrap-setup.sh
-    owner: yc-user:yc-user
-    permissions: "0755"
-    content: |
-      #!/usr/bin/env bash
-      set -euo pipefail
-      set -x  # временно, чтобы видеть каждую команду
-
-      BASE_GIT_URL=https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts
-      URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
-
-      echo "==> Download setup-compose.sh"
-      # сетевые загрузки — с ретраями (защитит и от rate limit у raw.githubusercontent.com)
-      
-      curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts/setup-compose.sh
-      
-      echo "==> Download setup-compose.sh ЗАВЕРШЕН"
-      chmod +x /opt/app/bin/setup-compose.sh
-
-    defer: true
-
   - path: "/usr/local/etc/yc-install.sh"
     owner: yc-user:yc-user
     permissions: "0755"
@@ -81,16 +60,39 @@ write_files:
 
     defer: true
 
+  - path: "/app/scripts/wd.sh"
+    owner: yc-user:yc-user
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      
+      set -Eeuo pipefail
+      for i in {1..100}
+      do
+        if [ -d /home/yc-user/yandex-cloud/bin ]; then
+          echo "OK: /home/yc-user/yandex-cloud/bin found." | tee -a /var/log/runcmd-debug.log
+          exit 0
+        fi
+        echo "Waiting for /home/yc-user/yandex-cloud/bin ($i)" | tee -a /var/log/runcmd-debug.log
+        sleep 1
+      done
+      
+      echo "ERROR: /home/yc-user/yandex-cloud/bin not found after 100s" | tee -a /var/log/runcmd-debug.log
+      exit 1
+
+    defer: true
+
 runcmd:
   - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
-  - 'chmod +x /home/yc-user/yandex-cloud/bin/*.sh'
-  - [ bash, -lc, "install -d -m 0755 -o yc-user /opt/app /opt/app/bin /opt/app/assets /opt/app/config" ]
   - [ bash, -lc, "id -nG yc-user | grep -qw docker || usermod -aG docker yc-user" ]
-  - [ bash, -lc, "sudo -u yc-user -H bash -lc 'set -o pipefail; /usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log; exit ${PIPESTATUS[0]}'" ]
+  - [ bash, -lc, "install -d -m 0755 -o yc-user -g yc-user /app /app/scripts; install -m 0644 -o yc-user -g yc-user /dev/null /var/log/runcmd-debug.log" ]
 
-
-# === Диагностика на всякий случай в конец (не критично, но помогает в отладке) ===
-final_message: |
-  Cloud-init завершил работу. Проверьте логи:
-    - /var/log/cloud-init-output.log
-    - /home/yc-user/bootstrap-setup.log
+  # Маркер перед началом
+  - [ bash, -lc, 'echo "[runcmd] start" | tee -a /var/log/runcmd-debug.log' ]
+  # 1) Ждём появление каталога с yc (до 5 минут) — если не появился, выходим с ошибкой
+  - [bash, -lc, '/app/scripts/wd.sh' ]
+  - [su, yc-user, -c, "/home/yc-user/yandex-cloud/bin/yc storage s3 cp s3://mysql8-asset-files/SQL_yandex_primitive2/scripts/download_from_yandex_s3.sh /app/scripts" ]
+  - [su, yc-user, -c, "chmod +x /app/scripts/*.sh" ]
+  - [su, yc-user, -c, "/app/scripts/download_from_yandex_s3.sh --bucket mysql8-asset-files --folder /app --prefix SQL_yandex_primitive2" ]
+  - [su, yc-user, -c, "chmod +x /app/SQL_yandex_primitive2/scripts/*.sh" ]
+  - [su, -l, yc-user, -c, "yc | tee -a /var/log/runcmd-debug.log" ]

@@ -1,0 +1,92 @@
+#cloud-config
+package_update: false
+packages:
+  - curl
+  - bash
+  - jq
+  - mc
+  - ca-certificates
+
+users:
+  - name: yc-user
+    groups: [sudo, docker]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/bash
+
+write_files:
+  - path: "/usr/local/etc/yc-install.sh"
+    owner: yc-user:yc-user
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+
+      # CLI
+      echo "Installing Yandex Cloud CLI"
+      curl \
+        --silent \
+        --show-error \
+        --location \
+        https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+      VM_ID=$(curl --silent http://169.254.169.254/latest/meta-data/instance-id)
+      
+      # Переходим в домашнюю директорию пользователя, чтобы все последующие команды
+      # выполнялись в ней и имели права на запись файлов (например, key.json).
+      cd /home/yc-user
+      
+      # Save YC params
+      echo "Saving YC params to the ~/.bashrc"
+      # Экранируем $HOME, чтобы он раскрылся во время выполнения скрипта от имени yc-user,
+      # а не во время создания файла от имени root.
+      cat << EOF >> /home/yc-user/.bashrc
+        export PATH="/home/yc-user/yandex-cloud/bin:\$PATH"
+        export YC_CLI_VM_ID="${VM_ID:-unknown}"
+      EOF
+      
+      # Явно обновляем PATH для текущей сессии скрипта.
+      # Это надежнее, чем `source` в cloud-init.
+      export PATH="/home/yc-user/yandex-cloud/bin:$PATH"
+
+      echo "SETTING YC +++++++++++++++++++++"
+
+      yc iam key create \
+        --service-account-name sc-scheduller-srv-acc \
+        --output key.json \
+        --folder-id b1gbgjv35qvro3lmgaci
+      
+      yc config profile create default
+      yc config set service-account-key key.json
+      yc config set cloud-id b1gib03pgvqrrfvhl3kb
+      yc config set folder-id b1gbgjv35qvro3lmgaci
+
+    defer: true
+
+runcmd:
+  - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
+  - [ bash, -lc, "install -d -m 0755 -o yc-user -g yc-user /app /app/scripts" ]
+  - [ bash, -lc, "id -nG yc-user | grep -qw docker || usermod -aG docker yc-user" ]
+#  - bash -c 'while [ ! -d /home/yc-user/yandex-cloud/bin ]; do echo "Waiting for /home/yc-user/yandex-cloud/bin"; sleep 1; done && chmod +x /home/yc-user/yandex-cloud/bin/*.sh'
+   # ⬇️ Добавленный отладочный вывод
+  - [ bash, -lc, 'echo "Перед yc storage" | tee -a /var/log/runcmd-debug.log' ]
+# Проблемная команда — теперь с трассировкой, fail-fast и собственным логом
+  - bash -lc 'set -euxo pipefail; echo "[runcmd] waiting for bin dir" | tee -a /var/log/runcmd-debug.log; \
+      while [ ! -d /home/yc-user/yandex-cloud/bin ]; do echo "Waiting for /home/yc-user/yandex-cloud/bin" | tee -a /var/log/runcmd-debug.log; sleep 1; done; \
+      shopt -s nullglob; \
+      ls -la /home/yc-user/yandex-cloud/bin | tee -a /var/log/runcmd-debug.log; \
+      chmod +x /home/yc-user/yandex-cloud/bin/*.sh 2>&1 | tee -a /var/log/runcmd-debug.log'
+
+#  - [ bash, -lc, "sudo -u yc-user -H bash -lc 'yc storage s3 cp s3://mysql8-asset-files/SQL_yandex_primitive2/scripts/download_from_yandex_s3.sh /app/scripts'" ]
+
+
+#  - 'chmod +x /app/scripts/*.sh'
+#  - [ su, yc-user, -c, "/app/scripts/download_from_yandex_s3.sh --bucket mysql8-asset-files --folder /app --prefix SQL_yandex_primitive2" ]
+#  - [ bash, -lc, "sudo -u yc-user -H bash -lc '''''" ]
+#  - [ bash, -lc, "sudo -u yc-user -H bash -lc '''''" ]
+#  - [ bash, -lc, "sudo -u yc-user -H bash -lc '''''" ]
+#  - [ bash, -lc, "sudo -u yc-user -H bash -lc 'set -o pipefail; /usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log; exit ${PIPESTATUS[0]}'''" ]
+
+
+# === Диагностика на всякий случай в конец (не критично, но помогает в отладке) ===
+final_message: |
+  Cloud-init завершил работу. Проверьте логи:
+    - /var/log/cloud-init-output.log
+    - /home/yc-user/bootstrap-setup.log

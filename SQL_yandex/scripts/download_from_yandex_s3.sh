@@ -62,6 +62,6 @@ echo "Скачивание файлов из '$S3_SOURCE' в '$TARGET_FOLDER'...
 
 # Рекурсивно копируем все объекты из бакета в целевую локальную папку
 # Флаг --recursive указывает на копирование всех объектов с указанным префиксом
-yc storage s3 cp --recursive "$S3_SOURCE" "$TARGET_FOLDER"
+/home/yc-user/yandex-cloud/bin/yc storage s3 cp --recursive "$S3_SOURCE" "$TARGET_FOLDER"
 
 echo "✅ Скачивание завершено."

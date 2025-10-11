@@ -36,15 +36,17 @@ yc storage s3 cp \
 
 # скопировать один файл
 yc storage s3 cp \
-  s3://mysql8-asset-files/SQL_yandex/download_from_yandex_s3.sh \
-  /opt/app
+  s3://mysql8-asset-files/SQL_yandex_primitive2/scripts/download_from_yandex_s3.sh \
+  /app/scripts
+
+yc storage s3 cp s3://mysql8-asset-files/SQL_yandex_primitive2/scripts/download_from_yandex_s3.sh /app/scripts
 
 chmod +x download_from_yandex_s3.sh
 
-./download_from_yandex_s3.sh --bucket mysql8-asset-files --folder /opt/app --prefix SQL_yandex
+./download_from_yandex_s3.sh --bucket mysql8-asset-files --folder /opt/app --prefix SQL_yandex_primitive2
 
 ============
-./upload_to_yandex_s3.sh \
+./scripts/upload_to_yandex_s3.sh \
     --bucket mysql8-asset-files \
     --folder /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2 \
     --prefix SQL_yandex_primitive2
