@@ -1,0 +1,18 @@
+yc compute instance delete --name mysql8_3
+export VM_NAME=mysql8_1
+cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
+source ./create-yandex-docker-compose2.sh "$VM_NAME"
+
+cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2 && ./ssh2.sh
+
+cat /var/log/runcmd-debug.log
+
+cd /app/SQL_yandex_primitive2/docker_assets_primitive
+/app/SQL_yandex_primitive2/scripts/yc-secrets-get.sh
+
+docker compose up -d --build
+
+/app/SQL_yandex_primitive2/scripts/make-mysql-certs-full.sh
+
+
+

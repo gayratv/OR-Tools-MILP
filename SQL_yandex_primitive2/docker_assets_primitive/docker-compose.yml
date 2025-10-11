@@ -5,9 +5,10 @@ services:
     # Собираем образ из Dockerfile в текущей директории
     build: .
     container_name: mysql8_yand_certs
-    # Обязательная переменная для инициализации базы данных при первом запуске
+    env_file: [.env]
     environment:
-      - MYSQL_ROOT_PASSWORD=your_password
+      # Эта переменная будет установлена в create-yandex-docker-compose.sh
+      - VM_EXTERNAL_IP
     ports:
       - "3398:3306"
     volumes:
@@ -16,6 +17,21 @@ services:
       - type: volume
         source: dbdata_yandex_sql_certs
         target: /var/lib/mysql
+      - ./certs:/certs
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
 volumes:
   dbdata_yandex_sql_certs:

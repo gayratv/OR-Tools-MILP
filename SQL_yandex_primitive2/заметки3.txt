@@ -1,11 +1,15 @@
 yc compute instance delete --name mysql8_3
-export VM_NAME=mysql8_4
+export VM_NAME=mysql8_1
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
 source ./create-yandex-docker-compose2.sh "$VM_NAME"
 
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2 && ./ssh2.sh
 
 cat /var/log/runcmd-debug.log
+
+cd /app/SQL_yandex_primitive2/docker_assets_primitive
+/app/SQL_yandex_primitive2/scripts/yc-secrets-get.sh
+nano /app/SQL_yandex_primitive2/scripts/yc-secrets-get.sh
 
 
 export VM_EXTERNAL_IP=89.169.140.36
@@ -15,6 +19,8 @@ cat /var/log/runcmd-debug.log
 
 ls -la /app/scripts
 ls -la /app/SQL_yandex_primitive2/scripts
+cat /app/SQL_yandex_primitive2/scripts/yc-secrets-get.sh
+
 ls  /app/
 /app/scripts/wd.sh
 ls /app/SQL_yandex_primitive2/docker_assets_primitive

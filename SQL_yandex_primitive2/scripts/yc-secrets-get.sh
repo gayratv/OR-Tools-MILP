@@ -6,6 +6,8 @@ need jq
 need yc
 need base64
 
+YC_DIR=/home/yc-user/yandex-cloud/bin
+
 # Устанавливаем имя выходного файла.
 # Используем первый аргумент командной строки ($1), если он есть.
 # В противном случае, используем ".env" по умолчанию.
@@ -23,7 +25,7 @@ mkdir -p "$OUTPUT_BINARY_DIR"
 
 # 1. Получаем весь payload секрета в виде одного JSON
 echo "Получаю секреты из Yandex Lockbox..."
-PAYLOAD_JSON=$(yc lockbox payload get school-scheduler-app-secrets --format json)
+PAYLOAD_JSON=$(${YC_DIR}/yc lockbox payload get school-scheduler-app-secrets --format json)
 
 # 2. Извлекаем и сохраняем текстовые значения в .env файл
 echo "Восстанавливаю текстовые переменные в '$OUTPUT_ENV_FILE'..."
