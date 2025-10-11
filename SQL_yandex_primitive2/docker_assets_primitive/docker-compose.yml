@@ -1,0 +1,21 @@
+name: mysql8_yand
+
+services:
+  db:
+    # Собираем образ из Dockerfile в текущей директории
+    build: .
+    container_name: mysql8_yand_certs
+    # Обязательная переменная для инициализации базы данных при первом запуске
+    environment:
+      - MYSQL_ROOT_PASSWORD=your_password
+    ports:
+      - "3398:3306"
+    volumes:
+      # ОСТАВЛЯЕМ ТОЛЬКО ЭТОТ ТОМ для хранения данных базы.
+      # Все остальное теперь встроено в образ.
+      - type: volume
+        source: dbdata_yandex_sql_certs
+        target: /var/lib/mysql
+
+volumes:
+  dbdata_yandex_sql_certs:

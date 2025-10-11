@@ -1,0 +1,96 @@
+#cloud-config
+package_update: false
+packages:
+  - curl
+  - bash
+  - jq
+  - mc
+  - ca-certificates
+
+users:
+  - name: yc-user
+    groups: [sudo, docker]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/bash
+
+write_files:
+  - path: /usr/local/bin/bootstrap-setup.sh
+    owner: yc-user:yc-user
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      set -x  # временно, чтобы видеть каждую команду
+
+      BASE_GIT_URL=https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts
+      URL_SETUP="$BASE_GIT_URL/setup-compose.sh"
+
+      echo "==> Download setup-compose.sh"
+      # сетевые загрузки — с ретраями (защитит и от rate limit у raw.githubusercontent.com)
+      
+      curl -fsSL --retry 5 --retry-all-errors -o /opt/app/bin/setup-compose.sh https://raw.githubusercontent.com/gayratv/OR-Tools-MILP/main/SQL_yandex_primitive/scripts/setup-compose.sh
+      
+      echo "==> Download setup-compose.sh ЗАВЕРШЕН"
+      chmod +x /opt/app/bin/setup-compose.sh
+
+    defer: true
+
+  - path: "/usr/local/etc/yc-install.sh"
+    owner: yc-user:yc-user
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+
+      # CLI
+      echo "Installing Yandex Cloud CLI"
+      curl \
+        --silent \
+        --show-error \
+        --location \
+        https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+      VM_ID=$(curl --silent http://169.254.169.254/latest/meta-data/instance-id)
+      
+      # Переходим в домашнюю директорию пользователя, чтобы все последующие команды
+      # выполнялись в ней и имели права на запись файлов (например, key.json).
+      cd /home/yc-user
+      
+      # Save YC params
+      echo "Saving YC params to the ~/.bashrc"
+      # Экранируем $HOME, чтобы он раскрылся во время выполнения скрипта от имени yc-user,
+      # а не во время создания файла от имени root.
+      cat << EOF >> /home/yc-user/.bashrc
+        export PATH="/home/yc-user/yandex-cloud/bin:\$PATH"
+        export YC_CLI_VM_ID="${VM_ID:-unknown}"
+      EOF
+      
+      # Явно обновляем PATH для текущей сессии скрипта.
+      # Это надежнее, чем `source` в cloud-init.
+      export PATH="/home/yc-user/yandex-cloud/bin:$PATH"
+
+      echo "SETTING YC +++++++++++++++++++++"
+
+      yc iam key create \
+        --service-account-name sc-scheduller-srv-acc \
+        --output key.json \
+        --folder-id b1gbgjv35qvro3lmgaci
+      
+      yc config profile create default
+      yc config set service-account-key key.json
+      yc config set cloud-id b1gib03pgvqrrfvhl3kb
+      yc config set folder-id b1gbgjv35qvro3lmgaci
+
+    defer: true
+
+runcmd:
+  - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
+  - 'chmod +x /home/yc-user/yandex-cloud/bin/*.sh'
+  - [ bash, -lc, "install -d -m 0755 -o yc-user /opt/app /opt/app/bin /opt/app/assets /opt/app/config" ]
+  - [ bash, -lc, "id -nG yc-user | grep -qw docker || usermod -aG docker yc-user" ]
+  - [ bash, -lc, "sudo -u yc-user -H bash -lc 'set -o pipefail; /usr/local/bin/bootstrap-setup.sh 2>&1 | tee -a /home/yc-user/bootstrap-setup.log; exit ${PIPESTATUS[0]}'" ]
+
+
+# === Диагностика на всякий случай в конец (не критично, но помогает в отладке) ===
+final_message: |
+  Cloud-init завершил работу. Проверьте логи:
+    - /var/log/cloud-init-output.log
+    - /home/yc-user/bootstrap-setup.log
