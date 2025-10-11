@@ -6,7 +6,7 @@ yc compute instance update \
   --name "$VM_NAME" \
   --metadata "ssh-keys=yc-user:$(ssh-keygen -y -f ~/.ssh/ya-cloud/priv)"
 
-export VM_EXTERNAL_IP=51.250.72.49
+export VM_EXTERNAL_IP=46.21.245.8
 echo $SECONDS && ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
 
 +72 сек

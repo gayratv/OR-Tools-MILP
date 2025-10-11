@@ -27,3 +27,18 @@ yc storage s3 cp \
     --bucket mysql8-asset-files \
     --folder /mnt/f/_prg/python/OR-Tools-MILP/_temp \
     --prefix mysql
+
+
+./upload_to_yandex_s3.sh \
+    --bucket mysql8-asset-files \
+    --folder /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex \
+    --prefix SQL_yandex
+
+# скопировать один файл
+yc storage s3 cp \
+  s3://mysql8-asset-files/SQL_yandex/download_from_yandex_s3.sh \
+  /opt/app
+
+chmod +x download_from_yandex_s3.sh
+
+./download_from_yandex_s3.sh --bucket mysql8-asset-files --folder /opt/app --prefix SQL_yandex
