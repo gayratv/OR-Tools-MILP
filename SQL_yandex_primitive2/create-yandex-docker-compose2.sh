@@ -46,6 +46,14 @@ RESP=$(
 VM_EXTERNAL_IP=$(jq -r 'first(.network_interfaces[].primary_v4_address.one_to_one_nat.address // empty)' <<< "$RESP")
 export VM_EXTERNAL_IP
 
+cat <<EOF > ssh2.sh
+#!/bin/bash
+echo "Подключаюсь к \$VM_EXTERNAL_IP..."
+echo "Время выполнения скрипта: \$SECONDS сек."
+export VM_EXTERNAL_IP=$VM_EXTERNAL_IP
+ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
+EOF
+
 echo "----------------------------------------"
 echo "ВМ создана, внешний IP: $VM_EXTERNAL_IP"
 echo "----------------------------------------"
@@ -67,3 +75,4 @@ echo "                                \r"
 
 # Выводим финальное сообщение
 echo "Прошло $TOTAL_SECONDS секунд!"
+ssh -i ~/.ssh/ya-cloud/priv yc-user@"$VM_EXTERNAL_IP"

@@ -1,12 +1,17 @@
-yc compute instance delete --name mysql8_1
-export VM_NAME=mysql8_2
+yc compute instance delete --name mysql8_3
+export VM_NAME=mysql8_4
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
 source ./create-yandex-docker-compose2.sh "$VM_NAME"
 
+cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2 && ./ssh2.sh
+
+cat /var/log/runcmd-debug.log
 
 
-export VM_EXTERNAL_IP=158.160.97.216
+export VM_EXTERNAL_IP=89.169.140.36
 echo $SECONDS && ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP
+
+cat /var/log/runcmd-debug.log
 
 ls -la /app/scripts
 ls -la /app/SQL_yandex_primitive2/scripts
@@ -17,7 +22,7 @@ ls /app/SQL_yandex_primitive2/docker_assets_primitive
 /app/scripts/download_from_yandex_s3.sh --bucket mysql8-asset-files --folder /app --prefix SQL_yandex_primitive2
 
 cat /var/log/runcmd-debug.log
-tail -n 200 /var/log/cloud-init-output.log
+sudo tail -n 200 /var/log/cloud-init-output.log
 cat /var/lib/cloud/instance/cloud-config.txt
 cat /etc/sudoers.d/90-cloud-init-user
 ls /home/yc-user
@@ -47,3 +52,6 @@ cat /home/yc-user/bootstrap-setup.log
  =======
  https://cloudinit.readthedocs.io/en/latest/
  Cloud-init documentation
+
+
+export PATH=$PATH:/app/SQL_yandex_primitive2/scripts:/home/user/scripts
