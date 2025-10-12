@@ -37,10 +37,9 @@ RESP=$(
     --metadata "ssh-keys=yc-user:$(cat "$HOME/.ssh/ya-cloud/priv.pub")" \
     --metadata secret_id=e6qdqbmm78930tvi4kdj \
     --format json \
-    --container-image alpine:3 \
-    --container-command sh \
-    --container-arg -c \
-    --container-arg "sleep infinity"
+    --container-image busybox \
+    --container-command sleep  \
+    --container-arg infinity
 )
 
 VM_EXTERNAL_IP=$(jq -r 'first(.network_interfaces[].primary_v4_address.one_to_one_nat.address // empty)' <<< "$RESP")
