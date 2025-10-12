@@ -9,6 +9,14 @@ ls -a
 docker compose up -d --build
 docker logs mysql8_yand_certs
 
+
+docker cp mysql8_yand_certs:/certs ~/certs
+
+VM_EXTERNAL_IP=51.250.86.32
+scp -i ~/.ssh/ya-cloud/priv -r yc-user@$VM_EXTERNAL_IP:~/certs/ \
+    /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/
+
+
 docker exec -it mysql8_yand_certs bash
 cat /var/log/make-certs.log
 
