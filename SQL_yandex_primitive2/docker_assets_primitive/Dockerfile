@@ -24,7 +24,7 @@ RUN chown mysql:mysql /certs/ca.pem /certs/server-cert.pem /certs/server-key.pem
     chmod 600 /certs/server-key.pem
 
 WORKDIR app
-COPY --chmod=755 entrypoint.sh .
+COPY --chmod=755 *.sh .
 
 # Указываем точку входа
 ENTRYPOINT ["/app/entrypoint.sh"]
