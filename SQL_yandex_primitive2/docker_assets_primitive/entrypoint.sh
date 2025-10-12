@@ -3,7 +3,7 @@ set -euo pipefail
 echo "--- Starting container entrypoint ---"
 
 echo "--- Generating SSL certificates ---"
-make-mysql-certs-full.sh
+/usr/local/bin/make-mysql-certs-full.sh
 
 echo "--- Setting permissions for certificates ---"
 # Устанавливаем правильного владельца и права на сгенерированные сертификаты

@@ -23,8 +23,18 @@ RUN chown mysql:mysql /certs/ca.pem /certs/server-cert.pem /certs/server-key.pem
     chmod 644 /certs/ca.pem /certs/server-cert.pem && \
     chmod 600 /certs/server-key.pem
 
-WORKDIR app
-COPY --chmod=755 *.sh .
 
-# Указываем точку входа
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Копируем скрипт в образ
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Делаем его исполняемым
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# ... предыдущие инструкции
+
+# Копируем и делаем исполняемым скрипт генерации сертификатов
+COPY make-mysql-certs-full.sh /usr/local/bin/make-mysql-certs-full.sh
+RUN chmod +x /usr/local/bin/make-mysql-certs-full.sh
+
+# Устанавливаем его как точку входа
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
