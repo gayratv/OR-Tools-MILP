@@ -1,18 +1,54 @@
-yc compute instance delete --name mysql8_3
-export VM_NAME=mysql8_1
+yc compute instance delete --name mysql8_1
+export VM_NAME=mysql8_3
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
 source ./create-yandex-docker-compose2.sh "$VM_NAME"
 
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2 && ./ssh2.sh
 
 cat /var/log/runcmd-debug.log
-
+=================
 cd /app/SQL_yandex_primitive2/docker_assets_primitive
 /app/SQL_yandex_primitive2/scripts/yc-secrets-get.sh
+ls -a
 
+
+sudo install -d -m 750 -o root -g root /certs
+sudo ls -la /certs
+sudo /app/SQL_yandex_primitive2/scripts/make-mysql-certs-full.sh
+
+sudo sh -c 'chmod 640 /certs/*.pem && chmod 600 /certs/*key.pem'
+sudo ls -l /certs
+
+sudo chmod -R o+rX /certs
+
+======
 docker compose up -d --build
 
-/app/SQL_yandex_primitive2/scripts/make-mysql-certs-full.sh
+VM_EXTERNAL_IP=158.160.61.115
+scp -i ~/.ssh/ya-cloud/priv -r yc-user@$VM_EXTERNAL_IP:/certs \
+    /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/certs
+
+
+docker exec -it mysql8_yand_certs bash
+mysql -uroot -p   # на самой машине с MySQL
+
+
+внутри контейнера
+chown mysql:mysql /certs/ca.pem /certs/server-cert.pem /certs/server-key.pem
+chmod 644 /certs/ca.pem /certs/server-cert.pem
+chmod 600 /certs/server-key.pem
+
+
+
+================
+
+sudo systemctl restart mysql
+sudo systemctl restart mysqld
+sudo systemctl status mysql
+
+
+SHOW VARIABLES LIKE 'ssl_%';
+SHOW STATUS LIKE 'Ssl_version';
 
 
 

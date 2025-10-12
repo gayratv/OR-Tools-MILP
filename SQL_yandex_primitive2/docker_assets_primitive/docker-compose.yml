@@ -17,7 +17,6 @@ services:
       - type: volume
         source: dbdata_yandex_sql_certs
         target: /var/lib/mysql
-      - ./certs:/certs
 
     restart: unless-stopped
     healthcheck:

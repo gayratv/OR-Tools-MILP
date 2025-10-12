@@ -78,20 +78,20 @@ cd - > /dev/null # Возвращаемся в исходную директор
 
 echo
 echo "==== Серверные сертификаты обновлены! ==="
-ls -l server-*.pem
+#ls -l server-*.pem
 echo
 echo "==== Клиентские и CA сертификаты (не менялись): ==="
-ls -l ca-*.pem client-*.pem
+#ls -l ca-*.pem client-*.pem
 echo
 echo ">> Теперь можно запускать MySQL с новыми сертификатами."
 
 #
 #    # Устанавливаем владельца на сертификаты
-chown -R mysql:mysql /certs && \
-# Устанавливаем права на ключи
-chmod 600 /certs/*-key.pem && \
-# Устанавливаем права на публичные сертификаты
-chmod 644 /certs/*-cert.pem /certs/ca.pem
+#chown -R mysql:mysql /certs && \
+## Устанавливаем права на ключи
+#chmod 600 /certs/*-key.pem && \
+## Устанавливаем права на публичные сертификаты
+#chmod 644 /certs/*-cert.pem /certs/ca.pem
 
 # Подключение с клиента:
 # mysql --ssl-mode=VERIFY_IDENTITY
