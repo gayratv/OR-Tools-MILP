@@ -72,7 +72,7 @@ write_files:
 runcmd:
   - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
   - [ bash, -lc, "id -nG yc-user | grep -qw docker || usermod -aG docker yc-user" ]
-  - [ bash, -lc, "install -d -m 0755 -o yc-user -g yc-user /app /app/scripts; install -m 0644 -o yc-user -g yc-user /dev/null /var/log/runcmd-debug.log" ]
+  - [ bash, -lc, "install -d -m 0755 -o yc-user -g yc-user /app /app/scripts /app/exchange; install -m 0644 -o yc-user -g yc-user /dev/null /var/log/runcmd-debug.log" ]
 
   # Маркер перед началом
   - [ bash, -lc, 'echo "[runcmd] start" | tee -a /var/log/runcmd-debug.log' ]

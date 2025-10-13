@@ -12,7 +12,7 @@ openssl req -x509 -new -nodes -key "$CERT_DIR/ca-key.pem" -sha256 -days 3650 \
 echo "==> Генерируем серверный ключ..."
 openssl genrsa -out "$CERT_DIR/server-key.pem" 2048
 
-CURRENT_IP="$(curl -s ifconfig.co)}"
+CURRENT_IP="$(curl -s ifconfig.co)"
 echo ">> Текущий внешний IP: $CURRENT_IP" | tee -a /var/log/make-certs.log
 
 echo "==> Создаём конфиг для SAN..."

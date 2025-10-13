@@ -27,7 +27,8 @@ RUN mkdir -p /app/exchange && chmod 777 /app/exchange
 
 COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY --chmod=755 make-mysql-certs-full.sh /usr/local/bin/make-mysql-certs-full.sh
-COPY --chmod=755 make-mysql-certs-full.sh /usr/local/bin/download_one_file.sh
+COPY --chmod=755 generate-mysql-certs2.sh /usr/local/bin/generate-mysql-certs2.sh
+COPY --chmod=755 generate-mysql-certs-all2.sh /usr/local/bin/generate-mysql-certs-all2.sh
 
 
 
