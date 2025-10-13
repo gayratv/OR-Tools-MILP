@@ -23,10 +23,13 @@ RUN chown mysql:mysql /certs/ca.pem /certs/server-cert.pem /certs/server-key.pem
     chmod 644 /certs/ca.pem /certs/server-cert.pem && \
     chmod 600 /certs/server-key.pem
 
-
+RUN mkdir -p /app/exchange && chmod 777 /app/exchange
 
 COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY --chmod=755 make-mysql-certs-full.sh /usr/local/bin/make-mysql-certs-full.sh
+COPY --chmod=755 make-mysql-certs-full.sh /usr/local/bin/download_one_file.sh
+
+
 
 # Устанавливаем его как точку входа
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

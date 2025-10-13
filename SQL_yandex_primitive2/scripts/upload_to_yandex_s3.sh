@@ -58,19 +58,26 @@ if [ -z "${BUCKET_NAME}" ] || [ -z "${KEY_PREFIX}" ]; then
     usage
 fi
 
+#if [ "$DELETE_FLAG" -eq 1 ]; then
+#    # Логика удаления
+#    echo "Внимание: вы собираетесь удалить все объекты в 's3://$BUCKET_NAME/$KEY_PREFIX/'."
+#    read -p "Вы уверены? [y/N] " -n 1 -r
+#    echo # перенос строки
+#    if [[ $REPLY =~ ^[Yy]$ ]]; then
+#        echo "Удаление объектов из 's3://$BUCKET_NAME/$KEY_PREFIX/'..."
+#        yc storage s3 rm "s3://$BUCKET_NAME/$KEY_PREFIX/" --recursive
+#        echo "✅ Удаление завершено."
+#    else
+#        echo "Удаление отменено."
+#        exit 0
+#    fi
+
 if [ "$DELETE_FLAG" -eq 1 ]; then
     # Логика удаления
     echo "Внимание: вы собираетесь удалить все объекты в 's3://$BUCKET_NAME/$KEY_PREFIX/'."
-    read -p "Вы уверены? [y/N] " -n 1 -r
-    echo # перенос строки
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "Удаление объектов из 's3://$BUCKET_NAME/$KEY_PREFIX/'..."
-        yc storage s3 rm "s3://$BUCKET_NAME/$KEY_PREFIX/" --recursive
-        echo "✅ Удаление завершено."
-    else
-        echo "Удаление отменено."
-        exit 0
-    fi
+    echo "Удаление объектов из 's3://$BUCKET_NAME/$KEY_PREFIX/'..."
+    yc storage s3 rm "s3://$BUCKET_NAME/$KEY_PREFIX/" --recursive
+    echo "✅ Удаление завершено."
 else
     # Логика загрузки (существующий код)
     # Проверка, что папка для загрузки указана

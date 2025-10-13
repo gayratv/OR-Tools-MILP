@@ -48,3 +48,16 @@ docker compose logs db
 VM_EXTERNAL_IP=158.160.33.153
 ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP "docker cp mysql8_yand_certs:/certs /home/yc-user/certs" && scp -i ~/.ssh/ya-cloud/priv -r yc-user@51.250.5.135:/home/yc-user/certs/  /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/
 
+docker exec -it mysql8_yand_certs bash
+
+nano /app/SQL_yandex_primitive2/scripts/download_one_file.sh
+chmod +x download_one_file.sh
+./download_one_file.sh SQL_yandex_primitive2/docker_assets_primitive/generate-mysql-certs2.sh /app/SQL_yandex_primitive2/scripts
+chmod +x *.sh
+
+microdnf install mc -y
+
+nano /usr/local/bin/download_one_file.sh
+chmod x /usr/local/bin/*.sh
+
+nano /usr/local/bin/generate-mysql-certs2.sh

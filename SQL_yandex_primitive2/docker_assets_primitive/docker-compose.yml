@@ -17,6 +17,9 @@ services:
       - type: volume
         source: dbdata_yandex_sql_certs
         target: /var/lib/mysql
+      - type: bind
+        source: /app/exchange
+        target: /app/exchange
 
     restart: unless-stopped
     healthcheck:
