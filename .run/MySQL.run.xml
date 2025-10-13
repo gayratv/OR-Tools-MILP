@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="MySQL" type="DatabaseScript">
+    <script-file value="$PROJECT_DIR$/SQL_yandex_primitive2/SQL/app-user.sql" />
+    <script-mode>FILE</script-mode>
+    <data-source id="443b4d64-31c0-4770-9a6a-40a2b0fb7c34" namespace="schema/&quot;school_sheduller&quot;" />
+    <method v="2" />
+  </configuration>
+</component>
