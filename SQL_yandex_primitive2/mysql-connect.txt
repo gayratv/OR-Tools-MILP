@@ -20,33 +20,21 @@ mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "
 
 cat ~/.my.cnf
 
-cat >> ~/.my.cnf << EOF
-[clientappuser]
-host=51.250.86.32
-port=3398
-user=appuser
-database=school_sheduller
-ssl-ca=/mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/certs/ca.pem
-ssl-cert=/mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/certs/client-cert.pem
-ssl-key=/mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/certs/client-key.pem
+docker cp mysql8_yand_certs:/certs ~/certs
+./scripts/mysql-run.sh 51.250.95.208
 
-[clientroot]
-host=51.250.86.32
-port=3398
-user=root
-database=school_sheduller
-
-EOF
-
+mysql --login-path=root --defaults-group-suffix=root school_sheduller -e "SELECT user, host, plugin, ssl_type FROM mysql.user;"
 
 ========
 Можно проверить тип соединения командой:
 mysql --login-path=appuser --defaults-group-suffix=appuser -e "status"
 mysql --login-path=root --defaults-group-suffix=root -e "status"
 
-
+mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "SELECT 1;"
 mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "SELECT user, host, plugin FROM mysql.user WHERE user = 'appuser';"
 
 mysql --login-path=root --defaults-group-suffix=root school_sheduller -e "SELECT user, host, plugin FROM mysql.user WHERE user = 'appuser';"
 mysql --login-path=root --defaults-group-suffix=root school_sheduller -e "SELECT user, host, plugin FROM mysql.user;"
+mysql --login-path=root --defaults-group-suffix=root school_sheduller -e "SELECT user, host, plugin, ssl_type FROM mysql.user WHERE user='root';"
+mysql --login-path=root --defaults-group-suffix=root school_sheduller -e "SELECT user, host, plugin, ssl_type FROM mysql.user;"
 mysql --login-path=root --defaults-group-suffix=root school_sheduller -e "SELECT 1;"

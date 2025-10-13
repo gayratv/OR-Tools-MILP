@@ -88,7 +88,7 @@ echo ">> Теперь можно запускать MySQL с новыми сер
 #
 #    # Устанавливаем владельца на сертификаты
 
-RUN chown mysql:mysql /certs/ca.pem /certs/server-cert.pem /certs/server-key.pem && \
+chown mysql:mysql /certs/ca.pem /certs/server-cert.pem /certs/server-key.pem && \
     chmod 644 /certs/ca.pem /certs/server-cert.pem && \
     chmod 600 /certs/server-key.pem
 

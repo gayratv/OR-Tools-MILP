@@ -1,20 +1,27 @@
 yc compute instance delete --name mysql8_1
-export VM_NAME=mysql8_4
+
+./scripts/upload_to_yandex_s3.sh --bucket mysql8-asset-files --prefix SQL_yandex_primitive2 --delete
+./scripts/upload_to_yandex_s3.sh --bucket mysql8-asset-files --prefix SQL_yandex_primitive2 --folder /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
+
+
+
+export VM_NAME=mysql8_5
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
 source ./create-yandex-docker-compose2.sh "$VM_NAME"
 
 cd /app/SQL_yandex_primitive2/docker_assets_primitive
 /app/SQL_yandex_primitive2/scripts/yc-secrets-get.sh
 ls -a
+cat .env
 docker compose up -d --build
-docker logs mysql8_yand_certs
 
+docker logs -f mysql8_yand_certs
 
-docker cp mysql8_yand_certs:/certs ~/certs
+rm ~/.ssh/known_hosts
 
-VM_EXTERNAL_IP=51.250.86.32
-scp -i ~/.ssh/ya-cloud/priv -r yc-user@$VM_EXTERNAL_IP:~/certs/ \
-    /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/
+VM_EXTERNAL_IP=158.160.123.22
+ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP "rm -rf /home/yc-user/certs && docker cp mysql8_yand_certs:/certs/. /home/yc-user/certs && rm -rf /home/yc-user/certs/certs"
+scp -i ~/.ssh/ya-cloud/priv -r yc-user@$VM_EXTERNAL_IP:/home/yc-user/certs/ /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/
 
 
 docker exec -it mysql8_yand_certs bash
@@ -25,4 +32,19 @@ docker logs mysql8_yand_certs
 docker logs -f mysql8_yand_certs
 docker compose logs -f db
 docker compose logs db
+
+
+# set -a
+# source .env
+# set +a
+
+# export MYSQL_USER="appuser"
+# export MYSQL_PASSWORD="2^hcG9Ktn"
+
+# echo $MYSQL_USER
+# echo $MYSQL_PASSWORD
+
+
+VM_EXTERNAL_IP=158.160.33.153
+ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP "docker cp mysql8_yand_certs:/certs /home/yc-user/certs" && scp -i ~/.ssh/ya-cloud/priv -r yc-user@51.250.5.135:/home/yc-user/certs/  /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/
 
