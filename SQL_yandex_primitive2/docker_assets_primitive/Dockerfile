@@ -1,7 +1,7 @@
 FROM mysql:8.4
 
 # Устанавливаем необходимые утилиты
-RUN microdnf install -y bash curl && microdnf clean all
+RUN microdnf install -y bash curl mc && microdnf clean all
 
 # Копируем файл конфигурации
 COPY ./mysql/conf.d/my.cnf /etc/mysql/conf.d/my.cnf
@@ -16,12 +16,12 @@ RUN chown mysql:mysql /etc/mysql/conf.d/my.cnf && \
     chmod 644 /etc/mysql/conf.d/my.cnf
 
 # Копируем сертификаты
-COPY ./certs /certs
+#COPY ./certs /certs
 
 # Устанавливаем правильного владельца и права доступа для сертификатов
-RUN chown mysql:mysql /certs/ca.pem /certs/server-cert.pem /certs/server-key.pem && \
-    chmod 644 /certs/ca.pem /certs/server-cert.pem && \
-    chmod 600 /certs/server-key.pem
+#RUN chown mysql:mysql /certs/ca.pem /certs/server-cert.pem /certs/server-key.pem && \
+#    chmod 644 /certs/ca.pem /certs/server-cert.pem && \
+#    chmod 600 /certs/server-key.pem
 
 RUN mkdir -p /app/exchange && chmod 777 /app/exchange
 

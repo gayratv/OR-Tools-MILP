@@ -20,6 +20,9 @@ services:
       - type: bind
         source: /app/exchange
         target: /app/exchange
+      - type: bind
+        source: /app/SQL_yandex_primitive2/docker_assets_primitive/certs
+        target: /certs
 
     restart: unless-stopped
     healthcheck:

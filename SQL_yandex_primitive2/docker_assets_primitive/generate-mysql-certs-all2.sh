@@ -32,7 +32,7 @@ set -euo pipefail
 # Author: ChatGPT (for VPS + Docker + MySQL SSL)
 # ==============================================================================
 
-CERT_DIR="/certs"
+CERT_DIR="/app/SQL_yandex_primitive2/docker_assets_primitive/certs"
 CLIENT_CN="appuser"
 
 mkdir -p "$CERT_DIR"

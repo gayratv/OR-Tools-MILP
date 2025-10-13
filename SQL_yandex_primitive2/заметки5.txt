@@ -3,25 +3,38 @@ yc compute instance delete --name mysql8_1
 ./scripts/upload_to_yandex_s3.sh --bucket mysql8-asset-files --prefix SQL_yandex_primitive2 --delete
 ./scripts/upload_to_yandex_s3.sh --bucket mysql8-asset-files --prefix SQL_yandex_primitive2 --folder /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
 
-
-
-export VM_NAME=mysql8_6
+export VM_NAME=mysql8_1
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
 source ./create-yandex-docker-compose2.sh "$VM_NAME"
 ====
 cd /app/SQL_yandex_primitive2/docker_assets_primitive
-/app/SQL_yandex_primitive2/scripts/yc-secrets-get.sh
+../scripts/yc-secrets-get.sh
 ls -a
 cat .env
-docker compose up -d --build
+# ../scripts/set-certs-rights.sh
 
+
+chmod +x generate-mysql-certs-all2.sh
+./generate-mysql-certs-all2.sh
+
+docker compose up -d --build
 docker logs -f mysql8_yand_certs
 
 rm ~/.ssh/known_hosts
 
-VM_EXTERNAL_IP=158.160.110.107
-ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP "rm -rf /home/yc-user/certs && docker cp mysql8_yand_certs:/certs/. /home/yc-user/certs && rm -rf /home/yc-user/certs/certs"
-scp -i ~/.ssh/ya-cloud/priv -r yc-user@$VM_EXTERNAL_IP:/home/yc-user/certs/ /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/
+
+
+# certs уже bind mount
+VM_EXTERNAL_IP=89.169.155.230
+VM_EXTERNAL_IP=89.169.155.230
+ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP \
+  "sudo chmod +r /app/SQL_yandex_primitive2/docker_assets_primitive/certs/client-key.pem"
+
+scp -i ~/.ssh/ya-cloud/priv -r \
+ yc-user@$VM_EXTERNAL_IP:/app/SQL_yandex_primitive2/docker_assets_primitive/certs \
+  /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/
+
+
 
 
 docker exec -it mysql8_yand_certs bash
@@ -45,19 +58,23 @@ docker compose logs db
 # echo $MYSQL_PASSWORD
 
 
-VM_EXTERNAL_IP=158.160.33.153
-ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP "docker cp mysql8_yand_certs:/certs /home/yc-user/certs" && scp -i ~/.ssh/ya-cloud/priv -r yc-user@51.250.5.135:/home/yc-user/certs/  /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/
+
+
 
 docker exec -it mysql8_yand_certs bash
 
-nano /app/SQL_yandex_primitive2/scripts/download_one_file.sh
-chmod +x download_one_file.sh
-./download_one_file.sh SQL_yandex_primitive2/docker_assets_primitive/generate-mysql-certs2.sh /app/SQL_yandex_primitive2/scripts
-chmod +x *.sh
+================================
 
-microdnf install mc -y
+статичный IP
 
-nano /usr/local/bin/download_one_file.sh
-chmod x /usr/local/bin/*.sh
+yc vpc address list
 
-nano /usr/local/bin/generate-mysql-certs2.sh
+yc compute instance add-one-to-one-nat \
+  --id=fhm9koh7gmdcgu2gnup8 \
+  --network-interface-index=0 \
+  --nat-address=51.250.84.79
+
+yc compute instance remove-one-to-one-nat
+  --id=fhm9koh7gmdcgu2gnup8
+  --network-interface-index=0
+
