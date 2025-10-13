@@ -3,6 +3,8 @@ yc compute instance delete --name mysql8_1
 ./scripts/upload_to_yandex_s3.sh --bucket mysql8-asset-files --prefix SQL_yandex_primitive2 --delete
 ./scripts/upload_to_yandex_s3.sh --bucket mysql8-asset-files --prefix SQL_yandex_primitive2 --folder /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
 
+====
+
 export VM_NAME=mysql8_1
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
 source ./create-yandex-docker-compose2.sh "$VM_NAME"
@@ -13,9 +15,9 @@ ls -a
 cat .env
 # ../scripts/set-certs-rights.sh
 
-
-chmod +x generate-mysql-certs-all2.sh
-./generate-mysql-certs-all2.sh
+# ls certs
+# chmod +x *.sh
+# ./generate-mysql-certs-all2.sh
 
 docker compose up -d --build
 docker logs -f mysql8_yand_certs
@@ -25,8 +27,7 @@ rm ~/.ssh/known_hosts
 
 
 # certs уже bind mount
-VM_EXTERNAL_IP=89.169.155.230
-VM_EXTERNAL_IP=89.169.155.230
+VM_EXTERNAL_IP=51.250.86.191
 ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP \
   "sudo chmod +r /app/SQL_yandex_primitive2/docker_assets_primitive/certs/client-key.pem"
 
