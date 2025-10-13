@@ -1,5 +1,12 @@
 # подготовить данные для входа для текущего IP
-./scripts/mysql-run.sh 51.250.86.191
+./scripts/mysql-conf.sh 51.250.86.191
 cat ~/.my.cnf
 
 mysql --login-path=root --defaults-group-suffix=root school_sheduller -e "SELECT user, host, plugin, ssl_type FROM mysql.user;"
+
+./SQL/deploy-user.sh
+
+
+mysql --login-path=appuser --defaults-group-suffix=appuser -e "status"
+mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "SELECT 1;"
+

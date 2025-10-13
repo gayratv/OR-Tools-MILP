@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # --- Настройки ---
-ENV_FILE="../.env"
-SQL_FILE="${1:-app-user.sql}"
+ENV_FILE=".env"
+SQL_FILE="${1:-./SQL/app-user.sql}"
 
 # --- Usage ---
 # ./deploy-user.sh [sql_file_name]
@@ -33,15 +33,13 @@ set +a # Отключить автоматический экспорт
 # Проверяем, что всё есть
 : "${APP_USER:?APP_USER не задан}"
 : "${APP_PASSWORD:?APP_PASSWORD не задан}"
-: "${DB_NAME:?DB_NAME не задан}"
-: "${MYSQL_LOGIN_PATH:?MYSQL_LOGIN_PATH не задан}"
-: "${MYSQL_SUFFIX:?MYSQL_SUFFIX не задан}"
+: "${MYSQL_DATABASE:?MYSQL_DATABASE не задан}"
 
 # Выполняем SQL с подстановкой переменных
-echo "🚀 Выполняем SQL-скрипт $SQL_FILE для базы $DB_NAME..."
+echo "🚀 Выполняем SQL-скрипт $SQL_FILE "
 envsubst < "$SQL_FILE" | mysql \
   --login-path=root \
   --defaults-group-suffix=root \
-  "MYSQL_DATABASE"
+  "$MYSQL_DATABASE"
 
 echo "✅ Готово!"
