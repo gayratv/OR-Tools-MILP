@@ -1,12 +1,24 @@
 # подготовить данные для входа для текущего IP
-./scripts/mysql-conf.sh 51.250.86.191
+# в  заметках ./scripts/mysql-conf.sh 51.250.86.191
 cat ~/.my.cnf
 
 mysql --login-path=root --defaults-group-suffix=root school_sheduller -e "SELECT user, host, plugin, ssl_type FROM mysql.user;"
 
-./SQL/deploy-user.sh
+# ./SQL/deploy-user.sh ./SQL/app-user-3.sql
+./SQL/deploy-user.sh ./SQL/app-user.sql
 
 
 mysql --login-path=appuser --defaults-group-suffix=appuser -e "status"
 mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "SELECT 1;"
+mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "SELECT 1;SHOW SESSION STATUS LIKE 'Ssl_version';SHOW STATUS LIKE 'Ssl_cipher';"
 
+
+проверка X509
+-- Покажет, что сессия в TLS и какой шифр используется
+SHOW SESSION STATUS LIKE 'Ssl_cipher';
+SHOW SESSION STATUS LIKE 'Ssl_version';
+
+-- (если есть) кто выдал и чей субъект у клиентского сертификата
+SELECT VARIABLE_NAME, VARIABLE_VALUE
+FROM performance_schema.session_status
+WHERE VARIABLE_NAME IN ('Ssl_client_subject','Ssl_client_issuer','Ssl_verify_mode');

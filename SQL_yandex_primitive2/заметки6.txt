@@ -1,0 +1,52 @@
+yc compute instance delete --name mysql8_1
+
+./scripts/upload_to_yandex_s3.sh --bucket mysql8-asset-files --prefix SQL_yandex_primitive2 --delete
+./scripts/upload_to_yandex_s3.sh --bucket mysql8-asset-files --prefix SQL_yandex_primitive2 --folder /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
+
+====
+
+export VM_NAME=mysql8_2
+cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
+source ./create-yandex-docker-compose2.sh "$VM_NAME"
+====
+
+Выполнить на VM
+cd /app/SQL_yandex_primitive2/docker_assets_primitive
+../scripts/yc-secrets-get.sh
+docker compose up -d --build
+
+ls /app/SQL_yandex_primitive2/docker_assets_primitive/certs
+docker logs -f mysql8_yand_certs
+
+rm ~/.ssh/known_hosts
+
+
+
+# копирование сертфикатов
+# выполнить на Host
+VM_EXTERNAL_IP=51.250.72.227
+ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP \
+  "sudo chmod +r /app/SQL_yandex_primitive2/docker_assets_primitive/certs/client-key.pem"
+
+scp -i ~/.ssh/ya-cloud/priv -r \
+ yc-user@$VM_EXTERNAL_IP:/app/SQL_yandex_primitive2/docker_assets_primitive/certs \
+  /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2/docker_assets_primitive/
+
+# === создать пользовательские конфигурации
+# выполнить на Host
+./scripts/mysql-conf.sh $VM_EXTERNAL_IP
+# создать appuser
+./SQL/deploy-user.sh ./SQL/app-user.sql
+
+# restore database
+./scripts/restore_school_db.sh
+
+============== others
+cat ~/.my.cnf
+== проверка
+mysql --login-path=root --defaults-group-suffix=root school_sheduller -e "SELECT user, host, plugin, ssl_type FROM mysql.user;"
+mysql --login-path=appuser --defaults-group-suffix=appuser school_sheduller -e "SELECT 1;"
+
+docker exec -it mysql8_yand_certs bash
+
+ls /mnt/f/_prg/python/OR-Tools-MILP/MySQL_backup

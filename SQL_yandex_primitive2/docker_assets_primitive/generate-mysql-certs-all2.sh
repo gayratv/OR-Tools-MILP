@@ -32,8 +32,17 @@ set -euo pipefail
 # Author: ChatGPT (for VPS + Docker + MySQL SSL)
 # ==============================================================================
 
-CERT_DIR="/app/SQL_yandex_primitive2/docker_assets_primitive/certs"
+CERT_DIR="/certs"
 CLIENT_CN="appuser"
+# Эти две переменные гарантируют одинаковые значения в [ req_dn ]
+COUNTRY="RU"
+ORG="VlasovGG"
+COMMON_DN="$(cat <<EOF
+[ req_dn ]
+C  = ${COUNTRY}
+O  = ${ORG}
+EOF
+)"
 
 mkdir -p "$CERT_DIR"
 
@@ -68,9 +77,7 @@ distinguished_name = req_dn
 req_extensions     = v3_server
 prompt             = no
 
-[ req_dn ]
-C  = RU
-O  = MyOrg
+${COMMON_DN}
 CN = ${CURRENT_IP}
 
 [ v3_server ]
@@ -102,9 +109,7 @@ distinguished_name = req_dn
 req_extensions     = v3_client
 prompt             = no
 
-[ req_dn ]
-C  = RU
-O  = MyOrg
+${COMMON_DN}
 CN = ${CLIENT_CN}
 
 [ v3_client ]

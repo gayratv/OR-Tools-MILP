@@ -82,6 +82,7 @@ runcmd:
   - [su, yc-user, -c, "chmod +x /app/scripts/*.sh" ]
   - [su, yc-user, -c, "/app/scripts/download_from_yandex_s3.sh --bucket mysql8-asset-files --folder /app --prefix SQL_yandex_primitive2" ]
   - [su, yc-user, -c, "chmod +x /app/SQL_yandex_primitive2/scripts/*.sh" ]
+  - [su, yc-user, -c, "chmod +x /app/SQL_yandex_primitive2/*.sh" ]
 #  - [su, -l, yc-user, -c, "yc 2>&1 | tee -a /var/log/runcmd-debug.log" ]
   #   Принудительно загрузить профиль:
   - [ bash, -lc, 'echo "перед PATH" | tee -a /var/log/runcmd-debug.log' ]
