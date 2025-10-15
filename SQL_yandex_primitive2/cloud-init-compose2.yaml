@@ -69,6 +69,31 @@ write_files:
 
     defer: true
 
+  - path: "/app/scripts/dockr-build.sh"
+    owner: yc-user:yc-user
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      
+      TOTAL_SECONDS=75
+
+      echo "Запускаю таймер на $TOTAL_SECONDS секунд..."
+
+      sleep $TOTAL_SECONDS
+      echo "Прошло $TOTAL_SECONDS секунд!"
+      
+      echo "../scripts/yc-secrets-get.sh"
+      /home/yc-user/yandex-cloud/bin/yc
+      echo "----- выше вывод yc"
+      /app/SQL_yandex_primitive2/scripts/yc-secrets-get.sh
+      echo "------- ls ---------"
+      ls /app/SQL_yandex_primitive2/docker_assets_primitive
+      echo "docker compose up -d --build"
+      cd /app/SQL_yandex_primitive2/docker_assets_primitive
+      docker compose up -d --build
+
+    defer: true
+
 runcmd:
   - [su, yc-user, -c, "/usr/local/etc/yc-install.sh"]
   - [ bash, -lc, "id -nG yc-user | grep -qw docker || usermod -aG docker yc-user" ]
@@ -90,3 +115,6 @@ runcmd:
 #  - [ bash, -c, "export PATH=$PATH:/app/SQL_yandex_primitive2/scripts:/home/yc-user/yandex-cloud/bin; yc 2>&1 | tee -a /var/log/runcmd-debug.log" ]
 #  - [ su, yc-user, -c, "export PATH=$$PATH:/app/SQL_yandex_primitive2/scripts" ]
 #  - [ su, yc-user, -c, "cd /app/SQL_yandex_primitive2/docker_assets_primitive && ../scripts/yc-secrets-get.sh && docker compose up -d --build" ]
+
+#  - [su, yc-user, -c, "chmod +x /app/scripts/dockr-build.sh" ]
+#  - [su, yc-user, -c, "/app/scripts/dockr-build.sh" ]

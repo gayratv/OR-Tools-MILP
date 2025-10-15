@@ -11,7 +11,7 @@ YC_DIR=/home/yc-user/yandex-cloud/bin
 # Устанавливаем имя выходного файла.
 # Используем первый аргумент командной строки ($1), если он есть.
 # В противном случае, используем ".env" по умолчанию.
-OUTPUT_ENV_FILE="${1:-./.env}"
+OUTPUT_ENV_FILE="${1:-/app/SQL_yandex_primitive2/docker_assets_primitive/.env}"
 
 # Директория для восстановленных бинарных файлов (сертификатов).
 OUTPUT_BINARY_DIR="${2:-./.mysql-out}"
@@ -21,11 +21,12 @@ OUTPUT_ENV_DIR=$(dirname "$OUTPUT_ENV_FILE")
 
 # Создаем директорию, если она не существует.
 mkdir -p "$OUTPUT_ENV_DIR"
-mkdir -p "$OUTPUT_BINARY_DIR"
+#mkdir -p "$OUTPUT_BINARY_DIR"
 
 # 1. Получаем весь payload секрета в виде одного JSON
 echo "Получаю секреты из Yandex Lockbox..."
-PAYLOAD_JSON=$(${YC_DIR}/yc lockbox payload get school-scheduler-app-secrets --format json)
+#PAYLOAD_JSON=$(${YC_DIR}/yc lockbox payload get school-scheduler-app-secrets --format json)
+PAYLOAD_JSON=$(/home/yc-user/yandex-cloud/bin/yc lockbox payload get school-scheduler-app-secrets --format json)
 
 # 2. Извлекаем и сохраняем текстовые значения в .env файл
 echo "Восстанавливаю текстовые переменные в '$OUTPUT_ENV_FILE'..."
