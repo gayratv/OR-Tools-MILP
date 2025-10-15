@@ -86,7 +86,7 @@ runcmd:
 #  - [su, -l, yc-user, -c, "yc 2>&1 | tee -a /var/log/runcmd-debug.log" ]
   #   Принудительно загрузить профиль:
   - [ bash, -lc, 'echo "перед PATH" | tee -a /var/log/runcmd-debug.log' ]
-  - [su, -l, yc-user, -c, 'echo "PATH $PATH" | tee -a /var/log/runcmd-debug.log']
+#  - [su, -l, yc-user, -c, 'echo "PATH $PATH" | tee -a /var/log/runcmd-debug.log']
 #  - [ bash, -c, "export PATH=$PATH:/app/SQL_yandex_primitive2/scripts:/home/yc-user/yandex-cloud/bin; yc 2>&1 | tee -a /var/log/runcmd-debug.log" ]
-  - [ su, yc-user, -c, "export PATH=$$PATH:/app/SQL_yandex_primitive2/scripts" ]
-
+#  - [ su, yc-user, -c, "export PATH=$$PATH:/app/SQL_yandex_primitive2/scripts" ]
+#  - [ su, yc-user, -c, "cd /app/SQL_yandex_primitive2/docker_assets_primitive && ../scripts/yc-secrets-get.sh && docker compose up -d --build" ]

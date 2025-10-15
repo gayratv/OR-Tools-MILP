@@ -5,26 +5,36 @@ yc compute instance delete --name mysql8_1
 
 ====
 
-export VM_NAME=mysql8_2
+export VM_NAME=mysql8_3
 cd /mnt/f/_prg/python/OR-Tools-MILP/SQL_yandex_primitive2
 source ./create-yandex-docker-compose2.sh "$VM_NAME"
 ====
 
-Выполнить на VM
+===== Выполнить на VM ==========
+sudo tail -n 200 /var/log/cloud-init-output.log
+
 cd /app/SQL_yandex_primitive2/docker_assets_primitive
 ../scripts/yc-secrets-get.sh
 docker compose up -d --build
 
+
+
 ls /app/SQL_yandex_primitive2/docker_assets_primitive/certs
 docker logs -f mysql8_yand_certs
+===== Выполнить на VM ========== END
 
 rm ~/.ssh/known_hosts
 
 
 
-# копирование сертфикатов
+
 # выполнить на Host
-VM_EXTERNAL_IP=51.250.72.227
+
+export VM_NAME=mysql8_3
+export VM_EXTERNAL_IP=$(yc compute instance get --name "$VM_NAME" --format json | jq -r '.network_interfaces[].primary_v4_address.one_to_one_nat.address')
+echo $VM_EXTERNAL_IP
+
+# копирование сертфикатов
 ssh -i ~/.ssh/ya-cloud/priv yc-user@$VM_EXTERNAL_IP \
   "sudo chmod +r /app/SQL_yandex_primitive2/docker_assets_primitive/certs/client-key.pem"
 

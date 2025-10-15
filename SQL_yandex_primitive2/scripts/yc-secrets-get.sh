@@ -38,20 +38,20 @@ echo "$PAYLOAD_JSON" | \
 
 
 # 3. Извлекаем и сохраняем бинарные файлы (сертификаты)
-echo "Восстанавливаю бинарные файлы в '$OUTPUT_BINARY_DIR'..."
-echo "$PAYLOAD_JSON" | \
-  jq -c '
-    .entries[]
-    | select(.binary_value != null)
-    | {key: .key, value: .binary_value}
-  ' | while read -r line; do
-      key=$(echo "$line" | jq -r '.key')
-      value_b64=$(echo "$line" | jq -r '.value')
-      output_path="$OUTPUT_BINARY_DIR/$key"
-
-      echo " -> $output_path"
-      echo "$value_b64" | base64 --decode > "$output_path"
-done
+#echo "Восстанавливаю бинарные файлы в '$OUTPUT_BINARY_DIR'..."
+#echo "$PAYLOAD_JSON" | \
+#  jq -c '
+#    .entries[]
+#    | select(.binary_value != null)
+#    | {key: .key, value: .binary_value}
+#  ' | while read -r line; do
+#      key=$(echo "$line" | jq -r '.key')
+#      value_b64=$(echo "$line" | jq -r '.value')
+#      output_path="$OUTPUT_BINARY_DIR/$key"
+#
+#      echo " -> $output_path"
+#      echo "$value_b64" | base64 --decode > "$output_path"
+#done
 
 echo "Готово."
 echo "Файл окружения: $OUTPUT_ENV_FILE"
